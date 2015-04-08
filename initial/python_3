@@ -1,0 +1,76 @@
+MAP_X = 2
+
+map_one_defender = [
+    {
+        "player": 0,
+        "type": "defender",
+        "script": "simple.py",
+        "coordinates": [3, 3],
+        "size": 0.5,
+        "fire_speed": 1,
+        "fire_demage": 10.5,
+        "range": 2,
+        "health": 100
+    },
+    {
+        "player": 1,
+        "type": "unit",
+        "script": "simple.py",
+        "coordinates": [6, 6],
+        "fire_speed": 5,
+        "fire_demage": 10,
+        "range": 2,
+        "speed": 0.3,
+        "health": 30
+    }
+]
+
+# you can use open to read source from files
+# like defender_simple_py = open('empire/attacker.py').read()
+
+defender_simple_py = '''
+from battle import commander
+
+initial = commander.ask_initials()
+
+
+def unit_in_range(data, **kwargs):
+    commander.do_attack_sysid(data['sysid'])
+
+commander.subscribe_unit_in_my_range(initial['range'], unit_in_range)
+'''
+
+attacker_simple_py = '''
+from battle import commander
+
+initial = commander.ask_initials()
+
+
+def attack_next_enemy(**kawargs):
+    enemy = commander.ask_nearest_enemy()
+    print('ENEMY', enemy)
+    commander.do_attack_sysid(enemy['sysid'])
+    commander.subscribe_death_sysid(enemy['sysid'], attack_next_enemy)
+
+attack_next_enemy()
+'''
+
+PLAYERS = {
+    'players': [
+        {
+            'env_name': 'python_3'
+        },
+        {
+            'env_name': 'python_3'
+        }
+    ],
+    'map': map_one_defender,
+    'sources': [
+        {
+            "simple.py": defender_simple_py
+        },
+        {
+            "simple.py": attacker_simple_py
+        }
+    ]
+}

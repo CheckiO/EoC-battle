@@ -13,41 +13,6 @@ MAP_SIZE = (10, 10)
 MAP_X = 2
 
 
-def short_name(item):
-    out_line = ''
-    if item['type'] == 'defender':
-        out_line += 'D'
-    else:
-        out_line += 'U'
-    out_line += str(item['player'])
-    return out_line
-
-
-def show_data(active):
-    #return
-    out_map = []
-    for item in range(MAP_SIZE[0] * MAP_X):
-        out_map.append([None] * (MAP_SIZE[1] * MAP_X))
-
-    out_line = ''
-    for item in active:
-        coordinates = item['coordinates']
-        r_coordinates = (round(coordinates[0] * MAP_X), round(coordinates[1] * MAP_X))
-        out_map[r_coordinates[0]][r_coordinates[1]] = item
-        out_line += short_name(item) + ':' + str(item['health'])
-        out_line += ';'
-    print(out_line)
-
-    for line in out_map:
-        out_line = ''
-        for el in line:
-            if el is None:
-                out_line += '..'
-            else:
-                out_line += short_name(el)
-        print(out_line)
-
-
 def distance_to_point(point1, point2):
     return ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5
 
@@ -55,12 +20,12 @@ def distance_to_point(point1, point2):
 class FightHandler(BaseHandler):
 
     def __init__(self, editor_data, editor_client, referee):
-        self.initial_data = editor_data['players']
+        self.initial_data = editor_data['code']
         self.TIME_STEP = 0.1
-        self.SYS_TIME_STEP = 0.01
+        self.SYS_TIME_STEP = 0.1
         self.sysids = {}
         self.cur_time = 0
-        self.listeners = {}
+        self.listeners = {'range': []}
         self.next_sys_id = 0
         super().__init__(editor_data, editor_client, referee)
 
@@ -94,7 +59,8 @@ class FightHandler(BaseHandler):
             'sysid': cur_sysid,
             'subscriptions': {},
             'listeners': {},
-            'initial': data
+            'initial': data,
+            'actual': {'do': 'stand'}
         }
         sdata.update(data)
         self.sysids[cur_sysid] = sdata
@@ -105,6 +71,26 @@ class FightHandler(BaseHandler):
         elif 'script' in data:
             self.start_sys_env(cur_sysid)
 
+    def show_data(self, status=None):
+        if status is None:
+            status = {}
+
+        units = []
+        for item in self.sysids.values():
+            item_unit = {}
+            for key in ('coordinates', 'health', 'type', 'player', 'sysid', 'size', 'do',
+                        'actual'):
+                if key in item:
+                    item_unit[key] = item[key]
+            units.append(item_unit)
+
+        self.editor_client.send_custom({
+            'status': status,
+            'units': units,
+            'map_size': MAP_SIZE,
+            'cur_time': self.cur_time
+        })
+
     @gen.coroutine
     def start(self):
         sysids = []
@@ -114,30 +100,32 @@ class FightHandler(BaseHandler):
         self.make_steps()
         yield sysids
 
-    def is_game_over(self):
+    def get_winner(self):
         active_players = set()
         for item in self.sysids.values():
             active_players.add(item['player'])
             if len(active_players) > 1:
-                return False
-        return True
+                return None
+        return list(active_players)[0]
 
     def make_steps(self):
-        show_data(self.sysids.values())
+        self.show_data()
         self.cur_time += self.TIME_STEP
 
         for data in list(self.sysids.values()):
             if 'do' not in data:
+                data['actual'] = {'do': 'stand'}
+                continue
+
+            if data['sysid'] not in self.sysids:
                 continue
 
             what, do_data = data['do']
-            getattr(self, 'do_' + what)(data['sysid'], do_data)
+            data['actual'] = getattr(self, 'do_' + what)(data['sysid'], do_data)
 
-        if self.is_game_over():
-            print("Game OVER")
-            show_data(self.sysids.values())
-            import sys
-            sys.exit()
+        winner = self.get_winner()
+        if winner is not None:
+            self.show_data({'winner': winner})
         else:
             IOLoop.current().call_later(self.SYS_TIME_STEP, self.make_steps)
 
@@ -148,7 +136,7 @@ class FightHandler(BaseHandler):
     def ask_initial(self, sysid, data):
         sdata = self.sysids[sysid]
         result = {}
-        for key in ('player', 'num', 'sysid', 'type', 'coordinates',
+        for key in ('player', 'sysid', 'type', 'coordinates',
                     'fire_speed', 'fire_demage', 'range'):
             result[key] = sdata[key]
         return result
@@ -192,7 +180,7 @@ class FightHandler(BaseHandler):
 
     def subs_unit_in_my_range(self, sysid, data, key):
         sysdata = self.sysids[sysid]
-        self.listeners.setdefault('range', []).append(({
+        self.listeners['range'].append(({
             'radius': data['radius'],
             'coordinates': sysdata['coordinates']
         }, sysid, key))
@@ -219,7 +207,7 @@ class FightHandler(BaseHandler):
 
     def do_attack(self, sysid, data):
         if data['sysid'] not in self.sysids:
-            return # WTF
+            return  # WTF
         target_data = self.sysids[data['sysid']]
         attacker_data = self.sysids[sysid]
 
@@ -228,13 +216,14 @@ class FightHandler(BaseHandler):
 
         unit_range = attacker_data['range']
         if distance_to_target < unit_range:
-            self._shot(sysid, target_data['sysid'])
+            return self._shot(sysid, target_data['sysid'])
         else:
-            self._move_to(sysid, target_data['coordinates'])
+            return self._move_to(sysid, target_data['coordinates'])
 
     def _move_to(self, sysid, target_coor):
         data = self.sysids[sysid]
         handler_coor = data['coordinates']
+        actual_from = [handler_coor[0], handler_coor[1]]
         distance = distance_to_point(handler_coor, target_coor)
 
         speed = data['speed'] * self.TIME_STEP
@@ -244,6 +233,11 @@ class FightHandler(BaseHandler):
             handler_coor[1] + (speed * (target_coor[1] - handler_coor[1]) / distance))
 
         self.check_range_listeners(sysid)
+        return {
+            'do': 'move',
+            'from': actual_from,
+            'to': [handler_coor[0], handler_coor[1]]
+        }
 
     def check_range_listeners(self, sysid):
         # TODO: check this one
@@ -260,12 +254,19 @@ class FightHandler(BaseHandler):
         charging = attacker_data.setdefault('charging', 0)
         charging += self.TIME_STEP * attacker_data['fire_speed']
         attacker_data['charging'] = charging
+        actual = {'do': 'charging'}
         if charging >= 1:
             target_data['health'] -= attacker_data['fire_demage']
             attacker_data['charging'] -= 1
-
+            actual = {
+                'do': 'fire',
+                'tosysid': target_data['sysid'],
+                'damaged': [target_data['sysid']]
+            }
             if target_data['health'] <= 0:
                 self._dead(target_sysid)
+                actual['killed'] = [target_data['sysid']]
+        return actual
 
     def _dead(self, sysid):
         data = self.sysids.pop(sysid)
@@ -277,11 +278,7 @@ class FightHandler(BaseHandler):
                 })
 
 
-
-
-
-
 class Referee(RefereeBase):
     ENVIRONMENTS = settings_env.ENVIRONMENTS
-    EDITOR_LOAD_ARGS = ('players', 'action', 'env_name')
-    HANDLERS = {'fight': FightHandler}
+    EDITOR_LOAD_ARGS = ('code', 'action', 'env_name')
+    HANDLERS = {'check': FightHandler}
