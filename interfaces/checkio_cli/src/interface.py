@@ -103,13 +103,7 @@ class FightHandler(BaseHandler):
             )
 
     def short_name(self, item):
-        out_line = ''
-        if item['type'] == 'defender':
-            out_line += 'D'
-        else:
-            out_line += 'U'
-        out_line += str(item['player'])
-        return out_line
+        return item['type'][0].upper() + str(item['player'])
 
 
 class ServerController(TCPConsoleServer):

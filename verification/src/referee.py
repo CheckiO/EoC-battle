@@ -2,6 +2,7 @@ from tornado import gen
 
 from checkio_referee import RefereeBase
 from checkio_referee.handlers.base import BaseHandler
+from copy import copy
 
 from tornado.ioloop import IOLoop
 
@@ -21,6 +22,7 @@ class FightHandler(BaseHandler):
 
     def __init__(self, editor_data, editor_client, referee):
         self.initial_data = editor_data['code']
+        self.players = set(range(len(self.initial_data['players'])))
         self.TIME_STEP = 0.1
         self.SYS_TIME_STEP = 0.1
         self.sysids = {}
@@ -100,13 +102,27 @@ class FightHandler(BaseHandler):
         self.make_steps()
         yield sysids
 
-    def get_winner(self):
-        active_players = set()
+    def is_defeated_units(self, player_id):
         for item in self.sysids.values():
-            active_players.add(item['player'])
-            if len(active_players) > 1:
-                return None
-        return list(active_players)[0]
+            if item['player'] == player_id and item['type'] == 'unit':
+                return False
+        return True
+
+    def is_defeated_center(self, player_id):
+        for item in self.sysids.values():
+            if item['player'] == player_id and item['type'] == 'center':
+                return False
+        return True
+
+    def get_winner(self):
+        for player_id in list(self.players):
+            if getattr(self, 'is_defeated_' +
+                       self.get_player_attr(player_id, 'defeat'))(player_id):
+                self.players.remove(player_id)
+        if len(self.players) > 1:
+            return None
+        else:
+            return list(self.players)[0]
 
     def make_steps(self):
         self.show_data()
@@ -281,4 +297,4 @@ class FightHandler(BaseHandler):
 class Referee(RefereeBase):
     ENVIRONMENTS = settings_env.ENVIRONMENTS
     EDITOR_LOAD_ARGS = ('code', 'action', 'env_name')
-    HANDLERS = {'check': FightHandler}
+    HANDLERS = {'check': FightHandler, 'run': FightHandler}
