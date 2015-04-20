@@ -1,54 +1,75 @@
 import sys
+from queue import Queue
+
 from checkio_executor_python.client import ClientLoop, RefereeClient
 from checkio_executor_python.execs import Runner
+
 from battle import commander
 
 
-Runner.ALLOWED_MODULES += ['battle', 'battle.commander']  # OMFG
+def _make_id(target):
+    if hasattr(target, '__func__'):
+        return id(target.__self__), id(target.__func__)
+    return id(target)
 
 
 class PlayerRefereeClient(RefereeClient):
-    next_subscription_key = 1
-    subscriptions = {}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._signals = {}
+        self._signals_calls = Queue()
+
 
     def _get_response_json(self):
-        resp = super()._get_response_json()
-        if not resp:
-            return resp
-        if 'action' not in resp:
-            return resp
-        attr_name = 'action_' + resp['action']
-        if hasattr(self, attr_name):
-            getattr(self, attr_name)(resp)
-            return self._get_response_json()
-        else:
-            return resp
+        response = super()._get_response_json()
+        if not response:
+            return
 
-    def action_raise(self, data):
-        func, w_data = self.subscriptions[data['key']]
-        call_data = {
-            'data': data['data']
-        }
-        call_data.update(w_data)
-        func(**call_data)
+        method = response.get('method')
+        if not method:
+            return response
 
-    def _subscribe(self, key, function, data):
-        self.subscriptions[key] = (function, data)
+        if method == 'signal':
+            # In situation, when user code select data but received signal,
+            # we mut finish select and then run signal.
+            # It's can be multiple signal calls per one select, so all signals put into FIFO
 
-    def subscribe(self, what, function, call_data=None, back_data=None):
-        key = str(self.next_subscription_key)
-        result = self.request({'do': 'subscribe', 'data': call_data, 'key': key, 'what': what})
-        if result['ok'] == 'ok':
-            self._subscribe(key, function, {
-                'what': what,
-                'call_data': call_data,
-                'back_data': back_data
+            self._signals_calls.put({
+                'lookup_key': response['lookup_key'],
+                'data': response['data']
             })
-            self.next_subscription_key += 1
+
+            new_response = self._get_response_json()
+
+            signal_kwargs = self._signals_calls.get()
+            self._send_signal(**signal_kwargs)
+            return new_response
+        return response
+
+    def _send_signal(self, lookup_key, data):
+        callback = self._signals[lookup_key]
+        callback(**data)
+
+    def _subscribe(self, lookup_key, callback):
+        self._signals[lookup_key] = callback
+
+    def subscribe(self, event, callback, data=None):
+        lookup_key = _make_id(callback)
+        response = self.request({'method': 'subscribe', 'lookup_key': lookup_key, 'event': event,
+                                 'data': data})
+        if response.get('status') == 200:
+            self._subscribe(lookup_key, callback)
+
+    def select(self, fields):
+        return self.request({'method': 'select', 'fields': fields})
+
+    def set_action(self, action, data):
+        return self.request({'method': 'set_action', 'action': action, 'data': data})
 
 
 class PlayerRunner(Runner):
-    pass
+    ALLOWED_MODULES = Runner.ALLOWED_MODULES + ['battle', 'battle.commander']
 
 
 class PlayerClientLoop(ClientLoop):
@@ -63,5 +84,5 @@ class PlayerClientLoop(ClientLoop):
 
 
 client = PlayerClientLoop(int(sys.argv[1]), sys.argv[2])
-commander.set_client(client)
+commander.Client.set_client(client)
 client.start()
