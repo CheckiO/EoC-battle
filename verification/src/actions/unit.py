@@ -1,20 +1,20 @@
-from . import ItemActions, distance_to_point
+from .base import BaseItemActions, distance_to_point
 from .exceptions import ActionValidateError
 
 
-class UnitActions(ItemActions):
+class UnitActions(BaseItemActions):
 
     def actions_init(self):
         actions = super().actions_init()
-        return actions.update({
+        actions.update({
             'move': self.action_move
         })
+        return actions
 
     def action_attack(self, data):
-        enemy = self._fight_handler.fighters.get(data['item_id'])
+        enemy = self._fight_handler.fighters.get(data['id'])
         if enemy is None:
             return  # WTF
-
         distance_to_enemy = distance_to_point(enemy.coordinates, self._item.coordinates)
         item_range = self._item.range
         if distance_to_enemy > item_range:
@@ -45,6 +45,6 @@ class UnitActions(ItemActions):
         }
 
     def validate_attack(self, action, data):
-        enemy = self._fight_handler.fighters.get(data['item_id'])
+        enemy = self._fight_handler.fighters.get(data['id'])
         if enemy.player['id'] == self._item.player['id']:
             raise ActionValidateError("Can not attack own item")

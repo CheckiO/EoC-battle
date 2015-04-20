@@ -30,29 +30,31 @@ class FightHandler(BaseHandler):
 
         players_groups = [[], []]
         for item in data['units']:
-            players_groups[item['player']].append(item)
+            players_groups[item['player']['id']].append(item)
             coordinates = item['coordinates']
             r_coordinates = (round(coordinates[0] * MAP_X), round(coordinates[1] * MAP_X))
             out_map[r_coordinates[0]][r_coordinates[1]] = item
-            if 'size' in item:
-                size = round(item['size'] * MAP_X)
-                for xs in range(r_coordinates[0] - size, r_coordinates[0] + size + 1):
-                    if xs < 0:
+            size = item.get('size')
+            if not size:
+                continue
+            size = round(item['size'] * MAP_X)
+            for xs in range(r_coordinates[0] - size, r_coordinates[0] + size + 1):
+                if xs < 0:
+                    continue
+                for ys in range(r_coordinates[1] - size, r_coordinates[1] + size + 1):
+                    if ys < 0:
                         continue
-                    for ys in range(r_coordinates[1] - size, r_coordinates[1] + size + 1):
-                        if ys < 0:
+                    try:
+                        if out_map[xs][ys] is not None:
                             continue
-                        try:
-                            if out_map[xs][ys] is not None:
-                                continue
-                        except IndexError:
-                            continue
+                    except IndexError:
+                        continue
 
-                        out_map[xs][ys] = MAP_BUILDING
+                    out_map[xs][ys] = MAP_BUILDING
 
         print()
         print('-'*30)
-        print('{:<10}'.format(round(data['cur_time']*1.0, 4)), end='')
+        print('{:<10}'.format(round(data['current_game_time']*1.0, 4)), end='')
         print('-'*20)
         print('-'*30)
         print('  ', end='')
@@ -76,30 +78,28 @@ class FightHandler(BaseHandler):
         for num, player in enumerate(players_groups):
             print('PLAYER {}:'.format(num + 1))
             for item in player:
-                print('  {sysid}{type} {health} - {str_actual}'.format(
-                    sysid=item['sysid'],
+                print('  {sysid}{type} {health} - {str_state}'.format(
+                    sysid=item['id'],
                     type=item['type'],
                     health=item['health'],
-                    str_actual=self.str_actual(item['actual'])
+                    str_state=self.str_state(item['state'])
                 ))
         if 'winner' in data['status']:
-            print('Game Over!!! The Winner is {}'.format(data['status']['winner']))
+            print('Game Over!!! The Winner is {}'.format(data['status']['winner']['id']))
 
-    def str_actual(self, actual):
-        if actual['do'] == 'stand':
-            return 'stand'
-        if actual['do'] == 'charging':
-            return 'charging'
-        if actual['do'] == 'fire':
-            str_do = 'fire to ' + str(actual['tosysid'])
-            if 'damaged' in actual:
-                str_do += ' and damaged ' + ','.join(map(str, actual['damaged']))
-            if 'killed' in actual:
-                str_do += ' and killed ' + ','.join(map(str, actual['killed']))
-            return str_do
-        if actual['do'] == 'move':
+    def str_state(self, state):
+        if state['action'] in ('stand', 'charging', 'dead'):
+            return state['action']
+        if state['action'] == 'attack':
+            str_action = 'fire to ' + str(state['aid'])
+            if 'damaged' in state:
+                str_action += ' and damaged ' + ','.join(map(str, state['damaged']))
+            if 'killed' in state:
+                str_action += ' and killed ' + ','.join(map(str, state['killed']))
+            return str_action
+        if state['action'] == 'move':
             return 'move from {:.4f}, {:.4f} to {:.4f}, {:.4f}'.format(
-                *(actual['from']+actual['to'])
+                *(state['from']+state['to'])
             )
 
     def short_name(self, item):

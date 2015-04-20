@@ -15,10 +15,17 @@ class Client(object):
         return self.CLIENT.select(fields=fields)
 
     def ask_initials(self):
-        return self.select(['initial'])
+        return self.select([{
+            'field': 'initials'
+        }])
 
     def ask_nearest_enemy(self):
-        return self.select(['nearest_enemy'])
+        return self.select([{
+            'field': 'nearest_enemy',
+            'data': {
+                'id': self.initials['id']
+            }
+        }])
 
     def subscribe(self, event, callback, data=None):
         return self.CLIENT.subscribe(event, callback, data)
@@ -33,7 +40,7 @@ class Client(object):
         return self.subscribe('item_in_my_range', callback)
 
     def subscribe_death_item(self, item_id, callback):
-        return self.subscribe('death_item', callback, {'id': item_id})
+        return self.subscribe('death', callback, {'id': item_id})
 
     def attack_item(self, item_id):
         return self.CLIENT.set_action('attack', {'id': item_id})

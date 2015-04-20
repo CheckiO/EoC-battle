@@ -1,5 +1,5 @@
 from .base import BaseItemActions
 
 
-class DefenceActions(BaseItemActions):
+class CenterActions(BaseItemActions):
     pass

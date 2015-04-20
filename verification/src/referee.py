@@ -1,5 +1,3 @@
-import uuid
-
 from tornado import gen
 from tornado.ioloop import IOLoop
 
@@ -9,6 +7,7 @@ from checkio_referee.handlers.base import BaseHandler
 import settings_env
 from actions import ItemActions
 from actions.exceptions import ActionValidateError
+from environment import BattleEnvironmentsController
 
 
 # TEMPORARILY  HERE
@@ -24,10 +23,12 @@ class FightItem(object):
     HANDLERS = None
     ACTIONS = None
 
+    ITEMS_COUNT = 0
+
     def __init__(self, item_data, player, fight_handler):
         self.init_handlers()
         
-        self.id = uuid.uuid4().hex
+        self.id = self.generate_id()
         self.player = player
         self.type = item_data.get('type')
         self.health = item_data.get('health')
@@ -42,16 +43,21 @@ class FightItem(object):
         self.action = item_data.get('action')
         self.charging = 0
 
-        self._fight_handler = fight_handler,
-        self._initial = item_data,
+        self._fight_handler = fight_handler
+        self._initial = item_data
         self._env = None
         self._state = None
-        self._actions_handlers = ItemActions(self.type, fight_handler=fight_handler)
+        self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
         self.set_state_stand()
 
     @property
     def is_dead(self):
         return self.health <= 0
+
+    @classmethod
+    def generate_id(cls):
+        cls.ITEMS_COUNT += 1
+        return cls.ITEMS_COUNT
 
     @property
     def info(self):
@@ -80,9 +86,12 @@ class FightItem(object):
     def set_state_stand(self):
         self._state = {'action': 'stand'}
 
+    def set_state_dead(self):
+        self._state = {'action': 'dead'}
+
     def set_coordinates(self, coordinates):
-        self._fight_handler.send_range_events(self.id)
         self.coordinates = coordinates
+        self._fight_handler.send_range_events(self.id)
 
     @property
     def is_executable(self):
@@ -101,12 +110,16 @@ class FightItem(object):
         self._env = yield self._fight_handler.get_environment(self.player['env_name'])
         result = yield self._env.run_code(self.code)
         while True:
+            status = result.pop('status')
+            if status and status != 'success':
+                pass  # TODO:
             self.handle_result(result)
             result = yield self._env.read_message()
 
     def handle_result(self, data):
-        handler_name = data.pop('method')
+        handler_name = data.pop('method', None)
         if handler_name is None:
+            # raise Exception("WTF")
             return  # TODO: this data is not from commander, then for what?
         handler = self.HANDLERS[handler_name]
         handler(**data)
@@ -114,17 +127,21 @@ class FightItem(object):
     def method_select(self, fields):
         data = {}
         for field in fields:
-            if field['field'] == 'info':
-                data.update(self._select_info(field['data']))
+            if field['field'] == 'initials':
+                data.update(self._select_info(self.id))
+            elif field['field'] == 'info':
+                data.update(self._select_info(field['data']['id']))
             elif field['field'] == 'nearest_enemy':
-                data.update(self._select_nearest_enemy(field['data']))
+                data.update(self._select_nearest_enemy(field['data']['id']))
+            else:
+                raise Exception("Wtf")
         self._env.select_result(data)
 
-    def _select_info(self, data):
-        return self._fight_handler.get_item_info(data['id'])
+    def _select_info(self, item_id):
+        return self._fight_handler.get_item_info(item_id)
 
-    def _select_nearest_enemy(self, data):
-        return self._fight_handler.get_nearest_enemy(data['id'])
+    def _select_nearest_enemy(self, item_id):
+        return self._fight_handler.get_nearest_enemy(item_id)
 
     def method_set_action(self, action, data):
         try:
@@ -142,7 +159,7 @@ class FightItem(object):
         self._env.confirm()
 
     def do_frame_action(self):
-        self._actions_handlers.do_action(self.action)
+        self._state = self._actions_handlers.do_action(self.action)
 
     def send_event(self, lookup_key, data):
         self._env.send_event(lookup_key, data)
@@ -171,7 +188,7 @@ class FightHandler(BaseHandler):
         self.players = None
         self.fighters = {}
         self.current_frame = 0
-        self.game_time = 0
+        self.current_game_time = 0
         self.initial_data = editor_data['code']  # TODO: rename attr
         super().__init__(editor_data, editor_client, referee)
 
@@ -195,15 +212,13 @@ class FightHandler(BaseHandler):
     def compute_frame(self):
         self.send_frame()
         self.current_frame += 1
-        self.game_time += self.GAME_FRAME_TIME
-
+        self.current_game_time += self.GAME_FRAME_TIME
         for key, fighter in self.fighters.items():
             if fighter.action is None:
                 fighter.set_state_stand()
                 continue
 
             if fighter.is_dead:
-                del self.fighters[key]
                 continue
             fighter.do_frame_action()
 
@@ -219,7 +234,7 @@ class FightHandler(BaseHandler):
                 del self.players[player_id]
 
             if len(self.players) == 1:
-                return self.players.values()[0]
+                return next (iter (self.players.values()))
         return None
 
     def _is_player_defeated(self, player):
@@ -232,7 +247,7 @@ class FightHandler(BaseHandler):
         for item in self.fighters.values():
             if item.player['id'] != player['id']:
                 continue
-            if item['type'] == item_require:
+            if item.type == item_require and not item.is_dead:
                 return False
         return True
 
@@ -249,7 +264,7 @@ class FightHandler(BaseHandler):
             'units': units,
             'map_size': MAP_SIZE,
             'current_frame': self.current_frame,
-            'game_time': self.game_time
+            'current_game_time': self.current_game_time
         })
 
     def get_item_info(self, item_id):
@@ -262,7 +277,7 @@ class FightHandler(BaseHandler):
         fighter = self.fighters[item_id]
 
         for enemy in self.fighters.values():
-            if enemy.player == fighter.player:
+            if enemy.player == fighter.player or enemy.is_dead:
                 continue
 
             length = distance_to_point(enemy.coordinates, fighter.coordinates)
@@ -275,7 +290,11 @@ class FightHandler(BaseHandler):
     def subscribe(self, event_name, item_id, lookup_key, data):
         if event_name not in self.EVENTS:
             return
-        subscribe_data = (item_id, lookup_key, data)
+        subscribe_data = {
+            'receiver_id': item_id,
+            'lookup_key': lookup_key,
+            'data': data
+        }
         event = self.EVENTS[event_name]
         if subscribe_data in event:
             return False
@@ -283,7 +302,7 @@ class FightHandler(BaseHandler):
         return True
 
     def unsubscribe(self, item):
-        for _, events in self.EVENTS:
+        for events in self.EVENTS.values():
             for event in events:
                 if event['receiver_id'] == item.id:
                     events.remove(event)
@@ -291,10 +310,10 @@ class FightHandler(BaseHandler):
     def send_death_event(self, item_id):
         events = self.EVENTS['death']
         for event in events:
-            if event['data']['item_id'] != item_id:
+            if event['data']['id'] != item_id:
                 continue
             receiver = self.fighters[event['receiver_id']]
-            receiver.send_event(lookup_key=event['lookup_key'], data={'item_id': item_id})
+            receiver.send_event(lookup_key=event['lookup_key'], data={'id': item_id})
 
     def send_range_events(self, item_id):
         self._send_my_range_event(item_id)
@@ -311,8 +330,7 @@ class FightHandler(BaseHandler):
             distance = distance_to_point(receiver.coordinates, event_item.coordinates)
             if distance > receiver.range:
                 continue
-
-            receiver.send_event(lookup_key=event['lookup_key'], data={'item_id': item_id})
+            receiver.send_event(lookup_key=event['lookup_key'], data={'id': item_id})
 
     def _send_custom_range_event(self, item_id):
         event_item = self.fighters[item_id]
@@ -325,11 +343,17 @@ class FightHandler(BaseHandler):
             distance = distance_to_point(event['data']['coordinates'], event_item.coordinates)
             if distance > event['data']['range']:
                 continue
-
-            receiver.send_event(lookup_key=event['lookup_key'], data={'item_id': item_id})
+            receiver.send_event(lookup_key=event['lookup_key'], data={'id': item_id})
 
 
 class Referee(RefereeBase):
     ENVIRONMENTS = settings_env.ENVIRONMENTS
     EDITOR_LOAD_ARGS = ('code', 'action', 'env_name')
     HANDLERS = {'check': FightHandler, 'run': FightHandler}
+
+    @property
+    def environments_controller(self):
+        if not hasattr(self, '_environments_controller'):
+            setattr(self, '_environments_controller', BattleEnvironmentsController(
+                self.ENVIRONMENTS))
+        return getattr(self, '_environments_controller')
