@@ -15,6 +15,18 @@ def _make_id(target):
     return id(target)
 
 
+class PlayerRefereeRunner(Runner):
+    def __init__(self, *args, **kwargs):
+        self._events = {}
+        super().__init__(*args, **kwargs)
+
+    def action_event(self, data):
+        self._events[data['lookup_key']](data['data'])
+
+    def subscribe(self, lookup_key, callback):
+        self._events[lookup_key] = callback
+
+
 class PlayerRefereeClient(RefereeClient):
 
     def __init__(self, *args, **kwargs):
@@ -28,12 +40,12 @@ class PlayerRefereeClient(RefereeClient):
 
     def _request(self, data, skipp_result=None):
         data['status'] = 'success'
-        return self.request(data, skipp_result, do_not_clean_up=True)
+        return self.request(data, skipp_result, skip_clean_up=True)
 
     def request(self, *args, **kwargs):
-        do_not_clean_up = kwargs.pop('do_not_clean_up')
+        skip_clean_up = kwargs.pop('skip_clean_up', None)
 
-        if not do_not_clean_up:
+        if not skip_clean_up:
             self.clean_up()
 
         return super().request(*args, **kwargs)
@@ -41,17 +53,17 @@ class PlayerRefereeClient(RefereeClient):
     def clean_up(self):
         while not self.events_call.empty():
             response = self.events_call.get()
-            self._send_event(response['lookup_key'], response['data'])
+            self.runner.action_event(response)
 
     def _send_event(self, lookup_key, data):
         callback = self._events[lookup_key]
         callback(data=data)
 
     def _subscribe(self, lookup_key, callback):
-        self._events[lookup_key] = callback
+        self.runner.subscribe(lookup_key, callback)
 
     def wait_actual_response(self, response):
-        if response.get('method') != 'event':
+        if response.get('action') != 'event':
             return response
 
         self.events_call.put(response)
@@ -80,6 +92,7 @@ class PlayerRefereeClient(RefereeClient):
 
 class PlayerClientLoop(ClientLoop):
     cls_client = PlayerRefereeClient
+    cls_runner = PlayerRefereeRunner
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

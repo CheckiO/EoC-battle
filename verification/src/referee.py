@@ -110,10 +110,11 @@ class FightItem(object):
         self._env = yield self._fight_handler.get_environment(self.player['env_name'])
         result = yield self._env.run_code(self.code)
         while True:
-            status = result.pop('status')
-            if status and status != 'success':
-                pass  # TODO:
-            self.handle_result(result)
+            if result is not None:
+                status = result.pop('status')
+                if status and status != 'success':
+                    pass  # TODO:
+                self.handle_result(result)
             result = yield self._env.read_message()
 
     def handle_result(self, data):

@@ -24,7 +24,7 @@ class BattleEnvironmentClient(EnvironmentClient):
 
     def send_event(self, lookup_key, data):
         self.write({
-            'method': 'event',
+            'action': 'event',
             'lookup_key': lookup_key,
             'data': data
         })
