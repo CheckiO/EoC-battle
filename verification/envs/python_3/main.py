@@ -38,13 +38,7 @@ class PlayerRefereeClient(RefereeClient):
     def set_runner(self, runner):
         self.runner = runner
 
-    def _request(self, data, skipp_result=None):
-        data['status'] = 'success'
-        return self.request(data, skipp_result, skip_clean_up=True)
-
-    def request(self, *args, **kwargs):
-        skip_clean_up = kwargs.pop('skip_clean_up', None)
-
+    def request(self, *args, skip_clean_up=None, **kwargs):
         if not skip_clean_up:
             self.clean_up()
 
@@ -59,9 +53,6 @@ class PlayerRefereeClient(RefereeClient):
         callback = self._events[lookup_key]
         callback(data=data)
 
-    def _subscribe(self, lookup_key, callback):
-        self.runner.subscribe(lookup_key, callback)
-
     def wait_actual_response(self, response):
         if response.get('action') != 'event':
             return response
@@ -69,8 +60,9 @@ class PlayerRefereeClient(RefereeClient):
         self.events_call.put(response)
         return self.wait_actual_response(self._get_response_json())
 
-    def actual_request(self, *args, **kwargs):
-        response = self._request(*args, **kwargs)
+    def actual_request(self, data, *args, **kwargs):
+        data['status'] = 'success'  # hack because of backward requesting
+        response = self.request(data, *args, **kwargs)
         return self.wait_actual_response(response)
 
     def subscribe(self, event, callback, data=None):
@@ -78,7 +70,7 @@ class PlayerRefereeClient(RefereeClient):
         response = self.actual_request({'method': 'subscribe', 'lookup_key': lookup_key,
                                         'event': event, 'data': data})
         if response.get('status') == 200:
-            self._subscribe(lookup_key, callback)
+            self.runner.subscribe(lookup_key, callback)
             return True
         return False
 
