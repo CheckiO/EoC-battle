@@ -99,6 +99,12 @@ class FightItem(object):
             'subscribe': self.method_subscribe,
         }
 
+        self.SELECT_HANDLERS = {
+            'initials': self.select_initials,
+            'info': self.select_info,
+            'nearest_enemy': self.select_nearest_enemy
+        }
+
     def set_state_stand(self):
         self._state = {'action': 'stand'}
 
@@ -142,23 +148,28 @@ class FightItem(object):
         handler(**data)
 
     def method_select(self, fields):
-        data = {}
+        data = []
         for field in fields:
-            if field['field'] == 'initials':
-                data.update(self._select_info(self.id))
-            elif field['field'] == 'info':
-                data.update(self._select_info(field['data']['id']))
-            elif field['field'] == 'nearest_enemy':
-                data.update(self._select_nearest_enemy(field['data']['id']))
-            else:
-                raise Exception("Wtf")
+            field_key = field.get('field')
+            if field_key is None:
+                data.append({'error': 'wrong format, field did not passed'})
+                continue
+            if field_key not in self.SELECT_HANDLERS:
+                data.append({'error': 'wrong format, wrong field'})
+                continue
+
+            data.append(self.SELECT_HANDLERS[field_key](field.get('data')))
+
         self._env.select_result(data)
 
-    def _select_info(self, item_id):
-        return self._fight_handler.get_item_info(item_id)
+    def select_initials(self, data):
+        return self._fight_handler.get_item_info(self.id)
 
-    def _select_nearest_enemy(self, item_id):
-        return self._fight_handler.get_nearest_enemy(item_id)
+    def select_info(self, data):
+        return self._fight_handler.get_item_info(data['id'])
+
+    def select_nearest_enemy(self, data):
+        return self._fight_handler.get_nearest_enemy(data['id'])
 
     def method_set_action(self, action, data):
         try:

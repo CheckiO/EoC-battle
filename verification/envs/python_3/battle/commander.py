@@ -17,7 +17,7 @@ class Client(object):
     def ask_initials(self):
         return self.select([{
             'field': 'initials'
-        }])
+        }])[0]
 
     def ask_nearest_enemy(self):
         return self.select([{
@@ -25,7 +25,7 @@ class Client(object):
             'data': {
                 'id': self.initials['id']
             }
-        }])
+        }])[0]
 
     def subscribe(self, event, callback, data=None):
         return self.CLIENT.subscribe(event, callback, data)
