@@ -43,6 +43,9 @@ class FightItem(object):
         self.speed = item_data.get('speed')
         self.coordinates = item_data.get('coordinates')  # list of two
         self.code = item_data.get('code')
+        if self.code in player['codes']:
+            self.code = player['codes'][self.code]
+
         self.fire_speed = item_data.get('fire_speed')
         self.damage = item_data.get('damage')
         self.range = item_data.get('range')
