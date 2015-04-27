@@ -1,67 +1,96 @@
 import sys
+from queue import Queue
+
 from checkio_executor_python.client import ClientLoop, RefereeClient
 from checkio_executor_python.execs import Runner
-from battle import commander
 
+from battle import commander
 
 Runner.ALLOWED_MODULES += ['battle', 'battle.commander']  # OMFG
 
 
+def _make_id(target):
+    if hasattr(target, '__func__'):
+        return id(target.__self__), id(target.__func__)
+    return id(target)
+
+
+class PlayerRefereeRunner(Runner):
+    def __init__(self, *args, **kwargs):
+        self._events = {}
+        super().__init__(*args, **kwargs)
+
+    def action_event(self, data):
+        self._events[data['lookup_key']](data['data'])
+
+    def subscribe(self, lookup_key, callback):
+        self._events[lookup_key] = callback
+
+
 class PlayerRefereeClient(RefereeClient):
-    next_subscription_key = 1
-    subscriptions = {}
 
-    def _get_response_json(self):
-        resp = super()._get_response_json()
-        if not resp:
-            return resp
-        if 'action' not in resp:
-            return resp
-        attr_name = 'action_' + resp['action']
-        if hasattr(self, attr_name):
-            getattr(self, attr_name)(resp)
-            return self._get_response_json()
-        else:
-            return resp
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._events = {}
+        self.events_call = Queue()
+        self.runner = None
 
-    def action_raise(self, data):
-        func, w_data = self.subscriptions[data['key']]
-        call_data = {
-            'data': data['data']
-        }
-        call_data.update(w_data)
-        func(**call_data)
+    def set_runner(self, runner):
+        self.runner = runner
 
-    def _subscribe(self, key, function, data):
-        self.subscriptions[key] = (function, data)
+    def request(self, *args, skip_clean_up=None, **kwargs):
+        if not skip_clean_up:
+            self.clean_up()
 
-    def subscribe(self, what, function, call_data=None, back_data=None):
-        key = str(self.next_subscription_key)
-        result = self.request({'do': 'subscribe', 'data': call_data, 'key': key, 'what': what})
-        if result['ok'] == 'ok':
-            self._subscribe(key, function, {
-                'what': what,
-                'call_data': call_data,
-                'back_data': back_data
-            })
-            self.next_subscription_key += 1
+        return super().request(*args, **kwargs)
 
+    def clean_up(self):
+        while not self.events_call.empty():
+            response = self.events_call.get()
+            self.runner.action_event(response)
 
-class PlayerRunner(Runner):
-    pass
+    def _send_event(self, lookup_key, data):
+        callback = self._events[lookup_key]
+        callback(data=data)
+
+    def wait_actual_response(self, response):
+        if response.get('action') != 'event':
+            return response
+
+        self.events_call.put(response)
+        return self.wait_actual_response(self._get_response_json())
+
+    def actual_request(self, data, *args, **kwargs):
+        data['status'] = 'success'  # hack because of backward requesting
+        response = self.request(data, *args, **kwargs)
+        return self.wait_actual_response(response)
+
+    def subscribe(self, event, callback, data=None):
+        lookup_key = _make_id(callback)
+        response = self.actual_request({'method': 'subscribe', 'lookup_key': lookup_key,
+                                        'event': event, 'data': data})
+        if response.get('status') == 200:
+            self.runner.subscribe(lookup_key, callback)
+            return True
+        return False
+
+    def select(self, fields):
+        response = self.actual_request({'method': 'select', 'fields': fields})
+        return response['data']
+
+    def set_action(self, action, data):
+        return self.actual_request({'method': 'set_action', 'action': action, 'data': data})
 
 
 class PlayerClientLoop(ClientLoop):
     cls_client = PlayerRefereeClient
-    cls_runner = PlayerRunner
+    cls_runner = PlayerRefereeRunner
 
-    def subscribe(self, *args, **kwargs):
-        return self.client.subscribe(*args, **kwargs)
-
-    def request(self, *args, **kwargs):
-        return self.client.request(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.client.set_runner(self.runner)
 
 
-client = PlayerClientLoop(int(sys.argv[1]), sys.argv[2])
-commander.set_client(client)
-client.start()
+client_loop = PlayerClientLoop(int(sys.argv[1]), sys.argv[2])
+commander.Client.set_client(client_loop.client)
+client_loop.start()

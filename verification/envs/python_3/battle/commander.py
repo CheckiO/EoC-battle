@@ -1,55 +1,46 @@
 
-CLIENT = None
+class Client(object):
 
+    CLIENT = None
 
-def set_client(client):
-    global CLIENT
-    CLIENT = client
+    def __init__(self):
+        assert self.CLIENT
+        self.initials = self.ask_initials()
 
+    @classmethod
+    def set_client(cls, client):
+        cls.CLIENT = client
 
-def client_request(data):
-    if CLIENT is None:
-        return {}
-    data['status'] = 'success'  # OMFG
-    return CLIENT.request(data)
+    def select(self, fields):
+        return self.CLIENT.select(fields=fields)
 
-# ASKS
+    def ask_initials(self):
+        return self.select([{
+            'field': 'initials'
+        }])
 
+    def ask_nearest_enemy(self):
+        return self.select([{
+            'field': 'nearest_enemy',
+            'data': {
+                'id': self.initials['id']
+            }
+        }])
 
-def ask(what, data=None):
-    return client_request({'do': 'ask', 'what': what, 'data': data})
+    def subscribe(self, event, callback, data=None):
+        return self.CLIENT.subscribe(event, callback, data)
 
+    def subscribe_item_in_range(self, callback, coordinates, range_value):
+        return self.subscribe('item_in_range', callback, {
+            'coordinates': coordinates,
+            'range': range_value
+        })
 
-def ask_initials():
-    return ask('initial')
+    def subscribe_item_in_my_range(self, callback):
+        return self.subscribe('item_in_my_range', callback)
 
+    def subscribe_death_item(self, item_id, callback):
+        return self.subscribe('death', callback, {'id': item_id})
 
-def ask_nearest_enemy():
-    return ask('nearest_enemy')
-
-# SUBSCRIBTIONS
-
-SUBSCRIBTIONS = {}
-NEXT_SUBSCRIBE_ID = 1
-
-
-def subscribe(what, function, data=None):
-    return CLIENT.subscribe(what, function, data)
-
-
-def subscribe_unit_in_my_range(radius, function):
-    return subscribe('unit_in_my_range', function, {'radius': radius})
-
-
-def subscribe_death_sysid(sysid, function):
-    return subscribe('death_sysid', function, {'sysid': sysid})
-
-
-# DOs
-
-def do(what, data=None):
-    return client_request({'do': 'do', 'what': what, 'data': data})
-
-
-def do_attack_sysid(sysid):
-    return do('attack', {'sysid': sysid})
+    def attack_item(self, item_id):
+        return self.CLIENT.set_action('attack', {'id': item_id})
