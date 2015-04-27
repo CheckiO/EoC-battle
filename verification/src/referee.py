@@ -10,16 +10,6 @@ from actions.exceptions import ActionValidateError
 from environment import BattleEnvironmentsController
 from tools.math import distance_to_point
 
-'''
-
-
-
-'''
-
-# TEMPORARILY  HERE
-# TODO: Pass it during map initialisation
-MAP_SIZE = (10, 10)
-
 
 class FightItem(object):
     '''
@@ -233,6 +223,7 @@ class FightHandler(BaseHandler):
                 units - to loose all the units
         '''
         self.players = None
+        self.map_size = (None, None)
         '''
             self.fighters is a disct of all available fighters on the map.
             where key is an id of the fighter and value is an object of FightItem
@@ -248,6 +239,7 @@ class FightHandler(BaseHandler):
         # WHY: can't we move an initialisation of players in the __init__ function?
         # in that case we can use it before start
         self.players = {p['id']: p for p in self.initial_data['players']}
+        self.map_size = self.initial_data['map_size']
         fight_items = []
         for item in self.initial_data['map']:
             player = self.players[item['player_id']]
@@ -323,7 +315,7 @@ class FightHandler(BaseHandler):
         self.editor_client.send_custom({
             'status': status,
             'units': units,
-            'map_size': MAP_SIZE,
+            'map_size': self.map_size,
             'current_frame': self.current_frame,
             'current_game_time': self.current_game_time
         })
