@@ -1,8 +1,5 @@
 from .exceptions import ActionValidateError
-
-
-def distance_to_point(point1, point2):
-    return ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5
+from tools.math import distance_to_point
 
 
 class BaseItemActions(object):

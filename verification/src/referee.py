@@ -8,18 +8,25 @@ import settings_env
 from actions import ItemActions
 from actions.exceptions import ActionValidateError
 from environment import BattleEnvironmentsController
+from tools.math import distance_to_point
 
+'''
+
+
+
+'''
 
 # TEMPORARILY  HERE
+# TODO: Pass it during map initialisation
 MAP_SIZE = (10, 10)
 
 
-def distance_to_point(point1, point2):
-    return ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5
-
-
 class FightItem(object):
-
+    '''
+        class for a single item in the fight.
+        It can be a simple building, a deffence building,
+        a unit that move and attack other buildings
+    '''
     HANDLERS = None
     ACTIONS = None
 
@@ -27,26 +34,29 @@ class FightItem(object):
 
     def __init__(self, item_data, player, fight_handler):
         self.init_handlers()
-        
         self.id = self.generate_id()
-        self.player = player
-        self.type = item_data.get('type')
+        self.player = player  # dict, data about the player who owns this Item
+        self.type = item_data.get('type')  # type of current Item
+        # available types: center, unit, defender
         self.health = item_data.get('health')
         self.size = item_data.get('size')
         self.speed = item_data.get('speed')
-        self.coordinates = item_data.get('coordinates')
+        self.coordinates = item_data.get('coordinates')  # list of two
         self.code = item_data.get('code')
         self.fire_speed = item_data.get('fire_speed')
         self.damage = item_data.get('damage')
         self.range = item_data.get('range')
 
-        self.action = item_data.get('action')
+        self.action = item_data.get('action')  # a current command that was send from code
         self.charging = 0
 
-        self._fight_handler = fight_handler
+        self._fight_handler = fight_handler  # object of FightHandler
         self._initial = item_data
-        self._env = None
-        self._state = None
+        self._env = None  # ??
+        self._state = None  # dict of current FightItem state
+        # every state has a key "action"
+        # {'action': 'stand'}
+        # {'action': 'dead'}
         self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
         self.set_state_stand()
 
@@ -77,6 +87,12 @@ class FightItem(object):
         }
 
     def init_handlers(self):
+        '''
+            there are only 3 kind of actions that can be send from FightItem to Referee
+            select - to ask data from system
+            set_action - to command unit to do
+            subscribe - to subscribe on some event
+        '''
         self.HANDLERS = {
             'select': self.method_select,
             'set_action': self.method_set_action,
@@ -166,12 +182,16 @@ class FightItem(object):
 
 
 class FightHandler(BaseHandler):
+    '''
+        The main class of the game.
+        Where all the game calculation do
+    '''
 
     FRAME_TIME = 0.1  # compute and send info each time per FRAME_TIME
     GAME_FRAME_TIME = 0.1  # per one FRAME_TIME in real, in game it would be GAME_FRAME_TIME
 
     """
-    Each item must have next structure:
+    Each item of an EVENT must have next structure:
     {
         'receiver_id': <item_id>,
         'lookup_key': <lookup_function_key>,
@@ -185,7 +205,23 @@ class FightHandler(BaseHandler):
     }
 
     def __init__(self, editor_data, editor_client, referee):
+        '''
+            self.players is a dict and will be defined at the start of the game
+            where key is player ID and value is a dict
+            {
+                'id': 0,
+                'env_name': 'python_3',
+                'defeat': 'center'
+            }
+            defeat shows the rules for defiting current player
+                center - to loose a command center
+                units - to loose all the units
+        '''
         self.players = None
+        '''
+            self.fighters is a disct of all available fighters on the map.
+            where key is an id of the fighter and value is an object of FightItem
+        '''
         self.fighters = {}
         self.current_frame = 0
         self.current_game_time = 0
@@ -194,7 +230,9 @@ class FightHandler(BaseHandler):
 
     @gen.coroutine
     def start(self):
-        self.players = {p['id']:p for p in self.initial_data['players']}
+        # WHY: can't we move an initialisation of players in the __init__ function?
+        # in that case we can use it before start
+        self.players = {p['id']: p for p in self.initial_data['players']}
         fight_items = []
         for item in self.initial_data['map']:
             player = self.players[item['player_id']]
@@ -210,10 +248,15 @@ class FightHandler(BaseHandler):
         yield fight_item.start()
 
     def compute_frame(self):
+        '''
+            calculate every frame and action for every FightItem
+        '''
         self.send_frame()
         self.current_frame += 1
         self.current_game_time += self.GAME_FRAME_TIME
         for key, fighter in self.fighters.items():
+            # WHY: can't we move in the FightItem class?
+            # When in can be None?
             if fighter.action is None:
                 fighter.set_state_stand()
                 continue
@@ -252,6 +295,9 @@ class FightHandler(BaseHandler):
         return True
 
     def send_frame(self, status=None):
+        '''
+            prepare and send data to an interface for visualisation
+        '''
         if status is None:
             status = {}
 
@@ -288,6 +334,10 @@ class FightHandler(BaseHandler):
         return self.get_item_info(nearest_enemy.id)
 
     def subscribe(self, event_name, item_id, lookup_key, data):
+        '''
+            subscribe an FightItem with ID "item_id" on event "event_name" with data "data"
+            and on item side it registered as lookup_key
+        '''
         if event_name not in self.EVENTS:
             return
         subscribe_data = {
@@ -302,12 +352,22 @@ class FightHandler(BaseHandler):
         return True
 
     def unsubscribe(self, item):
+        '''
+            unsubscibe item from all events
+        '''
+        # WHY: don't we call this method unsubscirbe_item or unsubscribe_all
+        # because if we have subscribe methon working in one way then
+        # unsubscibe should work in oposite
         for events in self.EVENTS.values():
             for event in events:
                 if event['receiver_id'] == item.id:
                     events.remove(event)
 
     def send_death_event(self, item_id):
+        '''
+            send "death" event of FightItem with ID "item_id"
+            to all FightItem who subscribe on it
+        '''
         events = self.EVENTS['death']
         for event in events:
             if event['data']['id'] != item_id:
@@ -316,6 +376,12 @@ class FightHandler(BaseHandler):
             receiver.send_event(lookup_key=event['lookup_key'], data={'id': item_id})
 
     def send_range_events(self, item_id):
+        '''
+            send "range" event to all FightItems who subscribe on changing event
+            if FightItem with ID "item_id" gets in their range
+        '''
+        # TODO: to make 2 signals. get_in_range and get_out_range
+        # TODO: if item is moving it is imposible for stable unit to get to its range
         self._send_my_range_event(item_id)
         self._send_custom_range_event(item_id)
 
