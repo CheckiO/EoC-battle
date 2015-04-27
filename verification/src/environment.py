@@ -6,25 +6,23 @@ class BattleEnvironmentClient(EnvironmentClient):
 
     def select_result(self, data):
         self.write({
-            'method': 'select_result',
+            'status': 200,
             'data': data
         })
 
     def confirm(self):
         self.write({
-            'method': 'confirm',
             'status': 200
         })
 
     def bad_action(self):
         self.write({
-            'method': 'confirm',
             'status': 400
         })
 
     def send_event(self, lookup_key, data):
         self.write({
-            'method': 'event',
+            'action': 'event',
             'lookup_key': lookup_key,
             'data': data
         })

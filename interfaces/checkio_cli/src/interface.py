@@ -22,6 +22,9 @@ class FightHandler(BaseHandler):
             MAP_X = gg['MAP_X']
         self.ROUTING['custom'] = 'handler_custom'
 
+    def handler_stderr(self, line, request_id, stream_r):
+        print('ERROR {}: {}'.format(request_id, line))
+
     def handler_custom(self, data, request_id, stream_r):
 
         out_map = []
@@ -103,7 +106,7 @@ class FightHandler(BaseHandler):
             )
 
     def short_name(self, item):
-        return item['type'][0].upper() + str(item['player'])
+        return item['type'][0].upper() + str(item['player']['id'])
 
 
 class ServerController(TCPConsoleServer):
