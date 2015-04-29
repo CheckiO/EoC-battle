@@ -40,11 +40,11 @@ class FightHandler(BaseHandler):
             size = item.get('size')
             if not size:
                 continue
-            size = round(item['size'] * MAP_X)
-            for xs in range(r_coordinates[0] - size, r_coordinates[0] + size + 1):
+            half_size = round((item['size'] / 2) * MAP_X)
+            for xs in range(r_coordinates[0] - half_size, r_coordinates[0] + half_size + 1):
                 if xs < 0:
                     continue
-                for ys in range(r_coordinates[1] - size, r_coordinates[1] + size + 1):
+                for ys in range(r_coordinates[1] - half_size, r_coordinates[1] + half_size + 1):
                     if ys < 0:
                         continue
                     try:

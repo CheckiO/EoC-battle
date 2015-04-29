@@ -6,7 +6,7 @@ map_one_defender = [
         "type": "defender",
         "script": "simple.py",
         "coordinates": [3, 3],
-        "size": 0.5,
+        "size": 1,
         "fire_speed": 1,
         "fire_demage": 10.5,
         "range": 2,
