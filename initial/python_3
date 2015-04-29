@@ -2,26 +2,48 @@ MAP_X = 2
 
 map_one_defender = [
     {
-        "player": 0,
+        "player_id": 0,
         "type": "defender",
-        "script": "simple.py",
+        "code": 'simple.py',
         "coordinates": [3, 3],
         "size": 1,
         "fire_speed": 1,
-        "fire_demage": 10.5,
+        "damage": 10.5,
         "range": 2,
-        "health": 100
+        "health": 140
     },
     {
-        "player": 1,
+        "player_id": 0,
+        "type": "center",
+        "coordinates": [2, 6],
+        "size": 3,
+        "health": 1000
+    },
+    {
+        "player_id": 0,
+        "type": "building",
+        "name": "laboratory",
+        "coordinates": [7, 2],
+        "size": 2,
+        "health": 2000,
+    },
+    {
+        "player_id": 1,
         "type": "unit",
-        "script": "simple.py",
-        "coordinates": [6, 6],
+        "code": 'simple.py',
+        "coordinates": [5, 5],
         "fire_speed": 5,
-        "fire_demage": 10,
+        "damage": 10,
         "range": 2,
         "speed": 0.3,
         "health": 30
+    },
+    {
+        "type": "obstacle",
+        "health": 10000,
+        "name": "rock",
+        "coordinates": [8, 8],
+        "size": 2,
     }
 ]
 

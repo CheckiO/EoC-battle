@@ -2,6 +2,7 @@ import os
 
 from handlers.base import BaseHandler
 from server import TCPConsoleServer
+from collections import defaultdict
 
 MAP_X = 2
 
@@ -31,9 +32,10 @@ class FightHandler(BaseHandler):
         for item in range(data['map_size'][0] * MAP_X):
             out_map.append([None] * (data['map_size'][1] * MAP_X))
 
-        players_groups = [[], []]
+        players_groups = defaultdict(list)
         for item in data['units']:
             players_groups[item['player']['id']].append(item)
+
             coordinates = item['coordinates']
             r_coordinates = (round(coordinates[0] * MAP_X), round(coordinates[1] * MAP_X))
             out_map[r_coordinates[0]][r_coordinates[1]] = item
@@ -41,12 +43,10 @@ class FightHandler(BaseHandler):
             if not size:
                 continue
             half_size = round((item['size'] / 2) * MAP_X)
-            for xs in range(r_coordinates[0] - half_size, r_coordinates[0] + half_size + 1):
-                if xs < 0:
-                    continue
-                for ys in range(r_coordinates[1] - half_size, r_coordinates[1] + half_size + 1):
-                    if ys < 0:
-                        continue
+            for xs in range(max(0, r_coordinates[0] - half_size),
+                            r_coordinates[0] + half_size + 1):
+                for ys in range(max(0, r_coordinates[1] - half_size),
+                                r_coordinates[1] + half_size + 1):
                     try:
                         if out_map[xs][ys] is not None:
                             continue
@@ -78,8 +78,9 @@ class FightHandler(BaseHandler):
                     out_line += self.short_name(el)
             print(out_line)
 
-        for num, player in enumerate(players_groups):
-            print('PLAYER {}:'.format(num + 1))
+        for num, player in players_groups.items():
+
+            print('PLAYER {}:'.format(num + 1 if num >= 0 else "X"))
             for item in player:
                 print('  {sysid}{type} {health} - {str_state}'.format(
                     sysid=item['id'],
@@ -106,7 +107,8 @@ class FightHandler(BaseHandler):
             )
 
     def short_name(self, item):
-        return item['type'][0].upper() + str(item['player']['id'])
+        player_id = item['player']['id']
+        return item['type'][0].upper() + str(player_id) if player_id >= 0 else "XX"
 
 
 class ServerController(TCPConsoleServer):
