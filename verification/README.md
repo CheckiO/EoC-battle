@@ -24,5 +24,11 @@ event if it will raise
 
  ## Item parameters
 
+ - "type" -- type of an item.
+  * "unit" -- troop that can move and attack.
+  * "center" -- main building of defenders.
+  * "defender" -- static defense building, like a tower or Machine Gun.
+  * "building" -- pacific building of defenders.
+  * "obstacle" -- an obstacle on the map, as a rock or a tree.
  - "coordinates" -- coordinates of the center for the buildings or non-sized units.
  - "size" -- all buildings are square. Size is length of the side.

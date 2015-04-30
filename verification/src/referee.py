@@ -27,7 +27,7 @@ class FightItem(object):
         self.id = self.generate_id()
         self.player = player  # dict, data about the player who owns this Item
         self.type = item_data.get('type')  # type of current Item
-        # available types: center, unit, defender
+        # available types: center, unit, defender, building, obstacle
         self.health = item_data.get('health')
         self.size = item_data.get('size')
         self.speed = item_data.get('speed')
@@ -56,6 +56,10 @@ class FightItem(object):
     @property
     def is_dead(self):
         return self.health <= 0
+
+    @property
+    def is_obstacle(self):
+        return self.type == "obstacle"
 
     @classmethod
     def generate_id(cls):
@@ -225,7 +229,7 @@ class FightHandler(BaseHandler):
         self.players = None
         self.map_size = (None, None)
         '''
-            self.fighters is a disct of all available fighters on the map.
+            self.fighters is a dict of all available fighters on the map.
             where key is an id of the fighter and value is an object of FightItem
         '''
         self.fighters = {}
@@ -239,18 +243,20 @@ class FightHandler(BaseHandler):
         # WHY: can't we move an initialisation of players in the __init__ function?
         # in that case we can use it before start
         self.players = {p['id']: p for p in self.initial_data['players']}
+        self.players[-1] = {"id": -1, "codes": {}}
+
         self.map_size = self.initial_data['map_size']
         fight_items = []
         for item in self.initial_data['map']:
-            player = self.players[item['player_id']]
+            player = self.players[item.get('player_id', -1)]
             fight_items.append(self.add_fight_item(item, player))
-
         self.compute_frame()
         yield fight_items
 
     @gen.coroutine
     def add_fight_item(self, item_data, player):
         fight_item = FightItem(item_data, player=player, fight_handler=self)
+
         self.fighters[fight_item.id] = fight_item
         yield fight_item.start()
 
@@ -279,19 +285,19 @@ class FightHandler(BaseHandler):
             IOLoop.current().call_later(self.FRAME_TIME, self.compute_frame)
 
     def get_winner(self):
-        for player_id, player in self.players.items():
+        for player_id, player in tuple(self.players.items()):
             if self._is_player_defeated(player):
                 del self.players[player_id]
 
             if len(self.players) == 1:
-                return next (iter (self.players.values()))
+                return next(iter(self.players.values()))
         return None
 
     def _is_player_defeated(self, player):
         item_require = None
-        if player['defeat'] == 'units':
+        if player.get('defeat') == 'units':
             item_require = 'unit'
-        elif player['defeat'] == 'center':
+        elif player.get('defeat') == 'center':
             item_require = 'center'
 
         for item in self.fighters.values():
@@ -329,15 +335,15 @@ class FightHandler(BaseHandler):
 
         fighter = self.fighters[item_id]
 
-        for enemy in self.fighters.values():
-            if enemy.player == fighter.player or enemy.is_dead:
+        for item in self.fighters.values():
+            if item.player == fighter.player or item.is_dead or item.is_obstacle:
                 continue
 
-            length = distance_to_point(enemy.coordinates, fighter.coordinates)
+            length = distance_to_point(item.coordinates, fighter.coordinates)
 
             if length < min_length:
                 min_length = length
-                nearest_enemy = enemy
+                nearest_enemy = item
         return self.get_item_info(nearest_enemy.id)
 
     def subscribe(self, event_name, item_id, lookup_key, data):
