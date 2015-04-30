@@ -1,6 +1,9 @@
 from tornado import gen
 from tornado.ioloop import IOLoop
 
+from random import choice
+from tools import precalculated
+
 from checkio_referee import RefereeBase
 from checkio_referee.handlers.base import BaseHandler
 
@@ -11,7 +14,17 @@ from environment import BattleEnvironmentsController
 from tools.math import distance_to_point
 
 
-class FightItem(object):
+class Item(object):
+
+    ITEMS_COUNT = 0
+
+    @classmethod
+    def generate_id(cls):
+        cls.ITEMS_COUNT += 1
+        return cls.ITEMS_COUNT
+
+
+class FightItem(Item):
     '''
         class for a single item in the fight.
         It can be a simple building, a deffence building,
@@ -19,8 +32,6 @@ class FightItem(object):
     '''
     HANDLERS = None
     ACTIONS = None
-
-    ITEMS_COUNT = 0
 
     def __init__(self, item_data, player, fight_handler):
         self.init_handlers()
@@ -60,11 +71,6 @@ class FightItem(object):
     @property
     def is_obstacle(self):
         return self.type == "obstacle"
-
-    @classmethod
-    def generate_id(cls):
-        cls.ITEMS_COUNT += 1
-        return cls.ITEMS_COUNT
 
     @property
     def info(self):
@@ -190,9 +196,23 @@ class FightItem(object):
         self._env.send_event(lookup_key, data)
 
 
-class CraftItem(object):
-    # gag for interfaces
-    pass
+class CraftItem(Item):
+    def __init__(self, item_data, player, fight_handler):
+        self.id = self.generate_id()
+        self.coordinates = item_data.get("coordinates")
+        self.level = item_data.get("level")
+        self.player = player
+        self.type = "craft"
+
+    @property
+    def info(self):
+        return {
+            'id': self.id,
+            'player_id': self.player.get("id"),
+            'type': self.type,
+            'coordinates': self.coordinates,
+            'level': self.level
+        }
 
 
 class FightHandler(BaseHandler):
@@ -238,24 +258,7 @@ class FightHandler(BaseHandler):
             where key is an id of the fighter and value is an object of FightItem
         '''
         self.fighters = {}
-
-        # TODO WTF GAG For interdaces
-        # ==============
-        self.crafts = [
-            {
-                "id": 0,
-                "level": 2,
-                "coordinates": (10, 6),
-                "player_id": 1
-            },
-            {
-                "id": 1,
-                "level": 4,
-                "coordinates": (10, 2),
-                "player_id": 1
-            },
-        ]
-        # ==============
+        self.crafts = {}
 
         self.current_frame = 0
         self.current_game_time = 0
@@ -273,16 +276,43 @@ class FightHandler(BaseHandler):
         fight_items = []
         for item in self.initial_data['map']:
             player = self.players[item.get('player_id', -1)]
-            fight_items.append(self.add_fight_item(item, player))
+            if item["type"] == 'craft':
+                self.add_craft_item(item, player, fight_items)
+            else:
+                fight_items.append(self.add_fight_item(item, player))
         self.compute_frame()
         yield fight_items
 
     @gen.coroutine
     def add_fight_item(self, item_data, player):
         fight_item = FightItem(item_data, player=player, fight_handler=self)
-
         self.fighters[fight_item.id] = fight_item
         yield fight_item.start()
+
+    @gen.coroutine
+    def add_craft_item(self, craft_data, player, fight_items):
+        craft_coor = self.generate_craft_place()
+        if not craft_coor[1]:
+            return
+        unit_quantity = craft_data["unit_quantity"]
+        unit_positions = [[craft_coor[0] + shift[0], craft_coor[1] + shift[1]]
+                          for shift in precalculated.LAND_POSITION_SHIFTS[:unit_quantity]]
+        craft_data["coordinates"] = craft_coor
+        craft = CraftItem(craft_data, player=player, fight_handler=self)
+        for i in range(min(unit_quantity, precalculated.MAX_LAND_POSITIONS)):
+            unit = craft_data["units"].copy()
+            unit["code"] = craft_data["code"]
+            unit["coordinates"] = unit_positions[i]
+            unit["type"] = "unit"
+            fight_items.append(self.add_fight_item(unit, player))
+        self.crafts[craft.id] = craft
+
+    def generate_craft_place(self):
+        width = self.map_size[1]
+        craft_positions = [cr.coordinates[1] for cr in self.crafts.values()]
+        available = [y for y in range(1, width)
+                     if not any(pos - 2 <= y <= pos + 2 for pos in craft_positions)]
+        return [self.map_size[0], choice(available) if available else 0]
 
     def compute_frame(self):
         '''
@@ -339,13 +369,12 @@ class FightHandler(BaseHandler):
             status = {}
 
         fight_items = []
-        for fighter in self.fighters.values():
-            fight_items.append(fighter.info)
-
+        fight_items = [fighter.info for fighter in self.fighters.values()]
+        craft_items = [craft.info for craft in self.crafts.values()]
         self.editor_client.send_custom({
             'status': status,
             'fight_items': fight_items,
-            'craft_items': self.crafts,
+            'craft_items': craft_items,
             'map_size': self.map_size,
             'current_frame': self.current_frame,
             'current_game_time': self.current_game_time
