@@ -70,7 +70,7 @@ class FightItem(object):
     def info(self):
         return {
             'id': self.id,
-            'player': self.player,
+            'player_id': self.player["id"],
             'type': self.type,
             'health': self.health,
             'size': self.size,
@@ -190,6 +190,11 @@ class FightItem(object):
         self._env.send_event(lookup_key, data)
 
 
+class CraftItem(object):
+    # gag for interfaces
+    pass
+
+
 class FightHandler(BaseHandler):
     '''
         The main class of the game.
@@ -233,6 +238,25 @@ class FightHandler(BaseHandler):
             where key is an id of the fighter and value is an object of FightItem
         '''
         self.fighters = {}
+
+        # TODO WTF GAG For interdaces
+        # ==============
+        self.crafts = [
+            {
+                "id": 0,
+                "level": 2,
+                "coordinates": (10, 6),
+                "player_id": 1
+            },
+            {
+                "id": 1,
+                "level": 4,
+                "coordinates": (10, 2),
+                "player_id": 1
+            },
+        ]
+        # ==============
+
         self.current_frame = 0
         self.current_game_time = 0
         self.initial_data = editor_data['code']  # TODO: rename attr
@@ -314,13 +338,14 @@ class FightHandler(BaseHandler):
         if status is None:
             status = {}
 
-        units = []
+        fight_items = []
         for fighter in self.fighters.values():
-            units.append(fighter.info)
+            fight_items.append(fighter.info)
 
         self.editor_client.send_custom({
             'status': status,
-            'units': units,
+            'fight_items': fight_items,
+            'craft_items': self.crafts,
             'map_size': self.map_size,
             'current_frame': self.current_frame,
             'current_game_time': self.current_game_time

@@ -1,4 +1,7 @@
 import os
+from datetime import datetime
+import json
+import atexit
 
 from handlers.base import BaseHandler
 from server import TCPConsoleServer
@@ -9,6 +12,9 @@ MAP_X = 2
 MAP_BUILDING = 1
 
 # TODO: out current lap
+
+LOG_DIRNAME = "log"
+ERR_LOG_FILE_OPEN = "Cann't open log file for writing - {}"
 
 
 class FightHandler(BaseHandler):
@@ -22,19 +28,39 @@ class FightHandler(BaseHandler):
             global MAP_X
             MAP_X = gg['MAP_X']
         self.ROUTING['custom'] = 'handler_custom'
+        if not os.path.exists(LOG_DIRNAME):
+            os.mkdir(LOG_DIRNAME)
+        log_filename = "battle_log_{}.json".format(str(datetime.now()))
+        try:
+            self.log_file = open(os.path.join(LOG_DIRNAME, log_filename), "w")
+            self.log_file.write("[\n")
+        except IOError:
+            print(ERR_LOG_FILE_OPEN.format(log_filename))
+            self.log_file = None
+        atexit.register(self.close_log_file)
 
     def handler_stderr(self, line, request_id, stream_r):
         print('ERROR {}: {}'.format(request_id, line))
 
-    def handler_custom(self, data, request_id, stream_r):
+    def close_log_file(self):
+        self.log_file.write("\n]")
+        self.log_file.close()
 
+    def write_frame_log(self, data):
+        if self.log_file.tell() > 2:
+            self.log_file.write(",\n")
+        self.log_file.write(json.dumps(data))
+
+    def handler_custom(self, data, request_id, stream_r):
+        if self.log_file:
+            self.write_frame_log(data)
         out_map = []
         for item in range(data['map_size'][0] * MAP_X):
             out_map.append([None] * (data['map_size'][1] * MAP_X))
 
         players_groups = defaultdict(list)
-        for item in data['units']:
-            players_groups[item['player']['id']].append(item)
+        for item in data['fight_items']:
+            players_groups[item['player_id']].append(item)
 
             coordinates = item['coordinates']
             r_coordinates = (round(coordinates[0] * MAP_X), round(coordinates[1] * MAP_X))
@@ -56,13 +82,13 @@ class FightHandler(BaseHandler):
                     out_map[xs][ys] = MAP_BUILDING
 
         print()
-        print('-'*30)
+        print('-' * 30)
         print('{:<10}'.format(round(data['current_game_time']*1.0, 4)), end='')
-        print('-'*20)
-        print('-'*30)
+        print('-' * 20)
+        print('-' * 30)
         print('  ', end='')
         for i in range(data['map_size'][0]):
-            print('{num:<{size}}'.format(num=i, size=MAP_X*2), end='')
+            print('{num:<{size}}'.format(num=i, size=MAP_X * 2), end='')
         print()
         for num, line in enumerate(out_map):
             if num % MAP_X:
@@ -103,11 +129,11 @@ class FightHandler(BaseHandler):
             return str_action
         if state['action'] == 'move':
             return 'move from {:.4f}, {:.4f} to {:.4f}, {:.4f}'.format(
-                *(state['from']+state['to'])
+                *(state['from'] + state['to'])
             )
 
     def short_name(self, item):
-        player_id = item['player']['id']
+        player_id = item['player_id']
         return item['type'][0].upper() + str(player_id) if player_id >= 0 else "XX"
 
 
