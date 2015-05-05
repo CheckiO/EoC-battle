@@ -39,6 +39,35 @@ map_one_defender = [
         "health": 30
     },
     {
+        "player_id": 1,
+        "type": "craft",
+        "level": 2,
+        "code": "simple.py",
+        "units": {
+                "fire_speed": 5,
+                "damage": 10,
+                "range": 2,
+                "speed": 0.3,
+                "health": 30
+        },
+        "unit_quantity": 2
+    },
+    {
+        "player_id": 1,
+        "type": "craft",
+        "level": 4,
+        "code": "simple.py",
+        "units": {
+                "fire_speed": 1,
+                "damage": 100,
+                "range": 4,
+                "speed": 0.1,
+                "health": 20
+        },
+        "unit_quantity": 3
+    },
+
+    {
         "type": "obstacle",
         "health": 10000,
         "name": "rock",

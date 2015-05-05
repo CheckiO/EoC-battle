@@ -55,8 +55,9 @@ class FightHandler(BaseHandler):
         if self.log_file:
             self.write_frame_log(data)
         out_map = []
-        for item in range(data['map_size'][0] * MAP_X):
-            out_map.append([None] * (data['map_size'][1] * MAP_X))
+        map_size = data['map_size']
+        for item in range(map_size[0] * MAP_X):
+            out_map.append([None] * (map_size[1] * MAP_X))
 
         players_groups = defaultdict(list)
         for item in data['fight_items']:
@@ -87,7 +88,7 @@ class FightHandler(BaseHandler):
         print('-' * 20)
         print('-' * 30)
         print('  ', end='')
-        for i in range(data['map_size'][0]):
+        for i in range(map_size[0]):
             print('{num:<{size}}'.format(num=i, size=MAP_X * 2), end='')
         print()
         for num, line in enumerate(out_map):
@@ -103,6 +104,17 @@ class FightHandler(BaseHandler):
                 else:
                     out_line += self.short_name(el)
             print(out_line)
+        craft_positions = [craft["coordinates"][1] for craft in data["craft_items"]]
+
+        craft_line = "  "
+
+        for i in range(len(out_map[0] if out_map else 0)):
+            pos = i / MAP_X
+            if any(p - 1 < pos < p + 1 for p in craft_positions):
+                craft_line += "^^"
+            else:
+                craft_line += "  "
+        print(craft_line + "\n" + craft_line)
 
         for num, player in players_groups.items():
 
