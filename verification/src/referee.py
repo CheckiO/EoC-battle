@@ -2,7 +2,7 @@ from tornado import gen
 from tornado.ioloop import IOLoop
 
 from random import choice
-from tools import precalculated
+from tools import precalculated, fill_square
 
 from checkio_referee import RefereeBase
 from checkio_referee.handlers.base import BaseHandler
@@ -11,11 +11,10 @@ import settings_env
 from actions import ItemActions
 from actions.exceptions import ActionValidateError
 from environment import BattleEnvironmentsController
-from tools.math import distance_to_point
+from tools.math import euclidean_distance
 
 
 class Item(object):
-
     ITEMS_COUNT = 0
 
     @classmethod
@@ -25,11 +24,11 @@ class Item(object):
 
 
 class FightItem(Item):
-    '''
+    """
         class for a single item in the fight.
         It can be a simple building, a deffence building,
         a unit that move and attack other buildings
-    '''
+    """
     HANDLERS = None
     ACTIONS = None
 
@@ -90,12 +89,12 @@ class FightItem(Item):
         }
 
     def init_handlers(self):
-        '''
+        """
             there are only 3 kind of actions that can be send from FightItem to Referee
             select - to ask data from system
             set_action - to command unit to do
             subscribe - to subscribe on some event
-        '''
+        """
         self.HANDLERS = {
             'select': self.method_select,
             'set_action': self.method_set_action,
@@ -112,6 +111,8 @@ class FightItem(Item):
         self._state = {'action': 'stand'}
 
     def set_state_dead(self):
+        if self.size:
+            self._fight_handler.clear_from_map(self)
         self._state = {'action': 'dead'}
 
     def set_coordinates(self, coordinates):
@@ -216,13 +217,16 @@ class CraftItem(Item):
 
 
 class FightHandler(BaseHandler):
-    '''
+    """
         The main class of the game.
         Where all the game calculation do
-    '''
+    """
 
     FRAME_TIME = 0.1  # compute and send info each time per FRAME_TIME
     GAME_FRAME_TIME = 0.1  # per one FRAME_TIME in real, in game it would be GAME_FRAME_TIME
+    GRID_SCALE = 2
+    CELL_SHIFT = 1 / (GRID_SCALE * 2)
+    ACCURACY_RANGE = 0.1
 
     """
     Each item of an EVENT must have next structure:
@@ -239,7 +243,7 @@ class FightHandler(BaseHandler):
     }
 
     def __init__(self, editor_data, editor_client, referee):
-        '''
+        """
             self.players is a dict and will be defined at the start of the game
             where key is player ID and value is a dict
             {
@@ -250,13 +254,15 @@ class FightHandler(BaseHandler):
             defeat shows the rules for defiting current player
                 center - to loose a command center
                 units - to loose all the units
-        '''
+        """
         self.players = None
-        self.map_size = (None, None)
-        '''
+        self.map_size = (0, 0)
+        self.map_grid = [[]]
+        self.map_hash = 0
+        """
             self.fighters is a dict of all available fighters on the map.
             where key is an id of the fighter and value is an object of FightItem
-        '''
+        """
         self.fighters = {}
         self.crafts = {}
 
@@ -281,7 +287,29 @@ class FightHandler(BaseHandler):
             else:
                 fight_items.append(self.add_fight_item(item, player))
         self.compute_frame()
+        self.create_map()
         yield fight_items
+
+    def create_map(self):
+        height = self.map_size[0] * self.GRID_SCALE
+        width = self.map_size[1] * self.GRID_SCALE
+        self.map_grid = [[1] * width for _ in range(height)]
+        for it in self.fighters.values():
+            if not it.size:
+                continue
+            size = it.size * self.GRID_SCALE
+            fill_square(self.map_grid, it.coordinates[0] * self.GRID_SCALE - size // 2,
+                        it.coordinates[1] * self.GRID_SCALE - size // 2, size, 0)
+        self.hash_grid()
+
+    def hash_grid(self):
+        self.map_hash = hash(tuple(map(tuple, self.map_grid)))
+
+    def clear_from_map(self, item):
+        size = item.size * self.GRID_SCALE
+        fill_square(self.map_grid, item.coordinates[0] * self.GRID_SCALE - size // 2,
+                    item.coordinates[1] * self.GRID_SCALE - size // 2, size, 1)
+        self.hash_grid()
 
     @gen.coroutine
     def add_fight_item(self, item_data, player):
@@ -315,21 +343,22 @@ class FightHandler(BaseHandler):
         return [self.map_size[0], choice(available) if available else 0]
 
     def compute_frame(self):
-        '''
+        """
             calculate every frame and action for every FightItem
-        '''
+        """
         self.send_frame()
         self.current_frame += 1
         self.current_game_time += self.GAME_FRAME_TIME
         for key, fighter in self.fighters.items():
             # WHY: can't we move in the FightItem class?
             # When in can be None?
+            if fighter.is_dead:
+                continue
+
             if fighter.action is None:
                 fighter.set_state_stand()
                 continue
 
-            if fighter.is_dead:
-                continue
             fighter.do_frame_action()
 
         winner = self.get_winner()
@@ -362,13 +391,12 @@ class FightHandler(BaseHandler):
         return True
 
     def send_frame(self, status=None):
-        '''
+        """
             prepare and send data to an interface for visualisation
-        '''
+        """
         if status is None:
             status = {}
 
-        fight_items = []
         fight_items = [fighter.info for fighter in self.fighters.values()]
         craft_items = [craft.info for craft in self.crafts.values()]
         self.editor_client.send_custom({
@@ -376,6 +404,7 @@ class FightHandler(BaseHandler):
             'fight_items': fight_items,
             'craft_items': craft_items,
             'map_size': self.map_size,
+            'map_grid': self.map_grid,
             'current_frame': self.current_frame,
             'current_game_time': self.current_game_time
         })
@@ -393,7 +422,7 @@ class FightHandler(BaseHandler):
             if item.player == fighter.player or item.is_dead or item.is_obstacle:
                 continue
 
-            length = distance_to_point(item.coordinates, fighter.coordinates)
+            length = euclidean_distance(item.coordinates, fighter.coordinates)
 
             if length < min_length:
                 min_length = length
@@ -401,10 +430,10 @@ class FightHandler(BaseHandler):
         return self.get_item_info(nearest_enemy.id)
 
     def subscribe(self, event_name, item_id, lookup_key, data):
-        '''
+        """
             subscribe an FightItem with ID "item_id" on event "event_name" with data "data"
             and on item side it registered as lookup_key
-        '''
+        """
         if event_name not in self.EVENTS:
             return
         subscribe_data = {
@@ -419,22 +448,22 @@ class FightHandler(BaseHandler):
         return True
 
     def unsubscribe(self, item):
-        '''
-            unsubscibe item from all events
-        '''
-        # WHY: don't we call this method unsubscirbe_item or unsubscribe_all
-        # because if we have subscribe methon working in one way then
-        # unsubscibe should work in oposite
+        """
+            unsubsrcibe item from all events
+        """
+        # WHY: don't we call this method unsubscribe_item or unsubscribe_all
+        # because if we have subscribe method working in one way then
+        # unsubscribe should work in opposite
         for events in self.EVENTS.values():
             for event in events:
                 if event['receiver_id'] == item.id:
                     events.remove(event)
 
     def send_death_event(self, item_id):
-        '''
+        """
             send "death" event of FightItem with ID "item_id"
             to all FightItem who subscribe on it
-        '''
+        """
         events = self.EVENTS['death']
         for event in events:
             if event['data']['id'] != item_id:
@@ -443,10 +472,10 @@ class FightHandler(BaseHandler):
             receiver.send_event(lookup_key=event['lookup_key'], data={'id': item_id})
 
     def send_range_events(self, item_id):
-        '''
+        """
             send "range" event to all FightItems who subscribe on changing event
             if FightItem with ID "item_id" gets in their range
-        '''
+        """
         # TODO: to make 2 signals. get_in_range and get_out_range
         # TODO: if item is moving it is imposible for stable unit to get to its range
         self._send_my_range_event(item_id)
@@ -460,7 +489,7 @@ class FightHandler(BaseHandler):
             if receiver.id == event_item.id:
                 continue
 
-            distance = distance_to_point(receiver.coordinates, event_item.coordinates)
+            distance = euclidean_distance(receiver.coordinates, event_item.coordinates)
             if distance > receiver.range:
                 continue
             receiver.send_event(lookup_key=event['lookup_key'], data={'id': item_id})
@@ -473,7 +502,7 @@ class FightHandler(BaseHandler):
             if receiver.id == event_item.id:
                 continue
 
-            distance = distance_to_point(event['data']['coordinates'], event_item.coordinates)
+            distance = euclidean_distance(event['data']['coordinates'], event_item.coordinates)
             if distance > event['data']['range']:
                 continue
             receiver.send_event(lookup_key=event['lookup_key'], data={'id': item_id})

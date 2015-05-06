@@ -56,6 +56,8 @@ class FightHandler(BaseHandler):
             self.write_frame_log(data)
         out_map = []
         map_size = data['map_size']
+        # for row in data['map_grid']:
+        #     print(row)
         for item in range(map_size[0] * MAP_X):
             out_map.append([None] * (map_size[1] * MAP_X))
 
@@ -67,7 +69,7 @@ class FightHandler(BaseHandler):
             r_coordinates = (round(coordinates[0] * MAP_X), round(coordinates[1] * MAP_X))
             out_map[r_coordinates[0]][r_coordinates[1]] = item
             size = item.get('size')
-            if not size:
+            if not size or item.get("state", {}).get("action") == "dead":
                 continue
             half_size = round((item['size'] / 2) * MAP_X)
             for xs in range(max(0, r_coordinates[0] - half_size),
