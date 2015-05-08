@@ -1,7 +1,7 @@
 __all__ = ["fill_square", "find_route"]
 
 from heapq import heappop, heappush
-from .math import manhattan_distance
+from .distances import manhattan_distance
 from itertools import product
 
 SQRT_2 = round(2 ** 0.5, 3)
@@ -20,6 +20,18 @@ DIRS = (
 
 
 def fill_square(matrix: list, row: int, column: int, size: int, fill_element=1) -> list:
+    """
+    Fill square area of the matrix with the given element.
+    !!! This method is not a pure function and change a given matrix.
+
+    :param matrix: A matrix where area are filling
+    :param row: top-left corner row
+    :param column: top-left corner column
+    :param size: size of area for filling
+    :param fill_element: An element which will be inserted
+    :return: The changed matrix
+    """
+
     height, width = len(matrix), len(matrix[0]) if matrix else 0
     for i in range(max(row, 0), min(row + size, height)):
         for j in range(max(column, 0), min(column + size, width)):
@@ -55,6 +67,15 @@ def find_possible_end(grid, goal):
 
 
 def find_route(grid, start_cell, end_cell):
+    """
+    Find a route in a grid with A* search.
+    If end cell are not available then search a path to near positions.
+
+    :param grid: a matrix to search
+    :param start_cell: start position
+    :param end_cell: goal cell
+    :return: A route as a tuple of coordinates.
+    """
     heap = []
     end_cell = tuple(end_cell)
     if not grid[end_cell[0]][end_cell[1]]:
@@ -79,20 +100,3 @@ def find_route(grid, start_cell, end_cell):
             priority = distance + HEURISTIC(neighbour, end_cell)
             heappush(heap, (priority, distance + cost, path + (neighbour,), neighbour))
     return ()
-
-
-if __name__ == "__main__":
-    from timeit import timeit
-
-    test = (
-        (1, 1, 1, 0, 0, 1, 1, 1),
-        (1, 0, 1, 0, 0, 1, 1, 1),
-        (1, 0, 1, 1, 1, 0, 0, 1),
-        (1, 0, 1, 1, 1, 0, 1, 1),
-        (1, 1, 1, 1, 1, 0, 1, 1),
-        (1, 1, 1, 1, 1, 0, 1, 1),
-    )
-    print(find_route(test, (2, 0), (5, 6)))
-    print(timeit("find_route(test, (2, 0), (5, 6))",
-                 "from __main__ import find_route, test",
-                 number=1))
