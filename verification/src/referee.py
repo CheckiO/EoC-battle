@@ -26,7 +26,7 @@ class Item(object):
 class FightItem(Item):
     """
         class for a single item in the fight.
-        It can be a simple building, a deffence building,
+        It can be a simple building, a defence building,
         a unit that move and attack other buildings
     """
     HANDLERS = None
@@ -46,9 +46,11 @@ class FightItem(Item):
         if self.code in player['codes']:
             self.code = player['codes'][self.code]
 
-        self.fire_speed = item_data.get('fire_speed')
-        self.damage = item_data.get('damage')
-        self.range = item_data.get('range')
+        self.rate_of_fire = item_data.get('rate_of_fire')
+        self.damage_per_shot = item_data.get('damage_per_shot')
+        self.firing_range = item_data.get('firing_range')
+        self.area_damage_per_shot = item_data.get('area_damage_per_shot', 0)
+        self.area_damage_radius = item_data.get('area_damage_radius', 0)
 
         self.action = item_data.get('action')  # a current command that was send from code
         self.charging = 0
@@ -81,9 +83,11 @@ class FightItem(Item):
             'size': self.size,
             'speed': self.speed,
             'coordinates': self.coordinates,
-            'fire_speed': self.fire_speed,
-            'damage': self.damage,
-            'range': self.range,
+            'rate_of_fire': self.rate_of_fire,
+            'damage_per_shot': self.damage_per_shot,
+            'area_damage_per_shot': self.area_damage_per_shot,
+            'area_damage_radius': self.area_damage_radius,
+            'firing_range': self.firing_range,
             'action': self.action,
             'state': self._state
         }
@@ -474,10 +478,10 @@ class FightHandler(BaseHandler):
     def send_range_events(self, item_id):
         """
             send "range" event to all FightItems who subscribe on changing event
-            if FightItem with ID "item_id" gets in their range
+            if FightItem with ID "item_id" gets in their qrange
         """
         # TODO: to make 2 signals. get_in_range and get_out_range
-        # TODO: if item is moving it is imposible for stable unit to get to its range
+        # TODO: if item is moving it is imposible for stable unit to get to its firing_range
         self._send_my_range_event(item_id)
         self._send_custom_range_event(item_id)
 
@@ -490,7 +494,7 @@ class FightHandler(BaseHandler):
                 continue
 
             distance = euclidean_distance(receiver.coordinates, event_item.coordinates)
-            if distance > receiver.range:
+            if distance > receiver.firing_range:
                 continue
             receiver.send_event(lookup_key=event['lookup_key'], data={'id': item_id})
 
@@ -503,7 +507,7 @@ class FightHandler(BaseHandler):
                 continue
 
             distance = euclidean_distance(event['data']['coordinates'], event_item.coordinates)
-            if distance > event['data']['range']:
+            if distance > event['data']['firing_range']:
                 continue
             receiver.send_event(lookup_key=event['lookup_key'], data={'id': item_id})
 
