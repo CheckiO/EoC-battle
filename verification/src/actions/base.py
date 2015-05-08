@@ -1,5 +1,5 @@
 from .exceptions import ActionValidateError
-from tools.math import euclidean_distance
+from tools.distances import euclidean_distance
 
 
 class BaseItemActions(object):

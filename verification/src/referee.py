@@ -11,7 +11,7 @@ import settings_env
 from actions import ItemActions
 from actions.exceptions import ActionValidateError
 from environment import BattleEnvironmentsController
-from tools.math import euclidean_distance
+from tools.distances import euclidean_distance
 
 
 class Item(object):
