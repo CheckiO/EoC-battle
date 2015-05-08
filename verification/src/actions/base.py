@@ -1,5 +1,5 @@
 from .exceptions import ActionValidateError
-from tools.math import distance_to_point
+from tools.math import euclidean_distance
 
 
 class BaseItemActions(object):
@@ -66,7 +66,7 @@ class BaseItemActions(object):
         if enemy.player['id'] == self._item.player['id']:
             raise ActionValidateError("Can not attack own item")
 
-        distance_to_enemy = distance_to_point(enemy.coordinates, self._item.coordinates)
+        distance_to_enemy = euclidean_distance(enemy.coordinates, self._item.coordinates)
         item_range = self._item.range
         if distance_to_enemy > item_range:
             raise ActionValidateError("Can not attack item, it's big distance")
