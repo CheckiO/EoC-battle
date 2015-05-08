@@ -23,8 +23,8 @@ class UnitActions(BaseItemActions):
         if enemy is None:
             return  # WTF
         distance_to_enemy = euclidean_distance(enemy.coordinates, self._item.coordinates)
-        item_range = self._item.range
-        if distance_to_enemy > item_range:
+        item_firing_range = self._item.firing_range
+        if distance_to_enemy > item_firing_range:
             return self._move(enemy.coordinates)
         return self._shot(enemy)
 

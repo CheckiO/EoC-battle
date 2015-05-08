@@ -30,5 +30,15 @@ event if it will raise
   * "defender" -- static defense building, like a tower or Machine Gun.
   * "building" -- pacific building of defenders.
   * "obstacle" -- an obstacle on the map, as a rock or a tree.
- - "coordinates" -- coordinates of the center for the buildings or non-sized units.
- - "size" -- all buildings are square. Size is length of the side.
+  
+ - "coordinates" -- coordinates of the center for the buildings or non-sized units
+ - "size" -- all buildings are square. Size is length of the side. Units don't have size (== 0)
+ - "health" -- health point (hp)
+ - "damage_per_shot" -- how many hp are reduced for one shot
+ - "rate_of_fire" -- shots per second
+ - "firing_range" -- the distance for shooting (radius)
+ - "speed" -- for units. Speed in titles per second.
+ - "area_damage_per_shot" -- if a fighter attack by area, than reduce hp of all items in the circle
+ - "area_damage_radius" -- radius of area where items are damaged (if area_damage_per_shot != 0) 
+ - "code" -- the code name (file) for this unit
+ 

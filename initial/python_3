@@ -7,11 +7,25 @@ map_one_defender = [
         "code": 'simple.py',
         "coordinates": [3, 3],
         "size": 1,
-        "fire_speed": 1,
-        "damage": 10.5,
-        "range": 2,
+        "rate_of_fire": 1,
+        "damage_per_shot": 10.5,
+        "firing_range": 2,
         "health": 140
     },
+    {
+        "player_id": 0,
+        "type": "defender",
+        "code": 'simple.py',
+        "coordinates": [1, 1],
+        "size": 1,
+        "rate_of_fire": 1,
+        "damage_per_shot": 50,
+        "firing_range": 5,
+        "area_damage_per_shot": 5,
+        "area_damage_radius": 1,
+        "health": 140
+    },
+
     {
         "player_id": 0,
         "type": "center",
@@ -32,9 +46,9 @@ map_one_defender = [
         "type": "unit",
         "code": 'simple.py',
         "coordinates": [5, 5],
-        "fire_speed": 5,
-        "damage": 10,
-        "range": 2,
+        "rate_of_fire": 5,
+        "damage_per_shot": 10,
+        "firing_range": 2,
         "speed": 0.3,
         "health": 30
     },
@@ -44,9 +58,9 @@ map_one_defender = [
         "level": 2,
         "code": "simple.py",
         "units": {
-                "fire_speed": 5,
-                "damage": 10,
-                "range": 2,
+                "rate_of_fire": 5,
+                "damage_per_shot": 10,
+                "firing_range": 2,
                 "speed": 0.3,
                 "health": 30
         },
@@ -58,9 +72,11 @@ map_one_defender = [
         "level": 4,
         "code": "simple.py",
         "units": {
-                "fire_speed": 1,
-                "damage": 100,
-                "range": 4,
+                "rate_of_fire": 1,
+                "damage_per_shot": 100,
+                "firing_range": 4,
+                "area_damage_per_shot": 1,
+                "area_damage_radius": 0.5,
                 "speed": 0.1,
                 "health": 20
         },
@@ -88,7 +104,7 @@ initial = commander.ask_initials()
 def unit_in_range(data, **kwargs):
     commander.do_attack_sysid(data['sysid'])
 
-commander.subscribe_unit_in_my_range(initial['range'], unit_in_range)
+commander.subscribe_unit_in_my_range(initial['firing_range'], unit_in_range)
 '''
 
 attacker_simple_py = '''

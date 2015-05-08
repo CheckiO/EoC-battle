@@ -28,11 +28,11 @@ class BaseItemActions(object):
 
     def _shot(self, enemy):
         attacker = self._item
-        attacker.charging += self._fight_handler.GAME_FRAME_TIME * attacker.fire_speed
+        attacker.charging += self._fight_handler.GAME_FRAME_TIME * attacker.rate_of_fire
         if attacker.charging < 1:
             return {'action': 'charging'}
 
-        enemy.health -= attacker.damage
+        enemy.health -= attacker.damage_per_shot
         if enemy.health <= 0:
             self._dead(enemy)
 
@@ -67,8 +67,8 @@ class BaseItemActions(object):
             raise ActionValidateError("Can not attack own item")
 
         distance_to_enemy = euclidean_distance(enemy.coordinates, self._item.coordinates)
-        item_range = self._item.range
-        if distance_to_enemy > item_range:
+        item_firing_range = self._item.firing_range
+        if distance_to_enemy > item_firing_range:
             raise ActionValidateError("Can not attack item, it's big distance")
 
     def do_action(self, action_data):
