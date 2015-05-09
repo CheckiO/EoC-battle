@@ -258,10 +258,12 @@ class FightHandler(BaseHandler):
             defeat shows the rules for defiting current player
                 center - to loose a command center
                 units - to loose all the units
+                time - time is out
         """
-        self.players = None
+        self.players = {}
         self.map_size = (0, 0)
         self.map_grid = [[]]
+        self.time_limit = float("inf")
         self.map_hash = 0
         """
             self.fighters is a dict of all available fighters on the map.
@@ -283,6 +285,7 @@ class FightHandler(BaseHandler):
         self.players[-1] = {"id": -1, "codes": {}}
 
         self.map_size = self.initial_data['map_size']
+        self.time_limit = self.initial_data.get('time_limit', float("inf"))
         fight_items = []
         for item in self.initial_data['map']:
             player = self.players[item.get('player_id', -1)]
@@ -375,24 +378,26 @@ class FightHandler(BaseHandler):
         for player_id, player in tuple(self.players.items()):
             if self._is_player_defeated(player):
                 del self.players[player_id]
-
-            if len(self.players) == 1:
-                return next(iter(self.players.values()))
+            real_players = [k for k in self.players if k >= 0]
+            if len(real_players) == 1:
+                return self.players[real_players[0]]
         return None
 
     def _is_player_defeated(self, player):
-        item_require = None
-        if player.get('defeat') == 'units':
-            item_require = 'unit'
-        elif player.get('defeat') == 'center':
-            item_require = 'center'
+        defeat_reasons = player.get('defeat', [])
+        if 'units' in defeat_reasons and not self._is_player_has_item_type(player, "unit"):
+            return True
+        elif 'center' in defeat_reasons and not self._is_player_has_item_type(player, "center"):
+            return True
+        elif 'time' in defeat_reasons and self.current_game_time >= self.time_limit:
+            return True
+        return False
 
+    def _is_player_has_item_type(self, player, item_type):
         for item in self.fighters.values():
-            if item.player['id'] != player['id']:
-                continue
-            if item.type == item_require and not item.is_dead:
-                return False
-        return True
+            if item.player['id'] == player['id'] and item.type == item_type and not item.is_dead:
+                return True
+        return False
 
     def send_frame(self, status=None):
         """
@@ -453,7 +458,7 @@ class FightHandler(BaseHandler):
 
     def unsubscribe(self, item):
         """
-            unsubsrcibe item from all events
+            unsubscribe item from all events
         """
         # WHY: don't we call this method unsubscribe_item or unsubscribe_all
         # because if we have subscribe method working in one way then
