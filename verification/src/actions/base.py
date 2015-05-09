@@ -68,7 +68,7 @@ class BaseItemActions(object):
 
         distance_to_enemy = euclidean_distance(enemy.coordinates, self._item.coordinates)
         item_firing_range = self._item.firing_range
-        if distance_to_enemy > item_firing_range:
+        if distance_to_enemy - enemy.size / 2 > item_firing_range:
             raise ActionValidateError("Can not attack item, it's big distance")
 
     def do_action(self, action_data):
