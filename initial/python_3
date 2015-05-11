@@ -98,46 +98,48 @@ map_one_defender = [
 defender_simple_py = '''
 from battle import commander
 
-initial = commander.ask_initials()
+client = commander.Client()
 
 
 def unit_in_range(data, **kwargs):
-    commander.do_attack_sysid(data['sysid'])
+    client.attack_item(data['id'])
 
-commander.subscribe_unit_in_my_range(initial['firing_range'], unit_in_range)
+client.subscribe_item_in_my_range(unit_in_range)
 '''
 
 attacker_simple_py = '''
 from battle import commander
+client = commander.Client()
 
-initial = commander.ask_initials()
 
-
-def attack_next_enemy(**kawargs):
-    enemy = commander.ask_nearest_enemy()
+def attack_next_enemy(data=None, **kawargs):
+    enemy = client.ask_nearest_enemy()
     print('ENEMY', enemy)
-    commander.do_attack_sysid(enemy['sysid'])
-    commander.subscribe_death_sysid(enemy['sysid'], attack_next_enemy)
-
+    client.attack_item(enemy['id'])
+    result = client.subscribe_death_item(enemy['id'], attack_next_enemy)
 attack_next_enemy()
 '''
 
 PLAYERS = {
     'players': [
         {
-            'env_name': 'python_3'
+            'id': 0,
+            'env_name': 'python_3',
+            'defeat': ['center'],
+            'codes': {
+                'simple.py': defender_simple_py
+            }
         },
         {
-            'env_name': 'python_3'
+            'id': 1,
+            'env_name': 'python_3',
+            'defeat': ['units', "time"],
+            'codes': {
+                'simple.py': attacker_simple_py
+            }
         }
     ],
     'map': map_one_defender,
-    'sources': [
-        {
-            "simple.py": defender_simple_py
-        },
-        {
-            "simple.py": attacker_simple_py
-        }
-    ]
+    'map_size': (10, 10),
+    'time_limit': 20
 }

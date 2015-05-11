@@ -56,8 +56,6 @@ class FightHandler(BaseHandler):
             self.write_frame_log(data)
         out_map = []
         map_size = data['map_size']
-        # for row in data['map_grid']:
-        #     print(row)
         for item in range(map_size[0] * MAP_X):
             out_map.append([None] * (map_size[1] * MAP_X))
 
