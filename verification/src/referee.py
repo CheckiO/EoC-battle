@@ -2,7 +2,7 @@ from tornado import gen
 from tornado.ioloop import IOLoop
 
 from random import choice
-from tools import precalculated, fill_square
+from tools import precalculated, fill_square, grid_to_graph
 
 from checkio_referee import RefereeBase
 from checkio_referee.handlers.base import BaseHandler
@@ -263,6 +263,7 @@ class FightHandler(BaseHandler):
         self.players = {}
         self.map_size = (0, 0)
         self.map_grid = [[]]
+        self.map_graph = {}
         self.time_limit = float("inf")
         self.map_hash = 0
         """
@@ -295,6 +296,7 @@ class FightHandler(BaseHandler):
                 fight_items.append(self.add_fight_item(item, player))
         self.compute_frame()
         self.create_map()
+        self.create_route_graph()
         yield fight_items
 
     def create_map(self):
@@ -309,6 +311,9 @@ class FightHandler(BaseHandler):
                         it.coordinates[1] * self.GRID_SCALE - size // 2, size, 0)
         self.hash_grid()
 
+    def create_route_graph(self):
+        self.map_graph = grid_to_graph(self.map_grid)
+
     def hash_grid(self):
         self.map_hash = hash(tuple(map(tuple, self.map_grid)))
 
@@ -316,6 +321,7 @@ class FightHandler(BaseHandler):
         size = item.size * self.GRID_SCALE
         fill_square(self.map_grid, item.coordinates[0] * self.GRID_SCALE - size // 2,
                     item.coordinates[1] * self.GRID_SCALE - size // 2, size, 1)
+        self.create_route_graph()
         self.hash_grid()
 
     @gen.coroutine

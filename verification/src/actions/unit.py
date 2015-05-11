@@ -1,6 +1,6 @@
 from .base import BaseItemActions, euclidean_distance
 from .exceptions import ActionValidateError
-from tools import find_route
+from tools import find_route, straighten_route
 
 
 class UnitActions(BaseItemActions):
@@ -32,46 +32,48 @@ class UnitActions(BaseItemActions):
         target_coordinates = data['coordinates']
         return self._move(target_coordinates)
 
-    def _move(self, destination_point):
-        if (self._fight_handler.map_hash != self._last_map_hash or not self._route or
+    def check_or_create_route(self, destination_point):
+        if (self._fight_handler.map_hash != self._last_map_hash or
+                not self._route or
                 self._last_destination_point != tuple(destination_point)):
             self.calculate_route(destination_point)
             self._last_map_hash = self._fight_handler.map_hash
             self._last_destination_point = tuple(destination_point)
-        if not self._route:
-            return {
-                'action': 'stand',
-            }
-        frame_distance = self._item.speed * self._fight_handler.GAME_FRAME_TIME
-        start_point = temp_point = tuple(self._item.coordinates)
+
+    def process_near_turns(self, distance):
+        intermediate_point = tuple(self._item.coordinates)
         next_point = self._route[0]
-        if start_point == next_point:
-            return {
-                'action': 'stand',
-            }
-        while self._route and euclidean_distance(temp_point, next_point) < frame_distance:
-            frame_distance -= euclidean_distance(temp_point, next_point)
-            temp_point = self._route.pop(0)
+        while self._route and euclidean_distance(intermediate_point, next_point) < distance:
+            distance -= euclidean_distance(intermediate_point, next_point)
+            intermediate_point = self._route.pop(0)
             next_point = self._route[0] if self._route else next_point
+        return next_point, intermediate_point
 
+    def _move(self, destination_point):
+        self.check_or_create_route(destination_point)
         if not self._route:
-            self._item.set_coordinates(temp_point)
-            return {
-                'action': 'move',
-                'from': start_point,
-                'to': temp_point
-            }
-        distance = euclidean_distance(temp_point, next_point)
-        new_point = (
-            temp_point[0] + (frame_distance / distance) * (next_point[0] - temp_point[0]),
-            temp_point[1] + (frame_distance / distance) * (next_point[1] - temp_point[1]))
-        self._item.set_coordinates(new_point)
+            return {'action': 'stand'}
+        frame_distance = self._item.speed * self._fight_handler.GAME_FRAME_TIME
+        start_point = tuple(self._item.coordinates)
+        # We on the end
+        if start_point == self._route[0]:
+            return {'action': 'stand'}
 
-        return {
-            'action': 'move',
-            'from': start_point,
-            'to': new_point
-        }
+        next_point, current_point = self.process_near_turns(frame_distance)
+        if not self._route:
+            self._item.set_coordinates(current_point)
+            return {'action': 'move',
+                    'from': start_point,
+                    'to': current_point}
+        distance = euclidean_distance(current_point, next_point)
+        new_point = (
+            current_point[0] + (frame_distance / distance) * (next_point[0] - current_point[0]),
+            current_point[1] + (frame_distance / distance) * (next_point[1] - current_point[1]))
+
+        self._item.set_coordinates(new_point)
+        return {'action': 'move',
+                'from': start_point,
+                'to': new_point}
 
     def calculate_route(self, end_point):
         current_point = self._item.coordinates
@@ -82,9 +84,12 @@ class UnitActions(BaseItemActions):
         end_cell = (int(round((end_point[0] - cell_shift) * grid_scale)),
                     int(round((end_point[1] - cell_shift) * grid_scale)))
         # A-star search
-        cell_route = find_route(self._fight_handler.map_grid, current_cell, end_cell)
+        cell_route = find_route(self._fight_handler.map_grid,
+                                self._fight_handler.map_graph,
+                                current_cell, end_cell)
+        cut_cell_route = straighten_route(self._fight_handler.map_grid, cell_route)
         self._route = [((c[0] / grid_scale) + cell_shift, (c[1] / grid_scale) + cell_shift)
-                       for c in cell_route]
+                       for c in cut_cell_route]
 
     def validate_attack(self, action, data):
         enemy = self._fight_handler.fighters.get(data['id'])
