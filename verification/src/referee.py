@@ -39,7 +39,7 @@ class FightItem(Item):
         self.type = item_data.get('type')  # type of current Item
         # available types: center, unit, defender, building, obstacle
         self.health = item_data.get('health')
-        self.size = item_data.get('size')
+        self.size = item_data.get('size', 0)
         self.speed = item_data.get('speed')
         self.coordinates = item_data.get('coordinates')  # list of two
         self.code = item_data.get('code')
