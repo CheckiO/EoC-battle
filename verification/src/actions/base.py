@@ -20,6 +20,8 @@ class BaseItemActions(object):
 
     def action_attack(self, data):
         enemy = self._fight_handler.fighters.get(data['id'])
+        if enemy.is_dead:
+            return {"action": "stand"}
         if enemy is None:
             raise Exception("No enemy")
             return  # WTF
