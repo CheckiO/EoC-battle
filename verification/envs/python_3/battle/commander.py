@@ -27,20 +27,36 @@ class Client(object):
             }
         }])[0]
 
+    def attack_item(self, item_id):
+        return self.CLIENT.set_action('attack', {'id': item_id})
+
+    def move_to_point(self, coordinates):
+        self.CLIENT.set_action('move', {'coordinates': coordinates})
+
     def subscribe(self, event, callback, data=None):
         return self.CLIENT.subscribe(event, callback, data)
 
-    def subscribe_item_in_range(self, callback, coordinates, range_value):
-        return self.subscribe('item_in_range', callback, {
-            'coordinates': coordinates,
-            'range': range_value
+    def subscribe_im_in_area(self, center, radius, callback):
+        return self.subscribe('im_in_area', callback, {
+            'coordinates': center,
+            'radius': radius
         })
 
-    def subscribe_item_in_my_range(self, callback):
-        return self.subscribe('item_in_my_range', callback)
+    def subscribe_any_item_in_area(self, center, radius, callback):
+        return self.subscribe('any_item_in_area', callback, {
+            'coordinates': center,
+            'radius': radius
+        })
+
+    def subscribe_im_stop(self, callback):
+        return self.subscribe('im_stop', callback, {})
+
+    def subscribe_im_in_enemy_firing_range(self, callback):
+        return self.subscribe('im_in_enemy_firing_range', callback, {})
+
+    def subscribe_enemy_item_in_my_firing_range(self, callback):
+        return self.subscribe('item_in_my_firing_range', callback)
 
     def subscribe_death_item(self, item_id, callback):
         return self.subscribe('death', callback, {'id': item_id})
 
-    def attack_item(self, item_id):
-        return self.CLIENT.set_action('attack', {'id': item_id})

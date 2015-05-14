@@ -29,8 +29,8 @@ class UnitActions(BaseItemActions):
         return self._shot(enemy)
 
     def action_move(self, data):
-        target_coordinates = data['coordinates']
-        return self._move(target_coordinates)
+        coordinates = data['coordinates']
+        return self._move(coordinates)
 
     def check_or_create_route(self, destination_point):
         if (self._fight_handler.map_hash != self._last_map_hash or
@@ -39,6 +39,10 @@ class UnitActions(BaseItemActions):
             self.calculate_route(destination_point)
             self._last_map_hash = self._fight_handler.map_hash
             self._last_destination_point = tuple(destination_point)
+
+    def _stop(self):
+        self._fight_handler.send_im_stop(self._item.id)
+        return {'action': 'stand'}
 
     def process_near_turns(self, distance):
         intermediate_point = tuple(self._item.coordinates)
@@ -52,16 +56,17 @@ class UnitActions(BaseItemActions):
     def _move(self, destination_point):
         self.check_or_create_route(destination_point)
         if not self._route:
-            return {'action': 'stand'}
+            return self._stop()
         frame_distance = self._item.speed * self._fight_handler.GAME_FRAME_TIME
         start_point = tuple(self._item.coordinates)
         # We on the end
-        if start_point == self._route[0]:
-            return {'action': 'stand'}
-
+        if len(self._route) == 1 and start_point == self._route[0]:
+            return self._stop()
         next_point, current_point = self.process_near_turns(frame_distance)
         if not self._route:
             self._item.set_coordinates(current_point)
+            # without it we will not stop
+            self._route.append(current_point)
             return {'action': 'move',
                     'from': start_point,
                     'to': current_point}
