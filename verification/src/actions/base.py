@@ -3,7 +3,6 @@ from tools.distances import euclidean_distance
 
 
 class BaseItemActions(object):
-
     def __init__(self, item, fight_handler):
         self._item = item
         self._fight_handler = fight_handler
@@ -72,6 +71,10 @@ class BaseItemActions(object):
         item_firing_range = self._item.firing_range
         if distance_to_enemy - enemy.size / 2 > item_firing_range:
             raise ActionValidateError("Can not attack item, it's big distance")
+
+    def validate_move(self, action, data):
+        if not self._fight_handler.is_point_on_map(*data["coordinates"]):
+            raise ActionValidateError("Wrong coordinates")
 
     def do_action(self, action_data):
         action_handler = self._actions[action_data['name']]

@@ -242,8 +242,11 @@ class FightHandler(BaseHandler):
     """
     EVENTS = {
         'death': [],
-        'item_in_range': [],
-        'item_in_my_range': [],
+        'im_in_area': [],
+        'any_item_in_area': [],
+        'im_stop': [],
+        'im_in_enemy_firing_range': [],
+        'item_in_my_firing_range': [],
     }
 
     def __init__(self, editor_data, editor_client, referee):
@@ -310,6 +313,9 @@ class FightHandler(BaseHandler):
             fill_square(self.map_grid, it.coordinates[0] * self.GRID_SCALE - size // 2,
                         it.coordinates[1] * self.GRID_SCALE - size // 2, size, 0)
         self.hash_grid()
+
+    def is_point_on_map(self, x, y):
+        return 0 < x < self.map_size[0] and y < 0 < self.map_size[1]
 
     def create_route_graph(self):
         self.map_graph = grid_to_graph(self.map_grid)
@@ -486,6 +492,20 @@ class FightHandler(BaseHandler):
             receiver = self.fighters[event['receiver_id']]
             receiver.send_event(lookup_key=event['lookup_key'], data={'id': item_id})
 
+    def send_im_stop(self, item_id):
+        """
+        Send "stop" event to Item with "item_id"
+        """
+        event_item = self.fighters[item_id]
+        events = self.EVENTS['im_stop']
+        for event in events[:]:
+            receiver = self.fighters[event['receiver_id']]
+            if receiver.id != event_item.id:
+                continue
+            receiver.send_event(lookup_key=event['lookup_key'],
+                                data={'id': item_id, "coordinates": event_item.coordinates})
+            events.remove(event)
+
     def send_range_events(self, item_id):
         """
             send "range" event to all FightItems who subscribe on changing event
@@ -493,32 +513,46 @@ class FightHandler(BaseHandler):
         """
         # TODO: to make 2 signals. get_in_range and get_out_range
         # TODO: if item is moving it is imposible for stable unit to get to its firing_range
-        self._send_my_range_event(item_id)
+        self._send_item_in_my_firing_range(item_id)
+        self._send_im_in_area(item_id)
         self._send_custom_range_event(item_id)
 
-    def _send_my_range_event(self, item_id):
+    def _send_im_in_area(self, item_id):
         event_item = self.fighters[item_id]
-        events = self.EVENTS['item_in_my_range']
+        events = self.EVENTS['im_in_area']
+        for event in events[:]:
+            receiver = self.fighters[event['receiver_id']]
+            if receiver.id != event_item.id:
+                continue
+            distance = euclidean_distance(receiver.coordinates, event["data"]["coordinates"])
+            if distance < event["data"]["radius"]:
+                receiver.send_event(lookup_key=event['lookup_key'],
+                                    data={'id': item_id, "distance": distance})
+                events.remove(event)
+
+    def _send_item_in_my_firing_range(self, item_id):
+        event_item = self.fighters[item_id]
+        events = self.EVENTS['item_in_my_firing_range']
         for event in events:
             receiver = self.fighters[event['receiver_id']]
             if receiver.id == event_item.id:
                 continue
 
             distance = euclidean_distance(receiver.coordinates, event_item.coordinates)
-            if distance > receiver.firing_range:
+            if distance - event_item.size / 2 > receiver.firing_range:
                 continue
             receiver.send_event(lookup_key=event['lookup_key'], data={'id': item_id})
 
     def _send_custom_range_event(self, item_id):
         event_item = self.fighters[item_id]
-        events = self.EVENTS['item_in_range']
+        events = self.EVENTS['any_item_in_area']
         for event in events:
             receiver = self.fighters[event['receiver_id']]
             if receiver.id == event_item.id:
                 continue
 
             distance = euclidean_distance(event['data']['coordinates'], event_item.coordinates)
-            if distance > event['data']['firing_range']:
+            if distance > event['data']['radius']:
                 continue
             receiver.send_event(lookup_key=event['lookup_key'], data={'id': item_id})
 
