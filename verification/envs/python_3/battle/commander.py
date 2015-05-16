@@ -51,9 +51,6 @@ class Client(object):
     def subscribe_im_stop(self, callback):
         return self.subscribe('im_stop', callback, {})
 
-    def subscribe_im_in_enemy_firing_range(self, callback):
-        return self.subscribe('im_in_enemy_firing_range', callback, {})
-
     def subscribe_enemy_item_in_my_firing_range(self, callback):
         return self.subscribe('item_in_my_firing_range', callback)
 
