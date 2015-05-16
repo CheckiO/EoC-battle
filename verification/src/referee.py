@@ -315,7 +315,7 @@ class FightHandler(BaseHandler):
         self.hash_grid()
 
     def is_point_on_map(self, x, y):
-        return 0 < x < self.map_size[0] and y < 0 < self.map_size[1]
+        return 0 < x < self.map_size[0] and 0 < y < self.map_size[1]
 
     def create_route_graph(self):
         self.map_graph = grid_to_graph(self.map_grid)
