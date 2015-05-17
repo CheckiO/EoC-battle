@@ -108,7 +108,8 @@ class FightItem(Item):
         self.SELECT_HANDLERS = {
             'initials': self.select_initials,
             'info': self.select_info,
-            'nearest_enemy': self.select_nearest_enemy
+            'nearest_enemy': self.select_nearest_enemy,
+            'enemy_items_in_my_firing_range': self.select_enemy_items_in_my_firing_range
         }
 
     def set_state_stand(self):
@@ -179,6 +180,9 @@ class FightItem(Item):
     def select_nearest_enemy(self, data):
         return self._fight_handler.get_nearest_enemy(data['id'])
 
+    def select_enemy_items_in_my_firing_range(self, data):
+        return self._fight_handler.get_enemy_items_in_my_firing_range(data['id'])
+
     def method_set_action(self, action, data):
         try:
             self.action = self._actions_handlers.parse_action_data(action, data)
@@ -245,7 +249,8 @@ class FightHandler(BaseHandler):
         'im_in_area': [],
         'any_item_in_area': [],
         'im_stop': [],
-        'item_in_my_firing_range': [],
+        'enemy_in_my_firing_range': [],
+        'the_item_out_my_firing_range': [],
     }
 
     def __init__(self, editor_data, editor_client, referee):
@@ -449,11 +454,26 @@ class FightHandler(BaseHandler):
                 nearest_enemy = item
         return self.get_item_info(nearest_enemy.id)
 
+    def get_enemy_items_in_my_firing_range(self, item_id):
+        seeker = self.fighters[item_id]
+        result = []
+        for other in self.fighters.values():
+            if other.player == seeker.player or other.is_dead or other.is_obstacle:
+                continue
+            distance = euclidean_distance(other.coordinates, seeker.coordinates)
+            if distance - other.size / 2 <= seeker.firing_range:
+                result.append(self.get_item_info(other.id))
+        return result
+
     def subscribe(self, event_name, item_id, lookup_key, data):
         """
             subscribe an FightItem with ID "item_id" on event "event_name" with data "data"
             and on item side it registered as lookup_key
         """
+        if event_name == "unsubscribe_all":
+            event_item = self.fighters[item_id]
+            self.unsubscribe(event_item)
+            return
         if event_name not in self.EVENTS:
             return
         subscribe_data = {
@@ -479,8 +499,8 @@ class FightHandler(BaseHandler):
                 if event['receiver_id'] == item.id:
                     events.remove(event)
 
-    def _send_event(self, item_id, event_name, check_function, data_function):
-        event_item = self.fighters[item_id]
+    def _send_event(self, event_item_id, event_name, check_function, data_function):
+        event_item = self.fighters[event_item_id]
         events = self.EVENTS[event_name]
         for event in events[:]:
             receiver = self.fighters[event['receiver_id']]
@@ -492,7 +512,7 @@ class FightHandler(BaseHandler):
     def _data_event_id(self, event, event_item, receiver):
         return {'id': event_item.id}
 
-    def send_death_event(self, item_id):
+    def send_death_event(self, event_item_id):
         """
             send "death" event of FightItem with ID "item_id"
             to all FightItem who subscribe on it
@@ -501,9 +521,9 @@ class FightHandler(BaseHandler):
         def check_function(event, event_item, receiver):
             return event['data']['id'] == event_item.id
 
-        self._send_event(item_id, "death", check_function, self._data_event_id)
+        self._send_event(event_item_id, "death", check_function, self._data_event_id)
 
-    def send_im_stop(self, item_id):
+    def send_im_stop(self, event_item_id):
         """
         Send "stop" event to Item with "item_id"
         """
@@ -514,20 +534,21 @@ class FightHandler(BaseHandler):
         def data_function(event, event_item, receiver):
             return {'id': event_item.id, "coordinates": event_item.coordinates}
 
-        self._send_event(item_id, "im_stop", check_function, data_function)
+        self._send_event(event_item_id, "im_stop", check_function, data_function)
 
-    def send_range_events(self, item_id):
+    def send_range_events(self, event_item_id):
         """
             send "range" event to all FightItems who subscribe on changing event
             if FightItem with ID "item_id" gets in their range
         """
         # TODO: to make 2 signals. get_in_range and get_out_range
         # TODO: if item is moving it is impossible for stable unit to get to its firing_range
-        self._send_item_in_my_firing_range(item_id)
-        self._send_im_in_area(item_id)
-        self._send_any_item_in_area(item_id)
+        self._send_enemy_in_my_firing_range(event_item_id)
+        self._send_the_item_out_my_firing_range(event_item_id)
+        self._send_im_in_area(event_item_id)
+        self._send_any_item_in_area(event_item_id)
 
-    def _send_im_in_area(self, item_id):
+    def _send_im_in_area(self, event_item_id):
         """
         Send "range" event for owner item about it's in an area
         """
@@ -542,22 +563,43 @@ class FightHandler(BaseHandler):
             distance = euclidean_distance(receiver.coordinates, event["data"]["coordinates"])
             return {'id': event_item.id, "distance": distance}
 
-        self._send_event(item_id, "im_in_area", check_function, data_function)
+        self._send_event(event_item_id, "im_in_area", check_function, data_function)
 
-    def _send_item_in_my_firing_range(self, item_id):
+    def _send_enemy_in_my_firing_range(self, event_item_id):
         """
         Send "range" event to owner if any item in firing range
         """
 
         def check_function(event, event_item, receiver):
-            if receiver.id != event_item.id:
+            if (receiver.id != event_item.id and
+                    not event_item.is_obstacle and
+                    event_item.player != receiver.player):
                 distance = euclidean_distance(receiver.coordinates, event_item.coordinates)
                 return distance - event_item.size / 2 <= receiver.firing_range
             return False
 
-        self._send_event(item_id, "item_in_my_firing_range", check_function, self._data_event_id)
+        self._send_event(event_item_id, "enemy_in_my_firing_range",
+                         check_function, self._data_event_id)
 
-    def _send_any_item_in_area(self, item_id):
+
+    def _send_the_item_out_my_firing_range(self, event_item_id):
+        """
+        Send "range" event to owner if the item out firing range
+        """
+
+        def check_function(event, event_item, receiver):
+            if event["data"]["item_id"] == event_item.id:
+                distance = euclidean_distance(receiver.coordinates, event_item.coordinates)
+                return distance - event_item.size / 2 > receiver.firing_range
+            return False
+
+        self._send_event(event_item_id, "the_item_out_my_firing_range",
+                         check_function, self._data_event_id)
+
+
+
+
+    def _send_any_item_in_area(self, event_item_id):
         """
         Send "range" event about an item in the area for all FightItem who subscribed.
         """
@@ -566,7 +608,7 @@ class FightHandler(BaseHandler):
             distance = euclidean_distance(event['data']['coordinates'], event_item.coordinates)
             return distance <= event['data']['radius']
 
-        self._send_event(item_id, "any_item_in_area", check_function, self._data_event_id)
+        self._send_event(event_item_id, "any_item_in_area", check_function, self._data_event_id)
 
 
 class Referee(RefereeBase):

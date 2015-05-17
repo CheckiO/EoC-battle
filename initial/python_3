@@ -101,23 +101,43 @@ from battle import commander
 client = commander.Client()
 
 
-def unit_in_range(data, **kwargs):
-    client.attack_item(data['id'])
+def search_next_target(data, **kwargs):
+    client.unsubscribe_all()
+    enemies = client.ask_enemy_items_in_my_firing_range()
+    if enemies:
+        unit_in_firing_range(enemies[0])
+    else:
+        client.subscribe_enemy_in_my_firing_range(unit_in_firing_range)
 
-client.subscribe_item_in_my_range(unit_in_range)
+
+def unit_in_firing_range(data, **kwargs):
+    print(data)
+    client.attack_item(data['id'])
+    client.subscribe_the_item_is_dead(data['id'], search_next_target)
+    client.subscribe_the_item_out_my_firing_range(data['id'], search_next_target)
+
+client.subscribe_enemy_in_my_firing_range(unit_in_firing_range)
 '''
 
 attacker_simple_py = '''
 from battle import commander
+from random import random
 client = commander.Client()
-
 
 def attack_next_enemy(data=None, **kawargs):
     enemy = client.ask_nearest_enemy()
     print('ENEMY', enemy)
     client.attack_item(enemy['id'])
-    result = client.subscribe_death_item(enemy['id'], attack_next_enemy)
-attack_next_enemy()
+    result = client.subscribe_the_item_is_dead(enemy['id'], attack_next_enemy)
+
+
+def move_to_X(data=None):
+    x, y = random() * 10, random() * 10
+    client.move_to_point((x, y))
+    client.subscribe_im_stop(attack_next_enemy)
+
+move_to_X()
+# attack_next_enemy()
 '''
 
 PLAYERS = {
