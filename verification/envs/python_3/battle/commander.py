@@ -27,6 +27,14 @@ class Client(object):
             }
         }])[0]
 
+    def ask_enemy_items_in_my_firing_range(self):
+        return self.select([{
+            'field': 'enemy_items_in_my_firing_range',
+            'data': {
+                'id': self.initials['id']
+            }
+        }])[0]
+
     def attack_item(self, item_id):
         return self.CLIENT.set_action('attack', {'id': item_id})
 
@@ -35,6 +43,9 @@ class Client(object):
 
     def subscribe(self, event, callback, data=None):
         return self.CLIENT.subscribe(event, callback, data)
+
+    def unsubscribe_all(self):
+        return self.subscribe('unsubscribe_all', None)
 
     def subscribe_im_in_area(self, center, radius, callback):
         return self.subscribe('im_in_area', callback, {
@@ -51,9 +62,12 @@ class Client(object):
     def subscribe_im_stop(self, callback):
         return self.subscribe('im_stop', callback, {})
 
-    def subscribe_enemy_item_in_my_firing_range(self, callback):
-        return self.subscribe('item_in_my_firing_range', callback)
+    def subscribe_enemy_in_my_firing_range(self, callback):
+        return self.subscribe('enemy_in_my_firing_range', callback)
 
-    def subscribe_death_item(self, item_id, callback):
+    def subscribe_the_item_out_my_firing_range(self, item_id, callback):
+        return self.subscribe('the_item_out_my_firing_range', callback, {"item_id": item_id})
+
+    def subscribe_the_item_is_dead(self, item_id, callback):
         return self.subscribe('death', callback, {'id': item_id})
 
