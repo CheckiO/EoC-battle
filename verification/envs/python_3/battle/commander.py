@@ -1,6 +1,4 @@
-
 class Client(object):
-
     CLIENT = None
 
     def __init__(self):
@@ -16,24 +14,24 @@ class Client(object):
 
     def ask_initials(self):
         return self.select([{
-            'field': 'initials'
-        }])[0]
+                                'field': 'initials'
+                            }])[0]
 
     def ask_nearest_enemy(self):
         return self.select([{
-            'field': 'nearest_enemy',
-            'data': {
-                'id': self.initials['id']
-            }
-        }])[0]
+                                'field': 'nearest_enemy',
+                                'data': {
+                                    'id': self.initials['id']
+                                }
+                            }])[0]
 
     def ask_enemy_items_in_my_firing_range(self):
         return self.select([{
-            'field': 'enemy_items_in_my_firing_range',
-            'data': {
-                'id': self.initials['id']
-            }
-        }])[0]
+                                'field': 'enemy_items_in_my_firing_range',
+                                'data': {
+                                    'id': self.initials['id']
+                                }
+                            }])[0]
 
     def attack_item(self, item_id):
         return self.CLIENT.set_action('attack', {'id': item_id})
@@ -61,6 +59,9 @@ class Client(object):
 
     def subscribe_im_stop(self, callback):
         return self.subscribe('im_stop', callback, {})
+
+    def subscribe_im_idle(self, callback):
+        return self.subscribe('im_idle', callback, {})
 
     def subscribe_enemy_in_my_firing_range(self, callback):
         return self.subscribe('enemy_in_my_firing_range', callback)

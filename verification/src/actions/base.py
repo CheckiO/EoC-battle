@@ -17,10 +17,12 @@ class BaseItemActions(object):
             'attack': self.action_attack
         }
 
+    def _idle(self):
+        self._fight_handler.send_im_idle(self._item.id)
+        return {'action': 'idle'}
+
     def action_attack(self, data):
         enemy = self._fight_handler.fighters.get(data['id'])
-        if enemy.is_dead:
-            return {"action": "stand"}
         if enemy is None:
             raise Exception("No enemy")
             return  # WTF
@@ -56,7 +58,6 @@ class BaseItemActions(object):
         validator = getattr(self, 'validate_{}'.format(action))
         if validator is not None:
             validator(action, data)
-
         return {
             'name': action,
             'data': data,
@@ -64,6 +65,8 @@ class BaseItemActions(object):
 
     def validate_attack(self, action, data):
         enemy = self._fight_handler.fighters.get(data['id'])
+        if enemy.is_dead:
+            raise ActionValidateError("The enemy is dead")
         if enemy.player['id'] == self._item.player['id']:
             raise ActionValidateError("Can not attack own item")
 
@@ -77,5 +80,8 @@ class BaseItemActions(object):
             raise ActionValidateError("Wrong coordinates")
 
     def do_action(self, action_data):
+        validator = getattr(self, 'validate_{}'.format(action_data['name']))
+        if validator is not None:
+            validator(action_data['name'], action_data["data"])
         action_handler = self._actions[action_data['name']]
         return action_handler(action_data['data'])
