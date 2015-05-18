@@ -60,10 +60,10 @@ class FightItem(Item):
         self._env = None  # ??
         self._state = None  # dict of current FightItem state
         # every state has a key "action"
-        # {'action': 'stand'}
+        # {'action': 'idle'}
         # {'action': 'dead'}
         self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
-        self.set_state_stand()
+        self.set_state_idle()
 
     @property
     def is_dead(self):
@@ -112,8 +112,9 @@ class FightItem(Item):
             'enemy_items_in_my_firing_range': self.select_enemy_items_in_my_firing_range
         }
 
-    def set_state_stand(self):
-        self._state = {'action': 'stand'}
+    def set_state_idle(self):
+        self._fight_handler.send_im_idle(self.id)
+        self._state = {'action': 'idle'}
 
     def set_state_dead(self):
         if self.size:
@@ -199,7 +200,10 @@ class FightItem(Item):
         self._env.confirm()
 
     def do_frame_action(self):
-        self._state = self._actions_handlers.do_action(self.action)
+        try:
+            self._state = self._actions_handlers.do_action(self.action)
+        except ActionValidateError:
+            self.set_state_idle()
 
     def send_event(self, lookup_key, data):
         self._env.send_event(lookup_key, data)
@@ -249,6 +253,7 @@ class FightHandler(BaseHandler):
         'im_in_area': [],
         'any_item_in_area': [],
         'im_stop': [],
+        'im_idle': [],
         'enemy_in_my_firing_range': [],
         'the_item_out_my_firing_range': [],
     }
@@ -379,7 +384,7 @@ class FightHandler(BaseHandler):
                 continue
 
             if fighter.action is None:
-                fighter.set_state_stand()
+                fighter.set_state_idle()
                 continue
 
             fighter.do_frame_action()
@@ -500,8 +505,8 @@ class FightHandler(BaseHandler):
                     events.remove(event)
 
     def _send_event(self, event_item_id, event_name, check_function, data_function):
-        event_item = self.fighters[event_item_id]
-        events = self.EVENTS[event_name]
+        event_item = self.fighters.get(event_item_id)
+        events = self.EVENTS.get(event_name, [])
         for event in events[:]:
             receiver = self.fighters[event['receiver_id']]
             if check_function(event, event_item, receiver):
@@ -509,8 +514,13 @@ class FightHandler(BaseHandler):
                                     data=data_function(event, event_item, receiver))
                 events.remove(event)
 
-    def _data_event_id(self, event, event_item, receiver):
+    @staticmethod
+    def _data_event_id(event, event_item, receiver):
         return {'id': event_item.id}
+
+    @staticmethod
+    def _check_event_equal_receiver(event, event_item, receiver):
+        return receiver.id == event_item.id
 
     def send_death_event(self, event_item_id):
         """
@@ -527,14 +537,18 @@ class FightHandler(BaseHandler):
         """
         Send "stop" event to Item with "item_id"
         """
-
-        def check_function(event, event_item, receiver):
-            return receiver.id == event_item.id
-
         def data_function(event, event_item, receiver):
             return {'id': event_item.id, "coordinates": event_item.coordinates}
 
-        self._send_event(event_item_id, "im_stop", check_function, data_function)
+        self._send_event(event_item_id, "im_stop", self._check_event_equal_receiver, data_function)
+
+    def send_im_idle(self, event_item_id):
+        """
+        Send "stop" event to Item with "item_id"
+        """
+        self._send_event(event_item_id, "im_idle",
+                         self._check_event_equal_receiver, self._data_event_id)
+
 
     def send_range_events(self, event_item_id):
         """
@@ -573,14 +587,13 @@ class FightHandler(BaseHandler):
         def check_function(event, event_item, receiver):
             if (receiver.id != event_item.id and
                     not event_item.is_obstacle and
-                    event_item.player != receiver.player):
+                        event_item.player != receiver.player):
                 distance = euclidean_distance(receiver.coordinates, event_item.coordinates)
                 return distance - event_item.size / 2 <= receiver.firing_range
             return False
 
         self._send_event(event_item_id, "enemy_in_my_firing_range",
                          check_function, self._data_event_id)
-
 
     def _send_the_item_out_my_firing_range(self, event_item_id):
         """
@@ -595,9 +608,6 @@ class FightHandler(BaseHandler):
 
         self._send_event(event_item_id, "the_item_out_my_firing_range",
                          check_function, self._data_event_id)
-
-
-
 
     def _send_any_item_in_area(self, event_item_id):
         """

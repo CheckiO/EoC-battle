@@ -42,7 +42,7 @@ class UnitActions(BaseItemActions):
 
     def _stop(self):
         self._fight_handler.send_im_stop(self._item.id)
-        return {'action': 'stand'}
+        return self._idle()
 
     def process_near_turns(self, distance):
         intermediate_point = tuple(self._item.coordinates)
@@ -98,5 +98,7 @@ class UnitActions(BaseItemActions):
 
     def validate_attack(self, action, data):
         enemy = self._fight_handler.fighters.get(data['id'])
+        if enemy.is_dead:
+            return ActionValidateError("The enemy is dead")
         if enemy.player['id'] == self._item.player['id']:
             raise ActionValidateError("Can not attack own item")

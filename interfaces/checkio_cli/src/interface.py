@@ -130,7 +130,7 @@ class FightHandler(BaseHandler):
             print('Game Over!!! The Winner is {}'.format(data['status']['winner']['id']))
 
     def str_state(self, state):
-        if state['action'] in ('stand', 'charging', 'dead'):
+        if state['action'] in ('idle', 'charging', 'dead'):
             return state['action']
         if state['action'] == 'attack':
             str_action = 'fire to ' + str(state['aid'])
