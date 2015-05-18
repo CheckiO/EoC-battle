@@ -14,6 +14,9 @@ from environment import BattleEnvironmentsController
 from tools.distances import euclidean_distance
 
 
+CUT_FROM_BUILDING = 1
+
+
 class Item(object):
     ITEMS_COUNT = 0
 
@@ -37,11 +40,21 @@ class FightItem(Item):
         self.init_handlers()
         self.id = self.generate_id()
         self.player = player  # dict, data about the player who owns this Item
-        self.type = item_data.get('type')  # type of current Item
         # available types: center, unit, defender, building, obstacle
-        self.health = item_data.get('health')
+        self.type = item_data.get('item_type')  # type of current Item
+
+        # [TODO] I know
+        self.type_for_interface = item_data.get('type')
+        self.alias = item_data.get('alias')
+        self.level = item_data.get('level')
+        self.tile_position = item_data.get('tile_position')
+        self.status_for_interface = item_data.get('status')
+
+        self.health = item_data.get('hit_points')
         self.size = item_data.get('size', 0)
+        self.full_size = item_data.get('full_size', 0)
         self.speed = item_data.get('speed')
+
         self.coordinates = item_data.get('coordinates')  # list of two
         self.code = item_data.get('code')
         if self.code in player['codes']:
@@ -140,7 +153,6 @@ class FightItem(Item):
     def start(self):
         if not self.is_executable:
             return
-
         self._env = yield self._fight_handler.get_environment(self.player['env_name'])
         result = yield self._env.run_code(self.code)
         while True:
@@ -219,6 +231,8 @@ class CraftItem(Item):
         self.id = self.generate_id()
         self.coordinates = item_data.get("coordinates")
         self.level = item_data.get("level")
+        self.alias = item_data.get("alias")
+        self.type_for_interface = item_data.get("type")
         self.player = player
         self.type = "craft"
 
@@ -297,6 +311,33 @@ class FightHandler(BaseHandler):
 
     @gen.coroutine
     def start(self):
+
+        # [SUPER SPIKE!!!]
+        # ===================
+        self.initial_data['map'].extend(
+            [
+                {
+                    "type": "rock",
+                    "item_type": "obstacle",
+                    "alias": "superRockLeft",
+                    "tile_position": [0, 0],
+                    "size": 21,
+                    "hit_points": 9000000,
+                    "level": 1
+                },
+                {
+                    "type": "rock",
+                    "item_type": "obstacle",
+                    "alias": "superRockRight",
+                    "tile_position": [0, 20],
+                    "size": 21,
+                    "hit_points": 9000000,
+                    "level": 1
+                },
+            ]
+        )
+        # ===================
+
         # WHY: can't we move an initialisation of players in the __init__ function?
         # in that case we can use it before start
         self.players = {p['id']: p for p in self.initial_data['players']}
@@ -309,6 +350,10 @@ class FightHandler(BaseHandler):
             player = self.players[item.get('player_id', -1)]
             if item["type"] == 'craft':
                 self.add_craft_item(item, player, fight_items)
+            elif item["type"] == 'unit':
+                # NO SINGLE UNIT [LEGACY]
+                print("DEPRECATED WARNING: NO SINGLE UNITS")
+                continue
             else:
                 fight_items.append(self.add_fight_item(item, player))
         self.compute_frame()
@@ -324,8 +369,8 @@ class FightHandler(BaseHandler):
             if not it.size:
                 continue
             size = it.size * self.GRID_SCALE
-            fill_square(self.map_grid, it.coordinates[0] * self.GRID_SCALE - size // 2,
-                        it.coordinates[1] * self.GRID_SCALE - size // 2, size, 0)
+            fill_square(self.map_grid, int(it.coordinates[0] * self.GRID_SCALE) - size // 2,
+                        int(it.coordinates[1] * self.GRID_SCALE) - size // 2, size, 0)
         self.hash_grid()
 
     def is_point_on_map(self, x, y):
@@ -346,6 +391,16 @@ class FightHandler(BaseHandler):
 
     @gen.coroutine
     def add_fight_item(self, item_data, player):
+        size = item_data.get("size", 0)
+        # [SPIKE] We use center coordinates
+        coordinates = [
+            round(item_data["tile_position"][0] + size / 2, 6),
+            round(item_data["tile_position"][1] + size / 2, 6)]
+        # [SPIKE] We use center coordinates
+        cut_size = max(size - CUT_FROM_BUILDING, 0)
+        item_data["full_size"] = size
+        item_data["size"] = cut_size
+        item_data["coordinates"] = coordinates
         fight_item = FightItem(item_data, player=player, fight_handler=self)
         self.fighters[fight_item.id] = fight_item
         yield fight_item.start()
@@ -364,7 +419,8 @@ class FightHandler(BaseHandler):
             unit = craft_data["units"].copy()
             unit["code"] = craft_data["code"]
             unit["coordinates"] = unit_positions[i]
-            unit["type"] = "unit"
+            unit["tile_position"] = unit_positions[i][:]
+            unit["item_type"] = "unit"
             fight_items.append(self.add_fight_item(unit, player))
         self.crafts[craft.id] = craft
 
@@ -548,6 +604,7 @@ class FightHandler(BaseHandler):
         """
         Send "stop" event to Item with "item_id"
         """
+
         def data_function(event, event_item, receiver):
             return {'id': event_item.id, "coordinates": event_item.coordinates}
 
