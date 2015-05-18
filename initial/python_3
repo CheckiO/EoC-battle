@@ -98,40 +98,40 @@ map_one_defender = [
 defender_simple_py = '''
 from battle import commander
 
-client = commander.Client()
+defender = commander.Client()
 
 
 def search_next_target(data, **kwargs):
-    enemies = client.ask_enemy_items_in_my_firing_range()
+    enemies = defender.ask_enemy_items_in_my_firing_range()
     if enemies:
         unit_in_firing_range(enemies[0])
     else:
-        client.subscribe_enemy_in_my_firing_range(unit_in_firing_range)
+        defender.subscribe_enemy_in_my_firing_range(unit_in_firing_range)
 
 
 def unit_in_firing_range(data, **kwargs):
-    client.attack_item(data['id'])
-    client.subscribe_im_idle(search_next_target)
+    defender.attack_item(data['id'])
+    defender.subscribe_the_item_is_dead(data['id'], search_next_target)
+    defender.subscribe_the_item_out_my_firing_range(data['id'], search_next_target)
 
-client.subscribe_enemy_in_my_firing_range(unit_in_firing_range)
+defender.subscribe_enemy_in_my_firing_range(unit_in_firing_range)
 '''
 
 attacker_simple_py = '''
 from battle import commander
 from random import random
-client = commander.Client()
+attacker = commander.Client()
 
 def attack_next_enemy(data=None, **kawargs):
-    enemy = client.ask_nearest_enemy()
-    print('ENEMY', enemy)
-    client.attack_item(enemy['id'])
-    result = client.subscribe_the_item_is_dead(enemy['id'], attack_next_enemy)
+    enemy = attacker.ask_nearest_enemy()
+    attacker.attack_item(enemy['id'])
+    result = attacker.subscribe_the_item_is_dead(enemy['id'], attack_next_enemy)
 
 
 def move_to_random(data=None):
     x, y = random() * 10, random() * 10
-    client.move_to_point((x, y))
-    client.subscribe_im_idle(move_to_random)
+    attacker.move_to_point((x, y))
+    attacker.subscribe_im_stop(attack_next_enemy)
 
 # move_to_random()
 attack_next_enemy()

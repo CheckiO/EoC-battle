@@ -31,6 +31,7 @@ class FightItem(Item):
     """
     HANDLERS = None
     ACTIONS = None
+    SELECT_HANDLERS = None
 
     def __init__(self, item_data, player, fight_handler):
         self.init_handlers()
@@ -106,8 +107,9 @@ class FightItem(Item):
         }
 
         self.SELECT_HANDLERS = {
-            'initials': self.select_initials,
-            'info': self.select_info,
+            'my_info': self.select_my_info,
+            'item_info': self.select_item_info,
+            'players': self.select_players,
             'nearest_enemy': self.select_nearest_enemy,
             'enemy_items_in_my_firing_range': self.select_enemy_items_in_my_firing_range
         }
@@ -172,11 +174,14 @@ class FightItem(Item):
 
         self._env.select_result(data)
 
-    def select_initials(self, data):
-        return self._fight_handler.get_item_info(self.id)
+    def select_my_info(self, data):
+        return self.select_item_info({"id": self.id})
 
-    def select_info(self, data):
+    def select_item_info(self, data):
         return self._fight_handler.get_item_info(data['id'])
+
+    def select_players(self, data):
+        return self._fight_handler.get_public_players_info(data)
 
     def select_nearest_enemy(self, data):
         return self._fight_handler.get_nearest_enemy(data['id'])
@@ -441,6 +446,12 @@ class FightHandler(BaseHandler):
 
     def get_item_info(self, item_id):
         return self.fighters[item_id].info
+
+    def get_public_players_info(self, data):
+        players = [{"id": p} for p in self.players if p >= 0]
+        if data["party"] == "enemy":
+            players = [p for p in players if p["id"] != data["player_id"]]
+        return players
 
     def get_nearest_enemy(self, item_id):
         min_length = 1000
