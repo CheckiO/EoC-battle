@@ -33,7 +33,6 @@ class FightHandler(BaseHandler):
         log_filename = "battle_log_{}.json".format(str(datetime.now()))
         try:
             self.log_file = open(os.path.join(LOG_DIRNAME, log_filename), "w")
-            self.log_file.write("[\n")
         except IOError:
             print(ERR_LOG_FILE_OPEN.format(log_filename))
             self.log_file = None
@@ -43,17 +42,15 @@ class FightHandler(BaseHandler):
         print('ERROR {}: {}'.format(request_id, line))
 
     def close_log_file(self):
-        self.log_file.write("\n]")
         self.log_file.close()
 
-    def write_frame_log(self, data):
-        if self.log_file.tell() > 2:
-            self.log_file.write(",\n")
+    def write_log(self, data):
         self.log_file.write(json.dumps(data))
 
     def handler_custom(self, data, request_id, stream_r):
-        if self.log_file:
-            self.write_frame_log(data)
+        if not data.get("is_stream") and self.log_file:
+            self.write_log(data)
+            return
         out_map = []
         map_size = data['map_size']
         for item in range(map_size[0] * MAP_X):
@@ -84,7 +81,7 @@ class FightHandler(BaseHandler):
 
         print()
         print('-' * 30)
-        print('{:<10}'.format(round(data['current_game_time']*1.0, 4)), end='')
+        print('{:<10}'.format(round(data['current_game_time'] * 1.0, 4)), end='')
         print('-' * 20)
         print('-' * 30)
         print('  ', end='')
@@ -130,7 +127,7 @@ class FightHandler(BaseHandler):
             print('Game Over!!! The Winner is {}'.format(data['status']['winner']['id']))
 
     def str_state(self, state):
-        if state['action'] in ('idle', 'charging', 'dead'):
+        if state['action'] in ('idle', 'charge', 'dead'):
             return state['action']
         if state['action'] == 'attack':
             str_action = 'fire to ' + str(state['aid'])

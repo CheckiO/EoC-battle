@@ -12,7 +12,7 @@ class ItemActions(object):
         unit_type = item.type
         return {
             'unit': UnitActions,
-            'defender': DefenceActions,
+            'tower': DefenceActions,
             'center': CenterActions,
             'building': BuildingActions,
             'obstacle': ObstacleActions

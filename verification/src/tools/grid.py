@@ -33,12 +33,13 @@ def fill_square(matrix: list, row: int, column: int, size: int, fill_element=1) 
     :param fill_element: An element which will be inserted
     :return: The changed matrix
     """
-
+    row, column = round(row), round(column)
     height, width = len(matrix), len(matrix[0]) if matrix else 0
     for i in range(max(row, 0), min(row + size, height)):
         for j in range(max(column, 0), min(column + size, width)):
             matrix[i][j] = fill_element
     return matrix
+
 
 def grid_to_graph(grid):
     """

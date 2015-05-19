@@ -1,3 +1,4 @@
+import atexit
 from tornado import gen
 from tornado.ioloop import IOLoop
 
@@ -12,6 +13,9 @@ from actions import ItemActions
 from actions.exceptions import ActionValidateError
 from environment import BattleEnvironmentsController
 from tools.distances import euclidean_distance
+
+
+CUT_FROM_BUILDING = 1
 
 
 class Item(object):
@@ -37,15 +41,23 @@ class FightItem(Item):
         self.init_handlers()
         self.id = self.generate_id()
         self.player = player  # dict, data about the player who owns this Item
-        self.type = item_data.get('type')  # type of current Item
-        # available types: center, unit, defender, building, obstacle
-        self.health = item_data.get('health')
+        # available types: center, unit, tower, building, obstacle
+        self.type = item_data.get('role')  # type of current Item
+
+        # [TODO] I know
+        self.type_for_interface = item_data.get('type')
+        self.alias = item_data.get('alias')
+        self.level = item_data.get('level')
+        self.tile_position = item_data.get('tile_position')
+        self.status_for_interface = item_data.get('status')
+
+        self.start_health = item_data.get('hit_points')
+        self.health = item_data.get('hit_points')
         self.size = item_data.get('size', 0)
+        self.full_size = item_data.get('full_size', 0)
         self.speed = item_data.get('speed')
+
         self.coordinates = item_data.get('coordinates')  # list of two
-        self.code = item_data.get('code')
-        if self.code in player['codes']:
-            self.code = player['codes'][self.code]
 
         self.rate_of_fire = item_data.get('rate_of_fire')
         self.damage_per_shot = item_data.get('damage_per_shot')
@@ -57,6 +69,7 @@ class FightItem(Item):
         self.charging = 0
 
         self._fight_handler = fight_handler  # object of FightHandler
+        self.code = self._fight_handler.codes.get(item_data.get('code'))
         self._initial = item_data
         self._env = None  # ??
         self._state = None  # dict of current FightItem state
@@ -76,6 +89,7 @@ class FightItem(Item):
 
     @property
     def info(self):
+        # DEPRECATED
         return {
             'id': self.id,
             'player_id': self.player["id"],
@@ -114,6 +128,12 @@ class FightItem(Item):
             'enemy_items_in_my_firing_range': self.select_enemy_items_in_my_firing_range
         }
 
+    def get_percentage_health(self):
+        return max(0, round(100 * self.health / self.start_health))
+
+    def get_action_status(self):
+        return self._state["action"]
+
     def set_state_idle(self):
         self._fight_handler.send_im_idle(self.id)
         self._state = {'action': 'idle'}
@@ -140,7 +160,6 @@ class FightItem(Item):
     def start(self):
         if not self.is_executable:
             return
-
         self._env = yield self._fight_handler.get_environment(self.player['env_name'])
         result = yield self._env.run_code(self.code)
         while True:
@@ -218,7 +237,10 @@ class CraftItem(Item):
     def __init__(self, item_data, player, fight_handler):
         self.id = self.generate_id()
         self.coordinates = item_data.get("coordinates")
+        self.tile_position = item_data.get("coordinates")[:]
         self.level = item_data.get("level")
+        self.alias = item_data.get("alias")
+        self.type_for_interface = item_data.get("type")
         self.player = player
         self.type = "craft"
 
@@ -278,6 +300,17 @@ class FightHandler(BaseHandler):
                 time - time is out
         """
         self.players = {}
+        self.codes = {}
+        self.is_stream = True
+        self.battle_log = {
+            "initial": {
+                "buildings": [],
+                "units": [],
+                "crafts": []
+            },
+            "frames": [],
+            "result": {}
+        }
         self.map_size = (0, 0)
         self.map_grid = [[]]
         self.map_graph = {}
@@ -297,20 +330,31 @@ class FightHandler(BaseHandler):
 
     @gen.coroutine
     def start(self):
+        self.is_stream = self.initial_data.get('is_stream', True)
         # WHY: can't we move an initialisation of players in the __init__ function?
         # in that case we can use it before start
         self.players = {p['id']: p for p in self.initial_data['players']}
-        self.players[-1] = {"id": -1, "codes": {}}
+        self.players[-1] = {"id": -1}
+        for code_data in self.initial_data["codes"]:
+            self.codes[code_data["id"]] = code_data["code"]
 
         self.map_size = self.initial_data['map_size']
         self.time_limit = self.initial_data.get('time_limit', float("inf"))
         fight_items = []
-        for item in self.initial_data['map']:
+        for item in self.initial_data['map_elements']:
             player = self.players[item.get('player_id', -1)]
-            if item["type"] == 'craft':
+            if item["role"] == 'craft':
                 self.add_craft_item(item, player, fight_items)
+            elif item["role"] == 'unit':
+                # NO SINGLE UNIT [LEGACY]
+                print("DEPRECATED WARNING: NO SINGLE UNITS")
+                continue
             else:
                 fight_items.append(self.add_fight_item(item, player))
+
+        atexit.register(self.send_full_log)
+        self._log_initial_state()
+
         self.compute_frame()
         self.create_map()
         self.create_route_graph()
@@ -324,8 +368,8 @@ class FightHandler(BaseHandler):
             if not it.size:
                 continue
             size = it.size * self.GRID_SCALE
-            fill_square(self.map_grid, it.coordinates[0] * self.GRID_SCALE - size // 2,
-                        it.coordinates[1] * self.GRID_SCALE - size // 2, size, 0)
+            fill_square(self.map_grid, int(it.coordinates[0] * self.GRID_SCALE) - size // 2,
+                        int(it.coordinates[1] * self.GRID_SCALE) - size // 2, size, 0)
         self.hash_grid()
 
     def is_point_on_map(self, x, y):
@@ -346,6 +390,16 @@ class FightHandler(BaseHandler):
 
     @gen.coroutine
     def add_fight_item(self, item_data, player):
+        size = item_data.get("size", 0)
+        # [SPIKE] We use center coordinates
+        coordinates = [
+            round(item_data["tile_position"][0] + size / 2, 6),
+            round(item_data["tile_position"][1] + size / 2, 6)]
+        # [SPIKE] We use center coordinates
+        cut_size = max(size - CUT_FROM_BUILDING, 0)
+        item_data["full_size"] = size
+        item_data["size"] = cut_size
+        item_data["coordinates"] = coordinates
         fight_item = FightItem(item_data, player=player, fight_handler=self)
         self.fighters[fight_item.id] = fight_item
         yield fight_item.start()
@@ -364,7 +418,8 @@ class FightHandler(BaseHandler):
             unit = craft_data["units"].copy()
             unit["code"] = craft_data["code"]
             unit["coordinates"] = unit_positions[i]
-            unit["type"] = "unit"
+            unit["tile_position"] = unit_positions[i][:]
+            unit["role"] = "unit"
             fight_items.append(self.add_fight_item(unit, player))
         self.crafts[craft.id] = craft
 
@@ -396,7 +451,7 @@ class FightHandler(BaseHandler):
 
         winner = self.get_winner()
         if winner is not None:
-            self.send_frame({'winner': winner})
+            self.send_frame({'winner': winner}, True)
         else:
             IOLoop.current().call_later(self.FRAME_TIME, self.compute_frame)
 
@@ -406,6 +461,7 @@ class FightHandler(BaseHandler):
                 del self.players[player_id]
             real_players = [k for k in self.players if k >= 0]
             if len(real_players) == 1:
+                self.battle_log["result"]["winner"] = real_players[0]
                 return self.players[real_players[0]]
         return None
 
@@ -425,7 +481,7 @@ class FightHandler(BaseHandler):
                 return True
         return False
 
-    def send_frame(self, status=None):
+    def send_frame(self, status=None, battle_finished=False):
         """
             prepare and send data to an interface for visualisation
         """
@@ -435,6 +491,7 @@ class FightHandler(BaseHandler):
         fight_items = [fighter.info for fighter in self.fighters.values()]
         craft_items = [craft.info for craft in self.crafts.values()]
         self.editor_client.send_custom({
+            "is_stream": True,
             'status': status,
             'fight_items': fight_items,
             'craft_items': craft_items,
@@ -443,6 +500,68 @@ class FightHandler(BaseHandler):
             'current_frame': self.current_frame,
             'current_game_time': self.current_game_time
         })
+        self.battle_log["frames"].append(self._get_battle_snapshot())
+        if battle_finished:
+            self.editor_client.send_custom(self.battle_log)
+
+    def send_full_log(self):
+        self.send_frame(battle_finished=True)
+
+    def _log_initial_state(self):
+        for item in self.fighters.values():
+            if item.type == "unit":
+                self._log_initial_unit(item)
+            elif item.type in ["building", "tower", "center"]:
+                self._log_initial_building(item)
+        for craft in self.crafts.values():
+            self._log_initial_craft(craft)
+
+    def _log_initial_unit(self, unit):
+        log = self.battle_log["initial"]["units"]
+        log.append({
+            "id": unit.id,
+            "tilePosition": unit.tile_position,
+            "type": unit.type_for_interface
+        })
+
+    def _log_initial_building(self, building):
+        log = self.battle_log["initial"]["buildings"]
+        log.append({
+            "id": building.id,
+            "tilePosition": building.tile_position,
+            "type": building.type_for_interface,
+            "alias": building.alias,
+            "status": building.status_for_interface,
+            "level": building.level
+        })
+
+    def _log_initial_craft(self, craft):
+        log = self.battle_log["initial"]["crafts"]
+        log.append({
+            "id": craft.id,
+            "tilePosition": craft.tile_position,
+            "type": craft.type_for_interface,
+            "alias": craft.alias,
+            "level": craft.level
+        })
+
+    def _get_battle_snapshot(self):
+        snapshot = []
+        for item in self.fighters.values():
+            if item.is_obstacle:
+                continue
+            item_info = {
+                "id": item.id,
+                "tilePosition": item.coordinates if item.type == "unit" else item.tile_position,
+                "hitPointPercentage": item.get_percentage_health(),
+                "status": item.get_action_status()
+            }
+            if item_info["status"] == "attack":
+                item_info["firing_point"] = item._state["firing_point"]
+
+            snapshot.append(item_info)
+        return snapshot
+
 
     def get_item_info(self, item_id):
         return self.fighters[item_id].info
@@ -548,6 +667,7 @@ class FightHandler(BaseHandler):
         """
         Send "stop" event to Item with "item_id"
         """
+
         def data_function(event, event_item, receiver):
             return {'id': event_item.id, "coordinates": event_item.coordinates}
 

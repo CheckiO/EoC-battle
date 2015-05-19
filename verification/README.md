@@ -27,7 +27,7 @@ event if it will raise
  - "type" -- type of an item.
   * "unit" -- troop that can move and attack.
   * "center" -- main building of defenders.
-  * "defender" -- static defense building, like a tower or Machine Gun.
+  * "tower" -- static defense building, like a tower or Machine Gun.
   * "building" -- pacific building of defenders.
   * "obstacle" -- an obstacle on the map, as a rock or a tree.
   
