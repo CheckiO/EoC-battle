@@ -1,3 +1,4 @@
+import atexit
 from tornado import gen
 from tornado.ioloop import IOLoop
 
@@ -50,6 +51,7 @@ class FightItem(Item):
         self.tile_position = item_data.get('tile_position')
         self.status_for_interface = item_data.get('status')
 
+        self.start_health = item_data.get('hit_points')
         self.health = item_data.get('hit_points')
         self.size = item_data.get('size', 0)
         self.full_size = item_data.get('full_size', 0)
@@ -89,6 +91,7 @@ class FightItem(Item):
 
     @property
     def info(self):
+        # DEPRECATED
         return {
             'id': self.id,
             'player_id': self.player["id"],
@@ -126,6 +129,12 @@ class FightItem(Item):
             'nearest_enemy': self.select_nearest_enemy,
             'enemy_items_in_my_firing_range': self.select_enemy_items_in_my_firing_range
         }
+
+    def get_percentage_health(self):
+        return max(0, round(100 * self.health / self.start_health))
+
+    def get_action_status(self):
+        return self._state["action"]
 
     def set_state_idle(self):
         self._fight_handler.send_im_idle(self.id)
@@ -230,6 +239,7 @@ class CraftItem(Item):
     def __init__(self, item_data, player, fight_handler):
         self.id = self.generate_id()
         self.coordinates = item_data.get("coordinates")
+        self.tile_position = item_data.get("coordinates")[:]
         self.level = item_data.get("level")
         self.alias = item_data.get("alias")
         self.type_for_interface = item_data.get("type")
@@ -292,6 +302,16 @@ class FightHandler(BaseHandler):
                 time - time is out
         """
         self.players = {}
+        self.is_stream = True
+        self.battle_log = {
+            "initial": {
+                "buildings": [],
+                "units": [],
+                "crafts": []
+            },
+            "frames": [],
+            "result": {}
+        }
         self.map_size = (0, 0)
         self.map_grid = [[]]
         self.map_graph = {}
@@ -337,7 +357,7 @@ class FightHandler(BaseHandler):
             ]
         )
         # ===================
-
+        self.is_stream = self.initial_data.get('is_stream', True)
         # WHY: can't we move an initialisation of players in the __init__ function?
         # in that case we can use it before start
         self.players = {p['id']: p for p in self.initial_data['players']}
@@ -356,6 +376,10 @@ class FightHandler(BaseHandler):
                 continue
             else:
                 fight_items.append(self.add_fight_item(item, player))
+
+        atexit.register(self.send_full_log)
+        self._log_initial_state()
+
         self.compute_frame()
         self.create_map()
         self.create_route_graph()
@@ -452,7 +476,7 @@ class FightHandler(BaseHandler):
 
         winner = self.get_winner()
         if winner is not None:
-            self.send_frame({'winner': winner})
+            self.send_frame({'winner': winner}, True)
         else:
             IOLoop.current().call_later(self.FRAME_TIME, self.compute_frame)
 
@@ -462,6 +486,7 @@ class FightHandler(BaseHandler):
                 del self.players[player_id]
             real_players = [k for k in self.players if k >= 0]
             if len(real_players) == 1:
+                self.battle_log["result"]["winner"] = real_players[0]
                 return self.players[real_players[0]]
         return None
 
@@ -481,7 +506,7 @@ class FightHandler(BaseHandler):
                 return True
         return False
 
-    def send_frame(self, status=None):
+    def send_frame(self, status=None, battle_finished=False):
         """
             prepare and send data to an interface for visualisation
         """
@@ -491,6 +516,7 @@ class FightHandler(BaseHandler):
         fight_items = [fighter.info for fighter in self.fighters.values()]
         craft_items = [craft.info for craft in self.crafts.values()]
         self.editor_client.send_custom({
+            "is_stream": True,
             'status': status,
             'fight_items': fight_items,
             'craft_items': craft_items,
@@ -499,6 +525,68 @@ class FightHandler(BaseHandler):
             'current_frame': self.current_frame,
             'current_game_time': self.current_game_time
         })
+        self.battle_log["frames"].append(self._get_battle_snapshot())
+        if battle_finished:
+            self.editor_client.send_custom(self.battle_log)
+
+    def send_full_log(self):
+        self.send_frame(battle_finished=True)
+
+    def _log_initial_state(self):
+        for item in self.fighters.values():
+            if item.type == "unit":
+                self._log_initial_unit(item)
+            elif item.type in ["building", "defender", "center"]:
+                self._log_initial_building(item)
+        for craft in self.crafts.values():
+            self._log_initial_craft(craft)
+
+    def _log_initial_unit(self, unit):
+        log = self.battle_log["initial"]["units"]
+        log.append({
+            "id": unit.id,
+            "tilePosition": unit.tile_position,
+            "type": unit.type_for_interface
+        })
+
+    def _log_initial_building(self, building):
+        log = self.battle_log["initial"]["buildings"]
+        log.append({
+            "id": building.id,
+            "tilePosition": building.tile_position,
+            "type": building.type_for_interface,
+            "alias": building.alias,
+            "status": building.status_for_interface,
+            "level": building.level
+        })
+
+    def _log_initial_craft(self, craft):
+        log = self.battle_log["initial"]["crafts"]
+        log.append({
+            "id": craft.id,
+            "tilePosition": craft.tile_position,
+            "type": craft.type_for_interface,
+            "alias": craft.alias,
+            "level": craft.level
+        })
+
+    def _get_battle_snapshot(self):
+        snapshot = []
+        for item in self.fighters.values():
+            if item.is_obstacle:
+                continue
+            item_info = {
+                "id": item.id,
+                "tilePosition": item.coordinates if item.type == "unit" else item.tile_position,
+                "hitPointPercentage": item.get_percentage_health(),
+                "status": item.get_action_status()
+            }
+            if item_info["status"] == "attack":
+                item_info["firing_point"] = item._state["firing_point"]
+
+            snapshot.append(item_info)
+        return snapshot
+
 
     def get_item_info(self, item_id):
         return self.fighters[item_id].info
