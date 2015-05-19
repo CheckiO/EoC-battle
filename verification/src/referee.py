@@ -41,8 +41,8 @@ class FightItem(Item):
         self.init_handlers()
         self.id = self.generate_id()
         self.player = player  # dict, data about the player who owns this Item
-        # available types: center, unit, defender, building, obstacle
-        self.type = item_data.get('item_type')  # type of current Item
+        # available types: center, unit, tower, building, obstacle
+        self.type = item_data.get('role')  # type of current Item
 
         # [TODO] I know
         self.type_for_interface = item_data.get('type')
@@ -58,9 +58,6 @@ class FightItem(Item):
         self.speed = item_data.get('speed')
 
         self.coordinates = item_data.get('coordinates')  # list of two
-        self.code = item_data.get('code')
-        if self.code in player['codes']:
-            self.code = player['codes'][self.code]
 
         self.rate_of_fire = item_data.get('rate_of_fire')
         self.damage_per_shot = item_data.get('damage_per_shot')
@@ -72,6 +69,7 @@ class FightItem(Item):
         self.charging = 0
 
         self._fight_handler = fight_handler  # object of FightHandler
+        self.code = self._fight_handler.codes.get(item_data.get('code'))
         self._initial = item_data
         self._env = None  # ??
         self._state = None  # dict of current FightItem state
@@ -302,6 +300,7 @@ class FightHandler(BaseHandler):
                 time - time is out
         """
         self.players = {}
+        self.codes = {}
         self.is_stream = True
         self.battle_log = {
             "initial": {
@@ -331,46 +330,22 @@ class FightHandler(BaseHandler):
 
     @gen.coroutine
     def start(self):
-
-        # [SUPER SPIKE!!!]
-        # ===================
-        self.initial_data['map'].extend(
-            [
-                {
-                    "type": "rock",
-                    "item_type": "obstacle",
-                    "alias": "superRockLeft",
-                    "tile_position": [0, 0],
-                    "size": 21,
-                    "hit_points": 9000000,
-                    "level": 1
-                },
-                {
-                    "type": "rock",
-                    "item_type": "obstacle",
-                    "alias": "superRockRight",
-                    "tile_position": [0, 20],
-                    "size": 21,
-                    "hit_points": 9000000,
-                    "level": 1
-                },
-            ]
-        )
-        # ===================
         self.is_stream = self.initial_data.get('is_stream', True)
         # WHY: can't we move an initialisation of players in the __init__ function?
         # in that case we can use it before start
         self.players = {p['id']: p for p in self.initial_data['players']}
-        self.players[-1] = {"id": -1, "codes": {}}
+        self.players[-1] = {"id": -1}
+        for code_data in self.initial_data["codes"]:
+            self.codes[code_data["id"]] = code_data["code"]
 
         self.map_size = self.initial_data['map_size']
         self.time_limit = self.initial_data.get('time_limit', float("inf"))
         fight_items = []
-        for item in self.initial_data['map']:
+        for item in self.initial_data['map_elements']:
             player = self.players[item.get('player_id', -1)]
-            if item["type"] == 'craft':
+            if item["role"] == 'craft':
                 self.add_craft_item(item, player, fight_items)
-            elif item["type"] == 'unit':
+            elif item["role"] == 'unit':
                 # NO SINGLE UNIT [LEGACY]
                 print("DEPRECATED WARNING: NO SINGLE UNITS")
                 continue
@@ -444,7 +419,7 @@ class FightHandler(BaseHandler):
             unit["code"] = craft_data["code"]
             unit["coordinates"] = unit_positions[i]
             unit["tile_position"] = unit_positions[i][:]
-            unit["item_type"] = "unit"
+            unit["role"] = "unit"
             fight_items.append(self.add_fight_item(unit, player))
         self.crafts[craft.id] = craft
 
@@ -536,7 +511,7 @@ class FightHandler(BaseHandler):
         for item in self.fighters.values():
             if item.type == "unit":
                 self._log_initial_unit(item)
-            elif item.type in ["building", "defender", "center"]:
+            elif item.type in ["building", "tower", "center"]:
                 self._log_initial_building(item)
         for craft in self.crafts.values():
             self._log_initial_craft(craft)
