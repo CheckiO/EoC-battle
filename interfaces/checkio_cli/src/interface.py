@@ -117,9 +117,9 @@ class FightHandler(BaseHandler):
 
             print('PLAYER {}:'.format(num + 1 if num >= 0 else "X"))
             for item in player:
-                print('  {sysid}{type} {health} - {str_state}'.format(
+                print('  {sysid}{role} {health} - {str_state}'.format(
                     sysid=item['id'],
-                    type=item['type'],
+                    role=item['role'],
                     health=item['health'],
                     str_state=self.str_state(item['state'])
                 ))
@@ -143,7 +143,7 @@ class FightHandler(BaseHandler):
 
     def short_name(self, item):
         player_id = item['player_id']
-        return item['type'][0].upper() + str(player_id) if player_id >= 0 else "XX"
+        return item['role'][0].upper() + str(player_id) if player_id >= 0 else "XX"
 
 
 class ServerController(TCPConsoleServer):
