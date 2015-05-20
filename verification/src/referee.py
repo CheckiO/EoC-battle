@@ -93,7 +93,7 @@ class FightItem(Item):
         return {
             'id': self.id,
             'player_id': self.player["id"],
-            'type': self.type,
+            'role': self.type,
             'health': self.health,
             'size': self.size,
             'speed': self.speed,
@@ -124,6 +124,7 @@ class FightItem(Item):
             'my_info': self.select_my_info,
             'item_info': self.select_item_info,
             'players': self.select_players,
+            'items': self.select_items,
             'nearest_enemy': self.select_nearest_enemy,
             'enemy_items_in_my_firing_range': self.select_enemy_items_in_my_firing_range
         }
@@ -200,7 +201,10 @@ class FightItem(Item):
         return self._fight_handler.get_item_info(data['id'])
 
     def select_players(self, data):
-        return self._fight_handler.get_public_players_info(data)
+        return self._fight_handler.get_public_players_info(data, self.player["id"])
+
+    def select_items(self, data):
+        return self._fight_handler.get_group_item_info(data, self.player["id"])
 
     def select_nearest_enemy(self, data):
         return self._fight_handler.get_nearest_enemy(data['id'])
@@ -562,15 +566,38 @@ class FightHandler(BaseHandler):
             snapshot.append(item_info)
         return snapshot
 
+    @staticmethod
+    def filter_enemy_party(sequence, player_id):
+        return [d for d in sequence if d["player_id"] >= 0 and d["player_id"] != player_id]
+
+    @staticmethod
+    def filter_my_party(sequence, player_id):
+        return [d for d in sequence if d["player_id"] >= 0 and d["player_id"] == player_id]
+
+    def filter_by_party(self, sequence, parties, player_id):
+        result = []
+        if "enemy" in parties:
+            result.extend(self.filter_enemy_party(sequence, player_id))
+        if "my" in parties:
+            result.extend(self.filter_my_party(sequence, player_id))
+        return result
+
+    @staticmethod
+    def filter_by_role(sequence, roles):
+        return [el for el in sequence if el["role"] in roles]
 
     def get_item_info(self, item_id):
         return self.fighters[item_id].info
 
-    def get_public_players_info(self, data):
-        players = [{"id": p} for p in self.players if p >= 0]
-        if data["party"] == "enemy":
-            players = [p for p in players if p["id"] != data["player_id"]]
-        return players
+    def get_public_players_info(self, data, applicant_player_id):
+        players = [{"player_id": p} for p in self.players if p >= 0]
+        return self.filter_by_party(players, data["parties"], applicant_player_id)
+
+    def get_group_item_info(self, data, applicant_player_id):
+        items = [it.info for it in self.fighters.values()]
+        items = self.filter_by_party(items, data["parties"], applicant_player_id)
+        items = self.filter_by_role(items, data["roles"])
+        return items
 
     def get_nearest_enemy(self, item_id):
         min_length = 1000
