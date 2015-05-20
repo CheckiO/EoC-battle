@@ -594,7 +594,7 @@ class FightHandler(BaseHandler):
         return self.filter_by_party(players, data["parties"], applicant_player_id)
 
     def get_group_item_info(self, data, applicant_player_id):
-        items = [it.info for it in self.fighters.values()]
+        items = [it.info for it in self.fighters.values() if not it.is_dead]
         items = self.filter_by_party(items, data["parties"], applicant_player_id)
         items = self.filter_by_role(items, data["roles"])
         return items
