@@ -329,8 +329,14 @@ class FightHandler(BaseHandler):
 
         self.current_frame = 0
         self.current_game_time = 0
-        self.initial_data = editor_data['code']  # TODO: rename attr
-        super().__init__(editor_data, editor_client, referee)
+        self.initial_data = editor_data['battle_info']
+
+        self.editor_client = editor_client
+        self._referee = referee
+
+        self.environment = None
+        self._is_stopping = None
+        self._stop_callback = None
 
     @gen.coroutine
     def start(self):
@@ -495,7 +501,7 @@ class FightHandler(BaseHandler):
 
             fight_items = [fighter.info for fighter in self.fighters.values()]
             craft_items = [craft.info for craft in self.crafts.values()]
-            self.editor_client.send_custom({
+            self.editor_client.send_battle({
                 "is_stream": True,
                 'status': status,
                 'fight_items': fight_items,
@@ -507,7 +513,7 @@ class FightHandler(BaseHandler):
             })
         self.battle_log["frames"].append(self._get_battle_snapshot())
         if battle_finished:
-            self.editor_client.send_custom(self.battle_log)
+            self.editor_client.send_battle(self.battle_log)
 
     def send_full_log(self):
         self.send_frame(battle_finished=True)
@@ -782,8 +788,10 @@ class FightHandler(BaseHandler):
 
 class Referee(RefereeBase):
     ENVIRONMENTS = settings_env.ENVIRONMENTS
-    EDITOR_LOAD_ARGS = ('code', 'action', 'env_name')
-    HANDLERS = {'check': FightHandler, 'run': FightHandler}
+    EDITOR_LOAD_ARGS = ('battle_info', 'action')
+    HANDLERS = {
+        'battle': FightHandler
+    }
 
     @property
     def environments_controller(self):
