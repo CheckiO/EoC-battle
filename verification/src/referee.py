@@ -489,21 +489,22 @@ class FightHandler(BaseHandler):
         """
             prepare and send data to an interface for visualisation
         """
-        if status is None:
-            status = {}
+        if self.is_stream:
+            if status is None:
+                status = {}
 
-        fight_items = [fighter.info for fighter in self.fighters.values()]
-        craft_items = [craft.info for craft in self.crafts.values()]
-        self.editor_client.send_custom({
-            "is_stream": True,
-            'status': status,
-            'fight_items': fight_items,
-            'craft_items': craft_items,
-            'map_size': self.map_size,
-            'map_grid': self.map_grid,
-            'current_frame': self.current_frame,
-            'current_game_time': self.current_game_time
-        })
+            fight_items = [fighter.info for fighter in self.fighters.values()]
+            craft_items = [craft.info for craft in self.crafts.values()]
+            self.editor_client.send_custom({
+                "is_stream": True,
+                'status': status,
+                'fight_items': fight_items,
+                'craft_items': craft_items,
+                'map_size': self.map_size,
+                'map_grid': self.map_grid,
+                'current_frame': self.current_frame,
+                'current_game_time': self.current_game_time
+            })
         self.battle_log["frames"].append(self._get_battle_snapshot())
         if battle_finished:
             self.editor_client.send_custom(self.battle_log)
