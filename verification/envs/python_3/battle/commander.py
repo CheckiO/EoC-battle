@@ -46,7 +46,7 @@ class Client(object):
     def ask_item_info(self, item_id):
         return self.select(
             {
-                'field': 'my_info',
+                'field': 'item_info',
                 'data': {
                     "id": item_id
                 }
