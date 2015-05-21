@@ -23,11 +23,11 @@ class FightHandler(BaseHandler):
         os.chdir(os.path.dirname(self.user_data['code_path']))
         gg = {}
         exec(self.user_data['code'], gg)
-        self.user_data['code'] = gg['PLAYERS']
+        self.user_data['battle_info'] = gg['PLAYERS']
         if 'MAP_X' in gg:
             global MAP_X
             MAP_X = gg['MAP_X']
-        self.ROUTING['custom'] = 'handler_custom'
+        self.ROUTING['battle'] = 'handler_battle'
         if not os.path.exists(LOG_DIRNAME):
             os.mkdir(LOG_DIRNAME)
         log_filename = "battle_log_{}.json".format(str(datetime.now()))
@@ -47,7 +47,7 @@ class FightHandler(BaseHandler):
     def write_log(self, data):
         self.log_file.write(json.dumps(data))
 
-    def handler_custom(self, data, request_id, stream_r):
+    def handler_battle(self, data, request_id, stream_r):
         if not data.get("is_stream") and self.log_file:
             self.write_log(data)
             return
