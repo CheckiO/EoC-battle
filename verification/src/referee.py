@@ -425,7 +425,7 @@ class FightHandler(BaseHandler):
         craft_data["coordinates"] = craft_coor
         craft = CraftItem(craft_data, player=player, fight_handler=self)
         for i in range(min(unit_quantity, precalculated.MAX_LAND_POSITIONS)):
-            unit = craft_data["units"].copy()
+            unit = craft_data["unit"].copy()
             unit["code"] = craft_data["code"]
             unit["coordinates"] = unit_positions[i]
             unit["tile_position"] = unit_positions[i][:]
