@@ -120,7 +120,7 @@ class FightHandler(BaseHandler):
                 print('  {sysid}{role} {hit_points} - {str_state}'.format(
                     sysid=item['id'],
                     role=item['role'],
-                    health=item['hit_points'],
+                    hit_points=item['hit_points'],
                     str_state=self.str_state(item['state'])
                 ))
         if 'winner' in data['status']:
