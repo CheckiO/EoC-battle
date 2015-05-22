@@ -33,7 +33,7 @@ event if it will raise
   
  - "coordinates" -- coordinates of the center for the buildings or non-sized units
  - "size" -- all buildings are square. Size is length of the side. Units don't have size (== 0)
- - "health" -- health point (hp)
+ - "hit_points" -- health point (hp)
  - "damage_per_shot" -- how many hp are reduced for one shot
  - "rate_of_fire" -- shots per second
  - "firing_range" -- the distance for shooting (radius)

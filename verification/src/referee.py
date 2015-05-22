@@ -94,7 +94,7 @@ class FightItem(Item):
             'id': self.id,
             'player_id': self.player["id"],
             'role': self.type,
-            'health': self.health,
+            'hit_points': self.health,
             'size': self.size,
             'speed': self.speed,
             'coordinates': self.coordinates,

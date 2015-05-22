@@ -117,10 +117,10 @@ class FightHandler(BaseHandler):
 
             print('PLAYER {}:'.format(num + 1 if num >= 0 else "X"))
             for item in player:
-                print('  {sysid}{role} {health} - {str_state}'.format(
+                print('  {sysid}{role} {hit_points} - {str_state}'.format(
                     sysid=item['id'],
                     role=item['role'],
-                    health=item['health'],
+                    health=item['hit_points'],
                     str_state=self.str_state(item['state'])
                 ))
         if 'winner' in data['status']:
