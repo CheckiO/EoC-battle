@@ -330,6 +330,7 @@ class FightHandler(BaseHandler):
         self.current_frame = 0
         self.current_game_time = 0
         self.initial_data = editor_data['battle_info']
+        self.rewards = {}
 
         self.editor_client = editor_client
         self._referee = referee
@@ -349,6 +350,7 @@ class FightHandler(BaseHandler):
             self.codes[code_data["id"]] = code_data["code"]
 
         self.map_size = self.initial_data['map_size']
+        self.rewards = self.initial_data.get('rewards', {})
         self.time_limit = self.initial_data.get('time_limit', float("inf"))
         fight_items = []
         for item in self.initial_data['map_elements']:
@@ -465,13 +467,24 @@ class FightHandler(BaseHandler):
         else:
             IOLoop.current().call_later(self.FRAME_TIME, self.compute_frame)
 
+    def count_casualties(self, roles):
+        result = {}
+        for it in self.fighters.values():
+            if it.is_dead and it.type in roles:
+                result[it.type_for_interface] = result.get(it.type_for_interface, 0) + 1
+        return result
+
     def get_winner(self):
         for player_id, player in tuple(self.players.items()):
             if self._is_player_defeated(player):
                 del self.players[player_id]
             real_players = [k for k in self.players if k >= 0]
             if len(real_players) == 1:
-                self.battle_log["result"]["winner"] = real_players[0]
+                self.battle_log["result"] = {
+                    "winner": real_players[0],
+                    "rewards": self.rewards,
+                    "casualties": self.count_casualties(roles=("unit",))
+                }
                 return self.players[real_players[0]]
         return None
 
