@@ -100,3 +100,7 @@ class OUTPUT():
     HIT_POINTS_PERCENTAGE = 'hitPointPercentage'
     FIRING_POINT = "firingPoint"
     FIRING_POINT_LEGACY = "firing_point"
+    DEFEAT_REASON = 'reason'
+    REWARDS = 'rewards'
+    WINNER = 'winner'
+    CASUALTIES = "casualties"
