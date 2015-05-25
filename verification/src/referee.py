@@ -310,13 +310,13 @@ class FightHandler(BaseHandler):
         self.codes = {}
         self.is_stream = True
         self.battle_log = {
-            "initial": {
-                "buildings": [],
-                "units": [],
-                "crafts": []
+            OUTPUT.INITIAL_CATEGORY: {
+                OUTPUT.BUILDINGS: [],
+                OUTPUT.UNITS: [],
+                OUTPUT.CRAFTS: []
             },
-            "frames": [],
-            "result": {}
+            OUTPUT.FRAME_CATEGORY: [],
+            OUTPUT.RESULT_CATEGORY: {}
         }
         self.map_size = (0, 0)
         self.map_grid = [[]]
@@ -334,6 +334,7 @@ class FightHandler(BaseHandler):
         self.current_game_time = 0
         self.initial_data = editor_data['battle_info']
         self.rewards = {}
+        self.defeat_reason = None
 
         self.editor_client = editor_client
         self._referee = referee
@@ -479,10 +480,11 @@ class FightHandler(BaseHandler):
                 del self.players[player_id]
             real_players = [k for k in self.players if k >= 0]
             if len(real_players) == 1:
-                self.battle_log["result"] = {
-                    "winner": real_players[0],
-                    "rewards": self.rewards,
-                    "casualties": self.count_casualties(roles=("unit",))
+                self.battle_log[OUTPUT.RESULT_CATEGORY] = {
+                    OUTPUT.WINNER: real_players[0],
+                    OUTPUT.REWARDS: self.rewards,
+                    OUTPUT.CASUALTIES: self.count_casualties(roles=(ROLE.UNIT,)),
+                    OUTPUT.DEFEAT_REASON: self.defeat_reason
                 }
                 return self.players[real_players[0]]
         return None
@@ -491,11 +493,14 @@ class FightHandler(BaseHandler):
         defeat_reasons = player.get(PLAYER.DEFEAT_REASONS, [])
         if (DEFEAT_REASON.UNITS in defeat_reasons and
                 not self._is_player_has_item_role(player, ROLE.UNIT)):
+            self.defeat_reason = DEFEAT_REASON.UNITS
             return True
         elif (DEFEAT_REASON.CENTER in defeat_reasons and
-                  not self._is_player_has_item_role(player, ROLE.CENTER)):
+                not self._is_player_has_item_role(player, ROLE.CENTER)):
+            self.defeat_reason = DEFEAT_REASON.CENTER
             return True
         elif DEFEAT_REASON.TIME in defeat_reasons and self.current_game_time >= self.time_limit:
+            self.defeat_reason = DEFEAT_REASON.TIME
             return True
         return False
 
