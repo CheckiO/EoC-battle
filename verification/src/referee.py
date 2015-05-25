@@ -4,6 +4,7 @@ from tornado.ioloop import IOLoop
 
 from random import choice
 from tools import precalculated, fill_square, grid_to_graph
+from tools import ROLE, ATTRIBUTE, PARTY, ACTION, STATUS, INITIAL, DEFEAT_REASON, OUTPUT
 
 from checkio_referee import RefereeBase
 from checkio_referee.handlers.base import BaseHandler
@@ -13,6 +14,7 @@ from actions import ItemActions
 from actions.exceptions import ActionValidateError
 from environment import BattleEnvironmentsController
 from tools.distances import euclidean_distance
+from tools.terms import PLAYER
 
 
 CUT_FROM_BUILDING = 1
@@ -42,34 +44,34 @@ class FightItem(Item):
         self.id = self.generate_id()
         self.player = player  # dict, data about the player who owns this Item
         # available types: center, unit, tower, building, obstacle
-        self.type = item_data.get('role')  # type of current Item
+        self.role = item_data.get(ATTRIBUTE.ROLE)  # type of current Item
 
-        # [TODO] I know
-        self.type_for_interface = item_data.get('type')
-        self.alias = item_data.get('alias')
-        self.level = item_data.get('level')
-        self.tile_position = item_data.get('tile_position')
-        self.status_for_interface = item_data.get('status')
+        self.item_type = item_data.get(ATTRIBUTE.ITEM_TYPE)
+        self.alias = item_data.get(ATTRIBUTE.ALIAS)
+        self.level = item_data.get(ATTRIBUTE.LEVEL)
+        self.tile_position = item_data.get(ATTRIBUTE.TILE_POSITION)
+        self.item_status = item_data.get(ATTRIBUTE.ITEM_STATUS)
 
-        self.start_health = item_data.get('hit_points')
-        self.health = item_data.get('hit_points')
-        self.size = item_data.get('size', 0)
-        self.full_size = item_data.get('full_size', 0)
-        self.speed = item_data.get('speed')
+        self.start_hit_points = item_data.get(ATTRIBUTE.HIT_POINTS)
+        self.hit_points = item_data.get(ATTRIBUTE.HIT_POINTS)
+        self.size = item_data.get(ATTRIBUTE.SIZE, 0)
+        self.base_size = item_data.get(ATTRIBUTE.BASE_SIZE, 0)
+        self.speed = item_data.get(ATTRIBUTE.SPEED)
 
-        self.coordinates = item_data.get('coordinates')  # list of two
+        self.coordinates = item_data.get(ATTRIBUTE.COORDINATES)  # list of two
 
-        self.rate_of_fire = item_data.get('rate_of_fire')
-        self.damage_per_shot = item_data.get('damage_per_shot')
-        self.firing_range = item_data.get('firing_range')
-        self.area_damage_per_shot = item_data.get('area_damage_per_shot', 0)
-        self.area_damage_radius = item_data.get('area_damage_radius', 0)
+        self.rate_of_fire = item_data.get(ATTRIBUTE.RATE_OF_FIRE)
+        self.damage_per_shot = item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT)
+        self.firing_range = item_data.get(ATTRIBUTE.FIRING_RANGE)
+        self.area_damage_per_shot = item_data.get(ATTRIBUTE.AREA_DAMAGE_PER_SHOT, 0)
+        self.area_damage_radius = item_data.get(ATTRIBUTE.AREA_DAMAGE_RADIUS, 0)
 
-        self.action = item_data.get('action')  # a current command that was send from code
+        # a current command that was send from code
+        self.action = item_data.get(ACTION.REQUEST_NAME)
         self.charging = 0
 
         self._fight_handler = fight_handler  # object of FightHandler
-        self.code = self._fight_handler.codes.get(item_data.get('code'))
+        self.code = self._fight_handler.codes.get(item_data.get(ATTRIBUTE.OPERATING_CODE))
         self._initial = item_data
         self._env = None  # ??
         self._state = None  # dict of current FightItem state
@@ -81,29 +83,30 @@ class FightItem(Item):
 
     @property
     def is_dead(self):
-        return self.health <= 0
+        return self.hit_points <= 0
 
     @property
     def is_obstacle(self):
-        return self.type == "obstacle"
+        return self.role == "obstacle"
 
     @property
     def info(self):
         # DEPRECATED
         return {
-            'id': self.id,
-            'player_id': self.player["id"],
-            'role': self.type,
-            'hit_points': self.health,
-            'size': self.size,
-            'speed': self.speed,
-            'coordinates': self.coordinates,
-            'rate_of_fire': self.rate_of_fire,
-            'damage_per_shot': self.damage_per_shot,
-            'area_damage_per_shot': self.area_damage_per_shot,
-            'area_damage_radius': self.area_damage_radius,
-            'firing_range': self.firing_range,
-            'action': self.action,
+            ATTRIBUTE.ID: self.id,
+            ATTRIBUTE.PLAYER_ID: self.player["id"],
+            ATTRIBUTE.ROLE: self.role,
+            ATTRIBUTE.HIT_POINTS: self.hit_points,
+            ATTRIBUTE.SIZE: self.size,
+            ATTRIBUTE.SPEED: self.speed,
+            ATTRIBUTE.COORDINATES: self.coordinates,
+            ATTRIBUTE.RATE_OF_FIRE: self.rate_of_fire,
+            ATTRIBUTE.DAMAGE_PER_SHOT: self.damage_per_shot,
+            ATTRIBUTE.AREA_DAMAGE_PER_SHOT: self.area_damage_per_shot,
+            ATTRIBUTE.AREA_DAMAGE_RADIUS: self.area_damage_radius,
+            ATTRIBUTE.FIRING_RANGE: self.firing_range,
+            ACTION.REQUEST_NAME: self.action,
+            # TODO State should be reworked
             'state': self._state
         }
 
@@ -129,8 +132,8 @@ class FightItem(Item):
             'enemy_items_in_my_firing_range': self.select_enemy_items_in_my_firing_range
         }
 
-    def get_percentage_health(self):
-        return max(0, round(100 * self.health / self.start_health))
+    def get_percentage_hit_points(self):
+        return max(0, round(100 * self.hit_points / self.start_hit_points))
 
     def get_action_status(self):
         return self._state["action"]
@@ -150,7 +153,7 @@ class FightItem(Item):
 
     @property
     def is_executable(self):
-        if self.type == 'unit':
+        if self.role == ROLE.UNIT:
             if self.coordinates is not None:
                 return True
         elif self.code is not None:
@@ -161,12 +164,12 @@ class FightItem(Item):
     def start(self):
         if not self.is_executable:
             return
-        self._env = yield self._fight_handler.get_environment(self.player['env_name'])
+        self._env = yield self._fight_handler.get_environment(self.player[PLAYER.ENV_NAME])
         result = yield self._env.run_code(self.code)
         while True:
             if result is not None:
                 status = result.pop('status')
-                if status and status != 'success':
+                if status and status != STATUS.SUCCESS:
                     pass  # TODO:
                 self.handle_result(result)
             result = yield self._env.read_message()
@@ -195,22 +198,22 @@ class FightItem(Item):
         self._env.select_result(data)
 
     def select_my_info(self, data):
-        return self.select_item_info({"id": self.id})
+        return self.select_item_info({ATTRIBUTE.ID: self.id})
 
     def select_item_info(self, data):
-        return self._fight_handler.get_item_info(data['id'])
+        return self._fight_handler.get_item_info(data[ATTRIBUTE.ID])
 
     def select_players(self, data):
-        return self._fight_handler.get_public_players_info(data, self.player["id"])
+        return self._fight_handler.get_public_players_info(data, self.player[ATTRIBUTE.ID])
 
     def select_items(self, data):
-        return self._fight_handler.get_group_item_info(data, self.player["id"])
+        return self._fight_handler.get_group_item_info(data, self.player[ATTRIBUTE.ID])
 
     def select_nearest_enemy(self, data):
-        return self._fight_handler.get_nearest_enemy(data['id'])
+        return self._fight_handler.get_nearest_enemy(data[ATTRIBUTE.ID])
 
     def select_enemy_items_in_my_firing_range(self, data):
-        return self._fight_handler.get_enemy_items_in_my_firing_range(data['id'])
+        return self._fight_handler.get_enemy_items_in_my_firing_range(data[ATTRIBUTE.ID])
 
     def method_set_action(self, action, data):
         try:
@@ -240,22 +243,22 @@ class FightItem(Item):
 class CraftItem(Item):
     def __init__(self, item_data, player, fight_handler):
         self.id = self.generate_id()
-        self.coordinates = item_data.get("coordinates")
-        self.tile_position = item_data.get("coordinates")[:]
-        self.level = item_data.get("level")
-        self.alias = item_data.get("alias")
-        self.type_for_interface = item_data.get("type")
+        self.coordinates = item_data.get(ATTRIBUTE.COORDINATES)
+        self.tile_position = item_data.get(ATTRIBUTE.COORDINATES)[:]
+        self.level = item_data.get(ATTRIBUTE.LEVEL)
+        self.alias = item_data.get(ATTRIBUTE.ALIAS)
+        self.item_type = item_data.get(ATTRIBUTE.ITEM_TYPE)
         self.player = player
-        self.type = "craft"
+        self.role = ROLE.CRAFT
 
     @property
     def info(self):
         return {
-            'id': self.id,
-            'player_id': self.player.get("id"),
-            'type': self.type,
-            'coordinates': self.coordinates,
-            'level': self.level
+            ATTRIBUTE.ID: self.id,
+            ATTRIBUTE.PLAYER_ID: self.player.get("id"),
+            ATTRIBUTE.ROLE: self.role,
+            ATTRIBUTE.COORDINATES: self.coordinates,
+            ATTRIBUTE.LEVEL: self.level
         }
 
 
@@ -298,7 +301,7 @@ class FightHandler(BaseHandler):
                 'env_name': 'python_3',
                 'defeat': 'center'
             }
-            defeat shows the rules for defiting current player
+            defeat shows the rules for defeating current player
                 center - to loose a command center
                 units - to loose all the units
                 time - time is out
@@ -341,26 +344,22 @@ class FightHandler(BaseHandler):
 
     @gen.coroutine
     def start(self):
-        self.is_stream = self.initial_data.get('is_stream', True)
+        self.is_stream = self.initial_data.get(INITIAL.IS_STREAM, True)
         # WHY: can't we move an initialisation of players in the __init__ function?
         # in that case we can use it before start
         self.players = {p['id']: p for p in self.initial_data['players']}
         self.players[-1] = {"id": -1}
-        for code_data in self.initial_data["codes"]:
+        for code_data in self.initial_data[INITIAL.CODES]:
             self.codes[code_data["id"]] = code_data["code"]
 
-        self.map_size = self.initial_data['map_size']
-        self.rewards = self.initial_data.get('rewards', {})
-        self.time_limit = self.initial_data.get('time_limit', float("inf"))
+        self.map_size = self.initial_data[INITIAL.MAP_SIZE]
+        self.rewards = self.initial_data.get(INITIAL.REWARDS, {})
+        self.time_limit = self.initial_data.get(INITIAL.TIME_LIMIT, float("inf"))
         fight_items = []
-        for item in self.initial_data['map_elements']:
-            player = self.players[item.get('player_id', -1)]
-            if item["role"] == 'craft':
+        for item in self.initial_data[INITIAL.MAP_ELEMENTS]:
+            player = self.players[item.get(PLAYER.PLAYER_ID, -1)]
+            if item[ATTRIBUTE.ROLE] == ROLE.CRAFT:
                 self.add_craft_item(item, player, fight_items)
-            elif item["role"] == 'unit':
-                # NO SINGLE UNIT [LEGACY]
-                print("DEPRECATED WARNING: NO SINGLE UNITS")
-                continue
             else:
                 fight_items.append(self.add_fight_item(item, player))
 
@@ -402,16 +401,16 @@ class FightHandler(BaseHandler):
 
     @gen.coroutine
     def add_fight_item(self, item_data, player):
-        size = item_data.get("size", 0)
+        size = item_data.get(ATTRIBUTE.SIZE, 0)
         # [SPIKE] We use center coordinates
         coordinates = [
-            round(item_data["tile_position"][0] + size / 2, 6),
-            round(item_data["tile_position"][1] + size / 2, 6)]
+            round(item_data[ATTRIBUTE.TILE_POSITION][0] + size / 2, 6),
+            round(item_data[ATTRIBUTE.TILE_POSITION][1] + size / 2, 6)]
         # [SPIKE] We use center coordinates
         cut_size = max(size - CUT_FROM_BUILDING, 0)
-        item_data["full_size"] = size
-        item_data["size"] = cut_size
-        item_data["coordinates"] = coordinates
+        item_data[ATTRIBUTE.BASE_SIZE] = size
+        item_data[ATTRIBUTE.SIZE] = cut_size
+        item_data[ATTRIBUTE.COORDINATES] = coordinates
         fight_item = FightItem(item_data, player=player, fight_handler=self)
         self.fighters[fight_item.id] = fight_item
         yield fight_item.start()
@@ -421,17 +420,17 @@ class FightHandler(BaseHandler):
         craft_coor = self.generate_craft_place()
         if not craft_coor[1]:
             return
-        unit_quantity = craft_data["unit_quantity"]
+        unit_quantity = craft_data[ATTRIBUTE.UNIT_QUANTITY]
         unit_positions = [[craft_coor[0] + shift[0], craft_coor[1] + shift[1]]
                           for shift in precalculated.LAND_POSITION_SHIFTS[:unit_quantity]]
-        craft_data["coordinates"] = craft_coor
+        craft_data[ATTRIBUTE.COORDINATES] = craft_coor
         craft = CraftItem(craft_data, player=player, fight_handler=self)
         for i in range(min(unit_quantity, precalculated.MAX_LAND_POSITIONS)):
-            unit = craft_data["unit"].copy()
-            unit["code"] = craft_data["code"]
-            unit["coordinates"] = unit_positions[i]
-            unit["tile_position"] = unit_positions[i][:]
-            unit["role"] = "unit"
+            unit = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION].copy()
+            unit[ATTRIBUTE.OPERATING_CODE] = craft_data[ATTRIBUTE.OPERATING_CODE]
+            unit[ATTRIBUTE.COORDINATES] = unit_positions[i]
+            unit[ATTRIBUTE.TILE_POSITION] = unit_positions[i][:]
+            unit[ATTRIBUTE.ROLE] = ROLE.UNIT
             fight_items.append(self.add_fight_item(unit, player))
         self.crafts[craft.id] = craft
 
@@ -470,8 +469,8 @@ class FightHandler(BaseHandler):
     def count_casualties(self, roles):
         result = {}
         for it in self.fighters.values():
-            if it.is_dead and it.type in roles:
-                result[it.type_for_interface] = result.get(it.type_for_interface, 0) + 1
+            if it.is_dead and it.role in roles:
+                result[it.item_type] = result.get(it.item_type, 0) + 1
         return result
 
     def get_winner(self):
@@ -489,18 +488,20 @@ class FightHandler(BaseHandler):
         return None
 
     def _is_player_defeated(self, player):
-        defeat_reasons = player.get('defeat', [])
-        if 'units' in defeat_reasons and not self._is_player_has_item_type(player, "unit"):
+        defeat_reasons = player.get(PLAYER.DEFEAT_REASONS, [])
+        if (DEFEAT_REASON.UNITS in defeat_reasons and
+                not self._is_player_has_item_role(player, ROLE.UNIT)):
             return True
-        elif 'center' in defeat_reasons and not self._is_player_has_item_type(player, "center"):
+        elif (DEFEAT_REASON.CENTER in defeat_reasons and
+                  not self._is_player_has_item_role(player, ROLE.CENTER)):
             return True
-        elif 'time' in defeat_reasons and self.current_game_time >= self.time_limit:
+        elif DEFEAT_REASON.TIME in defeat_reasons and self.current_game_time >= self.time_limit:
             return True
         return False
 
-    def _is_player_has_item_type(self, player, item_type):
+    def _is_player_has_item_role(self, player, role):
         for item in self.fighters.values():
-            if item.player['id'] == player['id'] and item.type == item_type and not item.is_dead:
+            if item.player['id'] == player['id'] and item.role == role and not item.is_dead:
                 return True
         return False
 
@@ -509,6 +510,7 @@ class FightHandler(BaseHandler):
             prepare and send data to an interface for visualisation
         """
         if self.is_stream:
+            # TODO: DEPRECATED Change to single out format
             if status is None:
                 status = {}
 
@@ -533,40 +535,40 @@ class FightHandler(BaseHandler):
 
     def _log_initial_state(self):
         for item in self.fighters.values():
-            if item.type == "unit":
+            if item.role == ROLE.UNIT:
                 self._log_initial_unit(item)
-            elif item.type in ["building", "tower", "center"]:
+            elif item.role in ROLE.PLAYER_STATIC:
                 self._log_initial_building(item)
         for craft in self.crafts.values():
             self._log_initial_craft(craft)
 
     def _log_initial_unit(self, unit):
-        log = self.battle_log["initial"]["units"]
+        log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.UNITS]
         log.append({
-            "id": unit.id,
-            "tilePosition": unit.tile_position,
-            "type": unit.type_for_interface
+            OUTPUT.ITEM_ID: unit.id,
+            OUTPUT.TILE_POSITION: unit.tile_position,
+            OUTPUT.ITEM_TYPE: unit.item_type
         })
 
     def _log_initial_building(self, building):
-        log = self.battle_log["initial"]["buildings"]
+        log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.BUILDINGS]
         log.append({
-            "id": building.id,
-            "tilePosition": building.tile_position,
-            "type": building.type_for_interface,
-            "alias": building.alias,
-            "status": building.status_for_interface,
-            "level": building.level
+            OUTPUT.ITEM_ID: building.id,
+            OUTPUT.TILE_POSITION: building.tile_position,
+            OUTPUT.ITEM_TYPE: building.item_type,
+            OUTPUT.ALIAS: building.alias,
+            OUTPUT.ITEM_STATUS: building.item_status,
+            OUTPUT.ITEM_LEVEL: building.level
         })
 
     def _log_initial_craft(self, craft):
-        log = self.battle_log["initial"]["crafts"]
+        log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.CRAFTS]
         log.append({
-            "id": craft.id,
-            "tilePosition": craft.tile_position,
-            "type": craft.type_for_interface,
-            "alias": craft.alias,
-            "level": craft.level
+            OUTPUT.ITEM_ID: craft.id,
+            OUTPUT.TILE_POSITION: craft.tile_position,
+            OUTPUT.ITEM_TYPE: craft.item_type,
+            OUTPUT.ALIAS: craft.alias,
+            OUTPUT.ITEM_LEVEL: craft.level
         })
 
     def _get_battle_snapshot(self):
@@ -575,48 +577,53 @@ class FightHandler(BaseHandler):
             if item.is_obstacle:
                 continue
             item_info = {
-                "id": item.id,
-                "tilePosition": item.coordinates if item.type == "unit" else item.tile_position,
-                "hitPointPercentage": item.get_percentage_health(),
-                "status": item.get_action_status()
+                OUTPUT.ITEM_ID: item.id,
+                OUTPUT.TILE_POSITION: (item.coordinates if item.role == ROLE.UNIT
+                                       else item.tile_position),
+                OUTPUT.HIT_POINTS_PERCENTAGE: item.get_percentage_hit_points(),
+                OUTPUT.ITEM_STATUS: item.get_action_status()
             }
-            if item_info["status"] == "attack":
-                item_info["firing_point"] = item._state["firing_point"]
+            if item_info[ACTION.STATUS] == ACTION.ATTACK:
+                item_info[OUTPUT.FIRING_POINT] = item._state[ACTION.FIRING_POINT]
+                # TODO LEGACY DEPRECATED
+                item_info[OUTPUT.FIRING_POINT_LEGACY] = item_info[OUTPUT.FIRING_POINT]
 
             snapshot.append(item_info)
         return snapshot
 
     @staticmethod
     def filter_enemy_party(sequence, player_id):
-        return [d for d in sequence if d["player_id"] >= 0 and d["player_id"] != player_id]
+        return [d for d in sequence
+                if d[ATTRIBUTE.PLAYER_ID] >= 0 and d[ATTRIBUTE.PLAYER_ID] != player_id]
 
     @staticmethod
     def filter_my_party(sequence, player_id):
-        return [d for d in sequence if d["player_id"] >= 0 and d["player_id"] == player_id]
+        return [d for d in sequence
+                if d[ATTRIBUTE.PLAYER_ID] >= 0 and d[ATTRIBUTE.PLAYER_ID] == player_id]
 
     def filter_by_party(self, sequence, parties, player_id):
         result = []
-        if "enemy" in parties:
+        if PARTY.ENEMY in parties:
             result.extend(self.filter_enemy_party(sequence, player_id))
-        if "my" in parties:
+        if PARTY.MY in parties:
             result.extend(self.filter_my_party(sequence, player_id))
         return result
 
     @staticmethod
     def filter_by_role(sequence, roles):
-        return [el for el in sequence if el["role"] in roles]
+        return [el for el in sequence if el[ATTRIBUTE.ROLE] in roles]
 
     def get_item_info(self, item_id):
         return self.fighters[item_id].info
 
     def get_public_players_info(self, data, applicant_player_id):
-        players = [{"player_id": p} for p in self.players if p >= 0]
-        return self.filter_by_party(players, data["parties"], applicant_player_id)
+        players = [{PLAYER.PLAYER_ID: p} for p in self.players if p >= 0]
+        return self.filter_by_party(players, data[PARTY.REQUEST_NAME], applicant_player_id)
 
     def get_group_item_info(self, data, applicant_player_id):
         items = [it.info for it in self.fighters.values() if not it.is_dead]
-        items = self.filter_by_party(items, data["parties"], applicant_player_id)
-        items = self.filter_by_role(items, data["roles"])
+        items = self.filter_by_party(items, data[PARTY.REQUEST_NAME], applicant_player_id)
+        items = self.filter_by_role(items, data[ROLE.REQUEST_NAME])
         return items
 
     def get_nearest_enemy(self, item_id):
@@ -706,7 +713,7 @@ class FightHandler(BaseHandler):
         """
 
         def check_function(event, event_item, receiver):
-            return event['data']['id'] == event_item.id
+            return event['data'][ATTRIBUTE.ID] == event_item.id
 
         self._send_event(event_item_id, "death", check_function, self._data_event_id)
 
@@ -716,7 +723,7 @@ class FightHandler(BaseHandler):
         """
 
         def data_function(event, event_item, receiver):
-            return {'id': event_item.id, "coordinates": event_item.coordinates}
+            return {ATTRIBUTE.ID: event_item.id, ATTRIBUTE.COORDINATES: event_item.coordinates}
 
         self._send_event(event_item_id, "im_stop", self._check_event_equal_receiver, data_function)
 
@@ -726,7 +733,6 @@ class FightHandler(BaseHandler):
         """
         self._send_event(event_item_id, "im_idle",
                          self._check_event_equal_receiver, self._data_event_id)
-
 
     def send_range_events(self, event_item_id):
         """
@@ -753,7 +759,7 @@ class FightHandler(BaseHandler):
 
         def data_function(event, event_item, receiver):
             distance = euclidean_distance(receiver.coordinates, event["data"]["coordinates"])
-            return {'id': event_item.id, "distance": distance}
+            return {ATTRIBUTE.ID: event_item.id, "distance": distance}
 
         self._send_event(event_item_id, "im_in_area", check_function, data_function)
 
@@ -765,7 +771,7 @@ class FightHandler(BaseHandler):
         def check_function(event, event_item, receiver):
             if (receiver.id != event_item.id and
                     not event_item.is_obstacle and
-                        event_item.player != receiver.player):
+                    event_item.player != receiver.player):
                 distance = euclidean_distance(receiver.coordinates, event_item.coordinates)
                 return distance - event_item.size / 2 <= receiver.firing_range
             return False
