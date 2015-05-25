@@ -35,8 +35,8 @@ class BaseItemActions(object):
         if attacker.charging < 1:
             return {'action': 'charge'}
 
-        enemy.health -= attacker.damage_per_shot
-        if enemy.health <= 0:
+        enemy.hit_points -= attacker.damage_per_shot
+        if enemy.hit_points <= 0:
             self._dead(enemy)
 
         attacker.charging -= 1
