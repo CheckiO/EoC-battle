@@ -12,7 +12,7 @@ Runner.ALLOWED_MODULES += ['battle', 'battle.commander']  # OMFG
 def _make_id(target):
     if hasattr(target, '__func__'):
         return id(target.__self__), id(target.__func__)
-    return id(target)
+    return id(target), None
 
 
 class PlayerRefereeRunner(Runner):
@@ -21,7 +21,8 @@ class PlayerRefereeRunner(Runner):
         super().__init__(*args, **kwargs)
 
     def action_event(self, data):
-        self._events[data['lookup_key']](data['data'])
+        lookup_key = tuple(data['lookup_key'])
+        self._events[lookup_key](data['data'])
 
     def subscribe(self, lookup_key, callback):
         self._events[lookup_key] = callback
