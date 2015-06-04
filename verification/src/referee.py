@@ -360,9 +360,12 @@ class FightHandler(BaseHandler):
         for item in self.initial_data[INITIAL.MAP_ELEMENTS]:
             player = self.players[item.get(PLAYER.PLAYER_ID, -1)]
             if item[ATTRIBUTE.ROLE] == ROLE.CRAFT:
-                self.add_craft_item(item, player, fight_items)
+                members = self.add_craft_item(item, player)
             else:
-                fight_items.append(self.add_fight_item(item, player))
+                members = (item,)
+
+            for member in members:
+                fight_items.append(self.add_fight_item(member, player))
 
         atexit.register(self.send_full_log)
         self._log_initial_state()
@@ -416,8 +419,7 @@ class FightHandler(BaseHandler):
         self.fighters[fight_item.id] = fight_item
         yield fight_item.start()
 
-    @gen.coroutine
-    def add_craft_item(self, craft_data, player, fight_items):
+    def add_craft_item(self, craft_data, player):
         craft_coor = self.generate_craft_place()
         if not craft_coor[1]:
             return
@@ -426,14 +428,14 @@ class FightHandler(BaseHandler):
                           for shift in precalculated.LAND_POSITION_SHIFTS[:unit_quantity]]
         craft_data[ATTRIBUTE.COORDINATES] = craft_coor
         craft = CraftItem(craft_data, player=player, fight_handler=self)
+        self.crafts[craft.id] = craft
         for i in range(min(unit_quantity, precalculated.MAX_LAND_POSITIONS)):
             unit = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION].copy()
             unit[ATTRIBUTE.OPERATING_CODE] = craft_data[ATTRIBUTE.OPERATING_CODE]
             unit[ATTRIBUTE.COORDINATES] = unit_positions[i]
             unit[ATTRIBUTE.TILE_POSITION] = unit_positions[i][:]
             unit[ATTRIBUTE.ROLE] = ROLE.UNIT
-            fight_items.append(self.add_fight_item(unit, player))
-        self.crafts[craft.id] = craft
+            yield unit
 
     def generate_craft_place(self):
         width = self.map_size[1]
@@ -464,6 +466,7 @@ class FightHandler(BaseHandler):
         winner = self.get_winner()
         if winner is not None:
             self.send_frame({'winner': winner}, True)
+            self.stop()
         else:
             IOLoop.current().call_later(self.FRAME_TIME, self.compute_frame)
 
