@@ -99,6 +99,6 @@ class UnitActions(BaseItemActions):
     def validate_attack(self, action, data):
         enemy = self._fight_handler.fighters.get(data['id'])
         if enemy.is_dead:
-            return ActionValidateError("The enemy is dead")
+            raise ActionValidateError("The enemy is dead")
         if enemy.player['id'] == self._item.player['id']:
             raise ActionValidateError("Can not attack own item")
