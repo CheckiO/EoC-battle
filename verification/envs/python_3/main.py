@@ -1,8 +1,9 @@
+import os
 import sys
 from queue import Queue
 
 from checkio_executor_python.client import ClientLoop, RefereeClient
-from checkio_executor_python.execs import Runner
+from checkio_executor_python.execs import Runner, StopExecuting
 
 from battle import commander
 
@@ -22,7 +23,11 @@ class PlayerRefereeRunner(Runner):
 
     def action_event(self, data):
         lookup_key = tuple(data['lookup_key'])
-        self._events[lookup_key](data['data'])
+        callback = self._events[lookup_key]
+        try:
+            callback(data['data'])
+        except Exception:
+            pass
 
     def subscribe(self, lookup_key, callback):
         self._events[lookup_key] = callback
@@ -49,10 +54,6 @@ class PlayerRefereeClient(RefereeClient):
         while not self.events_call.empty():
             response = self.events_call.get()
             self.runner.action_event(response)
-
-    def _send_event(self, lookup_key, data):
-        callback = self._events[lookup_key]
-        callback(data=data)
 
     def wait_actual_response(self, response):
         if response.get('action') != 'event':
@@ -90,6 +91,20 @@ class PlayerClientLoop(ClientLoop):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.client.set_runner(self.runner)
+
+    def start(self):
+        self.set_os_permissions()
+        execution_data = self.client.request({
+            'status': 'connected',
+            'environment_id': self.environment_id,
+            'pid': os.getpid(),
+        })
+        while True:
+            try:
+                results = self.runner.execute(execution_data)
+            except StopExecuting:
+                results = None
+            execution_data = self.client.request(results)
 
 
 client_loop = PlayerClientLoop(int(sys.argv[1]), sys.argv[2])

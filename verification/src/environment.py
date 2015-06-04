@@ -1,3 +1,5 @@
+from tornado import gen
+
 from checkio_referee.environment.controller import EnvironmentsController
 from checkio_referee.environment.client import EnvironmentClient
 
@@ -26,6 +28,12 @@ class BattleEnvironmentClient(EnvironmentClient):
             'lookup_key': lookup_key,
             'data': data
         })
+
+    @gen.coroutine
+    def _request(self, data):
+        yield self.write(data)
+        response = yield self.read_message()
+        return response
 
 
 class BattleEnvironmentsController(EnvironmentsController):
