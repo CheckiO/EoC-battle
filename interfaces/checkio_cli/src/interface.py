@@ -115,7 +115,7 @@ class FightHandler(BaseHandler):
 
         for num, player in players_groups.items():
 
-            print('PLAYER {}:'.format(num + 1 if num >= 0 else "X"))
+            print('PLAYER {}:'.format(num if num >= 0 else "X"))
             for item in player:
                 print('  {sysid}{role} {hit_points} - {str_state}'.format(
                     sysid=item['id'],
