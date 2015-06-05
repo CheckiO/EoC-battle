@@ -466,7 +466,7 @@ class FightHandler(BaseHandler):
         winner = self.get_winner()
         if winner is not None:
             self.send_frame({'winner': winner}, True)
-            self.stop()
+            IOLoop.current().call_later(3, self.stop)
         else:
             IOLoop.current().call_later(self.FRAME_TIME, self.compute_frame)
 
