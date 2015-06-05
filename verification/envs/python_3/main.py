@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 from queue import Queue
 
 from checkio_executor_python.client import ClientLoop, RefereeClient
@@ -26,8 +27,8 @@ class PlayerRefereeRunner(Runner):
         callback = self._events[lookup_key]
         try:
             callback(data['data'])
-        except Exception:
-            pass
+        except Exception as e:
+            logging.error(e, exc_info=True)
 
     def subscribe(self, lookup_key, callback):
         self._events[lookup_key] = callback
