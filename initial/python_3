@@ -1,148 +1,68 @@
-PLAYERS = {'codes':
-               [
-                   {'code': '\n'
-                            'from battle import commander\n'
-                            '\n'
-                            'tower_client = commander.Client()\n'
-                            '\n'
-                            '\n'
-                            'def search_next_target(data, **kwargs):\n'
-                            '    enemies = '
-                            'tower_client.ask_enemy_items_in_my_firing_range()\n'
-                            '    if enemies:\n'
-                            '        unit_in_firing_range(enemies[0])\n'
-                            '    else:\n'
-                            '        '
-                            'tower_client.subscribe_enemy_in_my_firing_range(unit_in_firing_range)\n'
-                            '\n'
-                            '\n'
-                            'def unit_in_firing_range(data, **kwargs):\n'
-                            "    tower_client.attack_item(data['id'])\n"
-                            '    '
-                            'tower_client.subscribe_im_idle(search_next_target)\n'
-                            '\n'
-                            'tower_client.subscribe_enemy_in_my_firing_range(unit_in_firing_range)\n',
-                    'id': 0},
-                   {'code': '\n'
-                            'from battle import commander\n'
-                            'unit_client = commander.Client()\n'
-                            '\n'
-                            '\n'
-                            'def search_and_destroy(data=None, *args, **kawargs):\n'
-                            '    enemy = unit_client.ask_nearest_enemy()\n'
-                            "    unit_client.attack_item(enemy['id'])\n"
-                            '    '
-                            "unit_client.subscribe_the_item_is_dead(enemy['id'], "
-                            'search_and_destroy)\n'
-                            '\n'
-                            'search_and_destroy()\n',
-                    'id': 1}
-               ],
-           'is_stream': True,
-           'map_elements': [
-               {'alias': 'commandCenter-main1',
-                'hit_points': 2500,
-                'level': 1,
-                'player_id': 0,
-                'role': 'center',
-                'size': 4,
-                'status': 'idle',
-                'tile_position': [20, 18],
-                'type': 'commandCenter'},
-               {'alias': 'sniper',
-                'code': 0,
-                'damage_per_shot': 55,
-                'firing_range': 12,
-                'hit_points': 1000,
-                'level': 2,
-                'player_id': 0,
-                'rate_of_fire': 1,
-                'role': 'tower',
-                'size': 3,
-                'status': 'idle',
-                'tile_position': [21, 14],
-                'type': 'sentryGun'},
-               {'alias': 'sniper',
-                'code': 0,
-                'damage_per_shot': 55,
-                'firing_range': 12,
-                'hit_points': 1000,
-                'level': 2,
-                'player_id': 0,
-                'rate_of_fire': 1,
-                'role': 'tower',
-                'size': 3,
-                'status': 'idle',
-                'tile_position': [21, 18],
-                'type': 'sentryGun'},
-               {'alias': 'crystaliteFarm-1',
-                'hit_points': 1000,
-                'level': 1,
-                'player_id': 0,
-                'role': 'building',
-                'size': 3,
-                'status': 'idle',
-                'tile_position': [23, 10],
-                'type': 'crystaliteFarm'},
-               {'alias': 'superRock',
-                'hit_points': 9000000,
-                'level': 1,
-                'role': 'obstacle',
-                'size': 21,
-                'tile_position': [0, 0],
-                'type': 'rock'},
-               {'alias': 'superRock',
-                'hit_points': 9000000,
-                'level': 1,
-                'role': 'obstacle',
-                'size': 21,
-                'tile_position': [0, 20],
-                'type': 'rock'},
-               {'alias': 'craft2',
-                'code': 1,
-                'level': 1,
-                'player_id': 1,
-                'role': 'craft',
-                'type': 'craft',
-                'unit': {'c_size': 1,
-                         'damage_per_shot': 50,
-                         'firing_range': 4,
-                         'hit_points': 120,
-                         'rate_of_fire': 1,
-                         'speed': 5,
-                         'type': 'infantryBot'},
-                'unit_quantity': 4},
-               {'alias': 'craft2',
-                'code': 1,
-                'level': 1,
-                'player_id': 1,
-                'role': 'craft',
-                'type': 'craft',
-                'unit': {'c_size': 4,
-                         'damage_per_shot': 5,
-                         'firing_range': 2.5,
-                         'hit_points': 1000,
-                         'rate_of_fire': 10,
-                         'speed': 3,
-                         'type': 'heavyBot'},
-                'unit_quantity': 1},
-               {'alias': 'craft2',
-                'code': 1,
-                'level': 1,
-                'player_id': 1,
-                'role': 'craft',
-                'type': 'craft',
-                'unit': {'c_size': 2,
-                         'damage_per_shot': 150,
-                         'firing_range': 8,
-                         'hit_points': 50,
-                         'rate_of_fire': 0.5,
-                         'speed': 4,
-                         'type': 'rocketBot'},
-                'unit_quantity': 2}],
-           'map_size': (40, 40),
-           'players': [
-               {'defeat': ['center'], 'env_name': 'python_3', 'id': 0},
-               {'defeat': ['units', 'time'], 'env_name': 'python_3', 'id': 1}],
-           'rewards': {'adamantite': 400, 'crystalite': 150},
-           'time_limit': 30}
+from battle_mocks import *
+
+DEFENDER_CODE = """
+from battle import commander
+
+tower_client = commander.Client()
+
+
+def search_next_target(data, **kwargs):
+    enemies = tower_client.ask_enemy_items_in_my_firing_range()
+    if enemies:
+        unit_in_firing_range(enemies[0])
+    else:
+        tower_client.subscribe_enemy_in_my_firing_range(unit_in_firing_range)
+
+
+def unit_in_firing_range(data, **kwargs):
+    tower_client.attack_item(data['id'])
+    tower_client.subscribe_im_idle(search_next_target)
+
+tower_client.subscribe_enemy_in_my_firing_range(unit_in_firing_range)
+"""
+
+ATTACKER_CODE = """
+from battle import commander
+unit_client = commander.Client()
+
+
+def search_and_destroy(data=None, *args, **kwargs):
+    enemy = unit_client.ask_nearest_enemy()
+    unit_client.attack_item(enemy['id'])
+    unit_client.subscribe_the_item_is_dead(enemy['id'], search_and_destroy)
+
+search_and_destroy()
+"""
+
+PLAYERS = {
+    # Player Codes
+    'codes': [
+        {'code': DEFENDER_CODE, 'id': 0},
+        {'code': ATTACKER_CODE, 'id': 1}
+    ],
+    # Required for console output
+    'is_stream': True,
+    'map_size': (40, 40),
+    # Player information
+    'players': [
+        {'defeat': ['center'], 'env_name': 'python_3', 'id': 0},
+        {'defeat': ['units', 'time'], 'env_name': 'python_3', 'id': 1}],
+    'rewards': {'adamantite': 400, 'crystalite': 150},
+    # If 'time' in defeat reasons, then after this time limit the player are defeated
+    'time_limit': 30,
+
+    # Building, obstacles and units
+    # Units appears from crafts in random places on the edge
+    'map_elements': [
+        command_center(level=1, tile_position=[20, 18], player_id=0),
+        sentry_tower(level=1, tile_position=[21, 14], player_id=0, code_id=0),
+        sentry_tower(level=5, tile_position=[21, 23], player_id=0, code_id=0),
+        sentry_tower(level=5, tile_position=[25, 23], player_id=0, code_id=0),
+        crystalite_farm(level=2, tile_position=[25, 19], player_id=0),
+        obstacle(tile_position=[0, 0], size=21),
+        obstacle(tile_position=[0, 20], size=21),
+        craft(level=1, unit=infantry_bot(level=1), unit_quantity=4, player_id=1, code_id=1),
+        craft(level=1, unit=heavy_bot(level=1), unit_quantity=1, player_id=1, code_id=1),
+        craft(level=1, unit=rocket_bot(level=1), unit_quantity=2, player_id=1, code_id=1)
+    ]
+}
