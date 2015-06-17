@@ -1,4 +1,3 @@
-import atexit
 from tornado import gen
 from tornado.ioloop import IOLoop
 
@@ -367,7 +366,6 @@ class FightHandler(BaseHandler):
             for member in members:
                 fight_items.append(self.add_fight_item(member, player))
 
-        atexit.register(self.send_full_log)
         self._log_initial_state()
 
         self.compute_frame()
@@ -537,9 +535,6 @@ class FightHandler(BaseHandler):
         self.battle_log["frames"].append(self._get_battle_snapshot())
         if battle_finished:
             self.editor_client.send_battle(self.battle_log)
-
-    def send_full_log(self):
-        self.send_frame(battle_finished=True)
 
     def _log_initial_state(self):
         for item in self.fighters.values():
