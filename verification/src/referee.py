@@ -41,6 +41,7 @@ class FightItem(Item):
     def __init__(self, item_data, player, fight_handler):
         self.init_handlers()
         self.id = self.generate_id()
+        self.craft_id = item_data.get(ATTRIBUTE.CRAFT_ID)
         self.player = player  # dict, data about the player who owns this Item
         # available types: center, unit, tower, building, obstacle
         self.role = item_data.get(ATTRIBUTE.ROLE)  # type of current Item
@@ -93,6 +94,7 @@ class FightItem(Item):
         # DEPRECATED
         return {
             ATTRIBUTE.ID: self.id,
+            ATTRIBUTE.CRAFT_ID: self.craft_id,
             ATTRIBUTE.PLAYER_ID: self.player["id"],
             ATTRIBUTE.ROLE: self.role,
             ATTRIBUTE.HIT_POINTS: self.hit_points,
@@ -242,6 +244,8 @@ class FightItem(Item):
 class CraftItem(Item):
     def __init__(self, item_data, player, fight_handler):
         self.id = self.generate_id()
+        self.craft_id = item_data.get(ATTRIBUTE.CRAFT_ID)
+        self.unit_type = item_data.get(ATTRIBUTE.UNIT_TYPE)
         self.coordinates = item_data.get(ATTRIBUTE.COORDINATES)
         self.tile_position = item_data.get(ATTRIBUTE.COORDINATES)[:]
         self.level = item_data.get(ATTRIBUTE.LEVEL)
@@ -425,14 +429,17 @@ class FightHandler(BaseHandler):
         unit_positions = [[craft_coor[0] + shift[0], craft_coor[1] + shift[1]]
                           for shift in precalculated.LAND_POSITION_SHIFTS[:unit_quantity]]
         craft_data[ATTRIBUTE.COORDINATES] = craft_coor
+        in_unit_description = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION]
+        craft_data[ATTRIBUTE.UNIT_TYPE] = in_unit_description[ATTRIBUTE.ITEM_TYPE]
         craft = CraftItem(craft_data, player=player, fight_handler=self)
         self.crafts[craft.id] = craft
         for i in range(min(unit_quantity, precalculated.MAX_LAND_POSITIONS)):
-            unit = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION].copy()
+            unit = in_unit_description.copy()
             unit[ATTRIBUTE.OPERATING_CODE] = craft_data[ATTRIBUTE.OPERATING_CODE]
             unit[ATTRIBUTE.COORDINATES] = unit_positions[i]
             unit[ATTRIBUTE.TILE_POSITION] = unit_positions[i][:]
             unit[ATTRIBUTE.ROLE] = ROLE.UNIT
+            unit[ATTRIBUTE.CRAFT_ID] = craft.craft_id
             yield unit
 
     def generate_craft_place(self):
@@ -468,12 +475,15 @@ class FightHandler(BaseHandler):
         else:
             IOLoop.current().call_later(self.FRAME_TIME, self.compute_frame)
 
-    def count_casualties(self, roles):
-        result = {}
+    def count_unit_casualties(self):
+        result = {craft.craft_id: {
+            OUTPUT.CRAFT_ID: craft.craft_id,
+            OUTPUT.COUNT: 0,
+            OUTPUT.ITEM_TYPE: craft.unit_type} for craft in self.crafts.values()}
         for it in self.fighters.values():
-            if it.is_dead and it.role in roles:
-                result[it.item_type] = result.get(it.item_type, 0) + 1
-        return result
+            if it.is_dead and it.role in ROLE.UNIT:
+                result[it.craft_id][OUTPUT.COUNT] += 1
+        return [casualty for casualty in result.values() if casualty[OUTPUT.COUNT]]
 
     def get_winner(self):
         for player_id, player in tuple(self.players.items()):
@@ -484,7 +494,7 @@ class FightHandler(BaseHandler):
                 self.battle_log[OUTPUT.RESULT_CATEGORY] = {
                     OUTPUT.WINNER: real_players[0],
                     OUTPUT.REWARDS: self.rewards,
-                    OUTPUT.CASUALTIES: self.count_casualties(roles=(ROLE.UNIT,)),
+                    OUTPUT.CASUALTIES: self.count_unit_casualties(),
                     OUTPUT.DEFEAT_REASON: self.defeat_reason
                 }
                 return self.players[real_players[0]]
