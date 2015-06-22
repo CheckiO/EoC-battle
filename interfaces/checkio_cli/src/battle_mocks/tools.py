@@ -8,6 +8,7 @@ class ATTRIBUTE():
     LEVEL = 'level'
     UNIT = 'unit'
     UNIT_QUANTITY = 'unit_quantity'
+    CRAFT_ID = "craft_id"
 
 
 def check_tile_position(tile_position: [int, int]):
@@ -42,11 +43,12 @@ def create_unit(unit_group: dict, level: int) -> dict:
 
 
 def create_craft(craft_basis: dict, level: int, unit: dict, unit_quantity: int,
-                 player_id: int, code_id: int) -> dict:
+                 player_id: int, code_id: int, craft_id: int) -> dict:
     craft = deepcopy(craft_basis)
     craft[ATTRIBUTE.LEVEL] = level
     craft[ATTRIBUTE.UNIT] = unit
     craft[ATTRIBUTE.UNIT_QUANTITY] = unit_quantity
     craft[ATTRIBUTE.PLAYER_ID] = player_id
     craft[ATTRIBUTE.CODE_ID] = code_id
+    craft[ATTRIBUTE.CRAFT_ID] = craft_id
     return craft

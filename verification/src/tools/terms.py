@@ -25,6 +25,7 @@ class ROLE():
 class ATTRIBUTE():
     ID = 'id'
     PLAYER_ID = 'player_id'
+    CRAFT_ID = 'craft_id'
     ALIAS = 'alias'
     COORDINATES = 'coordinates'
     LEVEL = 'level'
@@ -36,6 +37,7 @@ class ATTRIBUTE():
     DAMAGE_PER_SHOT = 'damage_per_shot'
     AREA_DAMAGE_RADIUS = 'area_damage_radius'
     ITEM_TYPE = 'type'
+    UNIT_TYPE= 'unit_type'
     ROLE = 'role'
     ITEM_STATUS = 'status'
     HIT_POINTS = 'hit_points'
@@ -104,3 +106,5 @@ class OUTPUT():
     REWARDS = 'rewards'
     WINNER = 'winner'
     CASUALTIES = "casualties"
+    CRAFT_ID = "craft_id"
+    COUNT = "count"

@@ -14,5 +14,6 @@ CRAFT_BASIS = {
 }
 
 
-def craft(level: int, unit: dict, unit_quantity: int, player_id: int, code_id: int) -> dict:
-    return create_craft(CRAFT_BASIS, level, unit, unit_quantity, player_id, code_id)
+def craft(level: int, unit: dict, unit_quantity: int,
+          player_id: int, code_id: int, craft_id: int) -> dict:
+    return create_craft(CRAFT_BASIS, level, unit, unit_quantity, player_id, code_id, craft_id)
