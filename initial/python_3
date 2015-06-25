@@ -1,4 +1,8 @@
 from battle_mocks import *
+from battle_missions import example as mission
+
+# For example
+# from battle_missions.campaigns.starter import lvl1_easy_target as mission
 
 DEFENDER_CODE = """
 from battle import commander
@@ -34,6 +38,16 @@ def search_and_destroy(data=None, *args, **kwargs):
 search_and_destroy()
 """
 
+ATTACKERS = [
+    # !!! craft_id should be unique
+    craft(level=1, unit=infantry_bot(level=1), unit_quantity=4,
+          player_id=1, code_id=1, craft_id=1),
+    craft(level=1, unit=heavy_bot(level=1), unit_quantity=1,
+          player_id=1, code_id=1, craft_id=2),
+    craft(level=1, unit=rocket_bot(level=1), unit_quantity=2,
+          player_id=1, code_id=1, craft_id=3)
+]
+
 PLAYERS = {
     # Player Codes
     'codes': [
@@ -49,25 +63,9 @@ PLAYERS = {
         {'defeat': ['units', 'time'], 'env_name': 'python_3', 'id': 1}],
     'rewards': {'adamantite': 400, 'crystalite': 150},
     # If 'time' in defeat reasons, then after this time limit the player are defeated
-    'time_limit': 30,
+    'time_limit': mission.TIME_LIMIT,
 
     # Building, obstacles and units
     # Units appears from crafts in random places on the edge
-    'map_elements': [
-        command_center(level=1, tile_position=[20, 18], player_id=0),
-        sentry_tower(level=1, tile_position=[21, 14], player_id=0, code_id=0),
-        sentry_tower(level=5, tile_position=[21, 23], player_id=0, code_id=0),
-        sentry_tower(level=5, tile_position=[25, 23], player_id=0, code_id=0),
-        crystalite_farm(level=2, tile_position=[25, 19], player_id=0),
-        obstacle(tile_position=[0, 0], size=21),
-        obstacle(tile_position=[0, 20], size=21),
-
-        # !!! craft_id should be unique
-        craft(level=1, unit=infantry_bot(level=1), unit_quantity=4,
-              player_id=1, code_id=1, craft_id=1),
-        craft(level=1, unit=heavy_bot(level=1), unit_quantity=1,
-              player_id=1, code_id=1, craft_id=2),
-        craft(level=1, unit=rocket_bot(level=1), unit_quantity=2,
-              player_id=1, code_id=1, craft_id=3)
-    ]
+    'map_elements': mission.MAP_ELEMENTS + mission.DEFENDERS + ATTACKERS
 }
