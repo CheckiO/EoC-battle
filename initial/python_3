@@ -1,29 +1,9 @@
 from battle_mocks import *
-from battle_missions import example as mission
+from battle_missions.utils import example as mission
 
 # For example
 # from battle_missions.campaigns.starter import lvl1_easy_target as mission
 
-DEFENDER_CODE = """
-from battle import commander
-
-tower_client = commander.Client()
-
-
-def search_next_target(data, **kwargs):
-    enemies = tower_client.ask_enemy_items_in_my_firing_range()
-    if enemies:
-        unit_in_firing_range(enemies[0])
-    else:
-        tower_client.subscribe_enemy_in_my_firing_range(unit_in_firing_range)
-
-
-def unit_in_firing_range(data, **kwargs):
-    tower_client.attack_item(data['id'])
-    tower_client.subscribe_im_idle(search_next_target)
-
-tower_client.subscribe_enemy_in_my_firing_range(unit_in_firing_range)
-"""
 
 ATTACKER_CODE = """
 from battle import commander
@@ -41,31 +21,16 @@ search_and_destroy()
 ATTACKERS = [
     # !!! craft_id should be unique
     craft(level=1, unit=infantry_bot(level=1), unit_quantity=4,
-          player_id=1, code_id=1, craft_id=1),
+          player_id=1, code_id=0, craft_id=1),
     craft(level=1, unit=heavy_bot(level=1), unit_quantity=1,
-          player_id=1, code_id=1, craft_id=2),
+          player_id=1, code_id=0, craft_id=2),
     craft(level=1, unit=rocket_bot(level=1), unit_quantity=2,
-          player_id=1, code_id=1, craft_id=3)
+          player_id=1, code_id=0, craft_id=3)
 ]
 
-PLAYERS = {
-    # Player Codes
-    'codes': [
-        {'code': DEFENDER_CODE, 'id': 0},
-        {'code': ATTACKER_CODE, 'id': 1}
-    ],
-    # Required for console output
-    'is_stream': True,
-    'map_size': (40, 40),
-    # Player information
-    'players': [
-        {'defeat': ['center'], 'env_name': 'python_3', 'id': 0},
-        {'defeat': ['units', 'time'], 'env_name': 'python_3', 'id': 1}],
-    'rewards': {'adamantite': 400, 'crystalite': 150},
-    # If 'time' in defeat reasons, then after this time limit the player are defeated
-    'time_limit': mission.TIME_LIMIT,
+PLAYERS = mission.MISSION_DATA
 
-    # Building, obstacles and units
-    # Units appears from crafts in random places on the edge
-    'map_elements': mission.MAP_ELEMENTS + mission.DEFENDERS + ATTACKERS
-}
+PLAYERS['map_elements'] += ATTACKERS
+
+# !!! code ids from 1000 to 10000 are bound for predefined codes from battle_mission
+PLAYERS['codes'].append({'code': ATTACKER_CODE, 'id': 0})
