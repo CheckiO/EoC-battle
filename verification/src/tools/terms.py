@@ -1,5 +1,5 @@
 __all__ = ['ROLE', 'PARTY', 'ATTRIBUTE', 'ACTION', 'STATUS',
-           'INITIAL', 'PLAYER', 'DEFEAT_REASON', 'OUTPUT']
+           'INITIAL', 'PLAYER', 'DEFEAT_REASON', 'OUTPUT', "STD"]
 
 
 class PARTY():
@@ -37,7 +37,7 @@ class ATTRIBUTE():
     DAMAGE_PER_SHOT = 'damage_per_shot'
     AREA_DAMAGE_RADIUS = 'area_damage_radius'
     ITEM_TYPE = 'type'
-    UNIT_TYPE= 'unit_type'
+    UNIT_TYPE = 'unit_type'
     ROLE = 'role'
     ITEM_STATUS = 'status'
     HIT_POINTS = 'hit_points'
@@ -75,9 +75,12 @@ class RESOURCE():
 
 
 class PLAYER():
+    KEY = "players"
+    ID = "id"
     PLAYER_ID = 'player_id'
     ENV_NAME = 'env_name'
     DEFEAT_REASONS = 'defeat'
+    USERNAME = "username"
 
 
 class DEFEAT_REASON():
@@ -87,12 +90,16 @@ class DEFEAT_REASON():
 
 
 class OUTPUT():
+    ID = "id"
     INITIAL_CATEGORY = 'initial'
     RESULT_CATEGORY = 'result'
     FRAME_CATEGORY = 'frames'
     UNITS = 'units'
     CRAFTS = 'crafts'
     BUILDINGS = 'buildings'
+    PLAYERS = "players"
+    PLAYER_ID = "player_id"
+    USERNAME = "username"
     ITEM_ID = 'id'
     TILE_POSITION = 'tilePosition'
     ITEM_TYPE = 'type'
@@ -108,3 +115,10 @@ class OUTPUT():
     CASUALTIES = "casualties"
     CRAFT_ID = "craft_id"
     COUNT = "count"
+    STDOUT = "stdout"
+    STDERR = "stderr"
+
+
+class STD():
+    OUT = "out"
+    ERR = "err"
