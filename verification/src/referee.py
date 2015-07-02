@@ -3,7 +3,7 @@ from tornado.ioloop import IOLoop
 
 from random import choice
 from tools import precalculated, fill_square, grid_to_graph
-from tools import ROLE, ATTRIBUTE, PARTY, ACTION, STATUS, INITIAL, DEFEAT_REASON, OUTPUT
+from tools import ROLE, ATTRIBUTE, PARTY, ACTION, STATUS, INITIAL, DEFEAT_REASON, OUTPUT, STD
 
 from checkio_referee import RefereeBase
 from checkio_referee.handlers.base import BaseHandler
@@ -75,6 +75,11 @@ class FightItem(Item):
         self._initial = item_data
         self._env = None  # ??
         self._state = None  # dict of current FightItem state
+
+        self._std = {
+            "out": [],
+            "err": []
+        }
         # every state has a key "action"
         # {'action': 'idle'}
         # {'action': 'dead'}
@@ -165,7 +170,11 @@ class FightItem(Item):
     def start(self):
         if not self.is_executable:
             return
-        self._env = yield self._fight_handler.get_environment(self.player[PLAYER.ENV_NAME])
+        controller = self._fight_handler._referee.environments_controller
+        self._env = yield controller.get_environment(self.player[PLAYER.ENV_NAME],
+                                                     on_stdout=self.stdout,
+                                                     on_stderr=self.stderr)
+        # self._env = yield self._fight_handler.get_environment(self.player[PLAYER.ENV_NAME])
         result = yield self._env.run_code(self.code)
         while True:
             if result is not None:
@@ -174,6 +183,20 @@ class FightItem(Item):
                     pass  # TODO:
                 self.handle_result(result)
             result = yield self._env.read_message()
+
+    def stdout(self, connection_id, out):
+        self._std[STD.OUT].append(out)
+
+    def stderr(self, connection_id, err):
+        self._std[STD.ERR].append(err)
+
+    def has_std(self, std_name):
+        return bool(self._std[std_name])
+
+    def pull_std(self, std_name):
+        data = "".join(self._std[std_name])
+        self._std[std_name] = []
+        return data
 
     def handle_result(self, data):
         handler_name = data.pop('method', None)
@@ -316,7 +339,8 @@ class FightHandler(BaseHandler):
             OUTPUT.INITIAL_CATEGORY: {
                 OUTPUT.BUILDINGS: [],
                 OUTPUT.UNITS: [],
-                OUTPUT.CRAFTS: []
+                OUTPUT.CRAFTS: [],
+                OUTPUT.PLAYERS: []
             },
             OUTPUT.FRAME_CATEGORY: [],
             OUTPUT.RESULT_CATEGORY: {}
@@ -351,7 +375,7 @@ class FightHandler(BaseHandler):
         self.is_stream = self.initial_data.get(INITIAL.IS_STREAM, True)
         # WHY: can't we move an initialisation of players in the __init__ function?
         # in that case we can use it before start
-        self.players = {p['id']: p for p in self.initial_data['players']}
+        self.players = {p['id']: p for p in self.initial_data[PLAYER.KEY]}
         self.players[-1] = {"id": -1}
         for code_data in self.initial_data[INITIAL.CODES]:
             self.codes[code_data["id"]] = code_data["code"]
@@ -554,13 +578,16 @@ class FightHandler(BaseHandler):
                 self._log_initial_building(item)
         for craft in self.crafts.values():
             self._log_initial_craft(craft)
+        for player in self.initial_data[PLAYER.KEY]:
+            self._log_initial_player(player)
 
     def _log_initial_unit(self, unit):
         log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.UNITS]
         log.append({
             OUTPUT.ITEM_ID: unit.id,
             OUTPUT.TILE_POSITION: unit.tile_position,
-            OUTPUT.ITEM_TYPE: unit.item_type
+            OUTPUT.ITEM_TYPE: unit.item_type,
+            OUTPUT.PLAYER_ID: unit.player[PLAYER.ID]
         })
 
     def _log_initial_building(self, building):
@@ -571,7 +598,8 @@ class FightHandler(BaseHandler):
             OUTPUT.ITEM_TYPE: building.item_type,
             OUTPUT.ALIAS: building.alias,
             OUTPUT.ITEM_STATUS: building.item_status,
-            OUTPUT.ITEM_LEVEL: building.level
+            OUTPUT.ITEM_LEVEL: building.level,
+            OUTPUT.PLAYER_ID: building.player[PLAYER.ID]
         })
 
     def _log_initial_craft(self, craft):
@@ -581,7 +609,15 @@ class FightHandler(BaseHandler):
             OUTPUT.TILE_POSITION: craft.tile_position,
             OUTPUT.ITEM_TYPE: craft.item_type,
             OUTPUT.ALIAS: craft.alias,
-            OUTPUT.ITEM_LEVEL: craft.level
+            OUTPUT.ITEM_LEVEL: craft.level,
+            OUTPUT.PLAYER_ID: craft.player[PLAYER.ID]
+        })
+
+    def _log_initial_player(self, player):
+        log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.PLAYERS]
+        log.append({
+            OUTPUT.ID: player[PLAYER.ID],
+            OUTPUT.USERNAME: player.get(PLAYER.USERNAME, str(player[PLAYER.ID]))
         })
 
     def _get_battle_snapshot(self):
@@ -600,6 +636,10 @@ class FightHandler(BaseHandler):
                 item_info[OUTPUT.FIRING_POINT] = item._state[ACTION.FIRING_POINT]
                 # TODO LEGACY DEPRECATED
                 item_info[OUTPUT.FIRING_POINT_LEGACY] = item_info[OUTPUT.FIRING_POINT]
+            if item.has_std(STD.OUT):
+                item_info[OUTPUT.STDOUT] = item.pull_std(STD.OUT)
+            if item.has_std(STD.ERR):
+                item_info[OUTPUT.STDERR] = item.pull_std(STD.ERR)
 
             snapshot.append(item_info)
         return snapshot
