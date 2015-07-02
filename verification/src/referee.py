@@ -174,7 +174,6 @@ class FightItem(Item):
         self._env = yield controller.get_environment(self.player[PLAYER.ENV_NAME],
                                                      on_stdout=self.stdout,
                                                      on_stderr=self.stderr)
-        # self._env = yield self._fight_handler.get_environment(self.player[PLAYER.ENV_NAME])
         result = yield self._env.run_code(self.code)
         while True:
             if result is not None:
