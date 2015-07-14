@@ -4,6 +4,8 @@ from battle_missions.utils import example as mission
 # For example
 # from battle_missions.campaigns.starter import lvl1_easy_target as mission
 
+# Uncomment line bellow in case you want to use JS to attack
+# mission.MISSION_DATA['players'][1]['env_name'] = 'js_node'
 
 ATTACKER_CODE = """
 from battle import commander

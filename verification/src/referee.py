@@ -116,6 +116,14 @@ class FightItem(Item):
             'state': self._state
         }
 
+    @property
+    def internal_info(self):
+        info = self.info
+        info.update({
+            'std': self._std
+        })
+        return info
+
     def init_handlers(self):
         """
             there are only 3 kind of actions that can be send from FightItem to Referee
@@ -553,7 +561,7 @@ class FightHandler(BaseHandler):
             if status is None:
                 status = {}
 
-            fight_items = [fighter.info for fighter in self.fighters.values()]
+            fight_items = [fighter.internal_info for fighter in self.fighters.values()]
             craft_items = [craft.info for craft in self.crafts.values()]
             self.editor_client.send_battle({
                 "is_stream": True,

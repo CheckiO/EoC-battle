@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import datetime
 import json
 import atexit
@@ -64,6 +65,14 @@ class FightHandler(BaseHandler):
             r_coordinates = (round(coordinates[0] * MAP_X), round(coordinates[1] * MAP_X))
             out_map[r_coordinates[0]][r_coordinates[1]] = item
             size = item.get('size')
+            if 'std' in item and any(item['std'].values()):
+                print('{:<10}'.format(item['id']), end='')
+                print('-' * 20)
+                if item['std']['out']:
+                    print(''.join(item['std']['out']))
+                if item['std']['err']:
+                    print(''.join(item['std']['err']), file=sys.stderr)
+
             if not size or item.get("state", {}).get("action") == "dead":
                 continue
             half_size = round((item['size'] / 2) * MAP_X)
