@@ -103,13 +103,13 @@ Client.prototype.askEnemyPlayers = function (callBack) {
     return this.askItems([PARTY.ENEMY], undefined, callBack);
 };
 
-Client.prototype.askMyRangeEnemyItems = function () {
+Client.prototype.askMyRangeEnemyItems = function (callBack) {
     return this.ask({
         'field': 'enemy_items_in_my_firing_range',
         'data': {
             'id': this.myInfo.id
         }
-    });
+    }, callBack);
 };
 
 // DO
