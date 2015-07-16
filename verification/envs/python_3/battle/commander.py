@@ -20,17 +20,18 @@ class Client(object):
     def set_client(cls, client):
         cls.CLIENT = client
 
-    def select(self, fields):
+    def ask(self, fields):
         return self.CLIENT.select(fields=[fields])[0]
+    select = ask
 
     def ask_my_info(self):
-        return self.select(
+        return self.ask(
             {
                 'field': 'my_info'
             })
 
     def ask_item_info(self, item_id):
-        return self.select(
+        return self.ask(
             {
                 'field': 'item_info',
                 'data': {
@@ -39,7 +40,7 @@ class Client(object):
             })
 
     def ask_items(self, parties=PARTY.ALL, roles=ROLE.ALL):
-        return self.select(
+        return self.ask(
             {
                 'field': 'items',
                 'data': {
@@ -68,7 +69,7 @@ class Client(object):
         return self.ask_items(roles=(ROLE.UNIT,))
 
     def ask_players(self, parties=PARTY.ALL):
-        return self.select(
+        return self.ask(
             {
                 'field': 'players',
                 'data': {
@@ -80,7 +81,7 @@ class Client(object):
         return self.ask_players(parties=(PARTY.ENEMY,))
 
     def ask_nearest_enemy(self):
-        return self.select(
+        return self.ask(
             {
                 'field': 'nearest_enemy',
                 'data': {
@@ -88,50 +89,64 @@ class Client(object):
                 }
             })
 
-    def ask_enemy_items_in_my_firing_range(self):
-        return self.select(
+    def ask_my_range_enemy_items(self):
+        return self.ask(
             {
                 'field': 'enemy_items_in_my_firing_range',
                 'data': {
                     'id': self.item_id
                 }
             })
+    ask_enemy_items_in_my_firing_range = ask_my_range_enemy_items
 
-    def attack_item(self, item_id):
-        return self.CLIENT.set_action('attack', {'id': item_id})
+    def do(self, action, data):
+        return self.CLIENT.set_action(action, data)
 
-    def move_to_point(self, coordinates):
-        self.CLIENT.set_action('move', {'coordinates': coordinates})
+    def do_attack(self, item_id):
+        return self.do('attack', {'id': item_id})
+    attack_item = do_attack
 
-    def subscribe(self, event, callback, data=None):
+    def do_move(self, coordinates):
+        return self.do('move', {'coordinates': coordinates})
+    move_to_point = do_move
+
+    def when(self, event, callback, data=None):
         return self.CLIENT.subscribe(event, callback, data)
+    subscribe = when
 
     def unsubscribe_all(self):
-        return self.subscribe('unsubscribe_all', None)
+        return self.when('unsubscribe_all', None)
 
-    def subscribe_im_in_area(self, center, radius, callback):
-        return self.subscribe('im_in_area', callback, {
+    def when_in_area(self, center, radius, callback):
+        return self.when('im_in_area', callback, {
             'coordinates': center,
             'radius': radius
         })
+    subscribe_im_in_area = when_in_area
 
-    def subscribe_any_item_in_area(self, center, radius, callback):
-        return self.subscribe('any_item_in_area', callback, {
+    def when_item_in_area(self, center, radius, callback):
+        return self.when('any_item_in_area', callback, {
             'coordinates': center,
             'radius': radius
         })
+    subscribe_any_item_in_area = when_item_in_area
 
-    def subscribe_im_stop(self, callback):
-        return self.subscribe('im_stop', callback, {})
+    def when_stop(self, callback):
+        return self.when('im_stop', callback, {})
+    subscribe_im_stop = when_stop
 
-    def subscribe_im_idle(self, callback):
-        return self.subscribe('im_idle', callback, {})
+    def when_idle(self, callback):
+        return self.when('im_idle', callback, {})
+    subscribe_im_idle = when_idle
 
-    def subscribe_enemy_in_my_firing_range(self, callback):
-        return self.subscribe('enemy_in_my_firing_range', callback)
+    def when_enemy_in_range(self, callback):
+        return self.when('enemy_in_my_firing_range', callback)
+    subscribe_enemy_in_my_firing_range = when_enemy_in_range
 
-    def subscribe_the_item_out_my_firing_range(self, item_id, callback):
-        return self.subscribe('the_item_out_my_firing_range', callback, {"item_id": item_id})
+    def when_enemy_out_range(self, item_id, callback):
+        return self.when('the_item_out_my_firing_range', callback, {"item_id": item_id})
+    subscribe_the_item_out_my_firing_range = when_enemy_out_range
 
-    def subscribe_the_item_is_dead(self, item_id, callback):
-        return self.subscribe('death', callback, {'id': item_id})
+    def when_item_destroyed(self, item_id, callback):
+        return self.when('death', callback, {'id': item_id})
+    subscribe_the_item_is_dead = when_item_destroyed

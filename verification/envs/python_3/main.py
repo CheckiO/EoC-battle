@@ -11,6 +11,7 @@ from battle import commander
 Runner.ALLOWED_MODULES += ['battle', 'battle.commander']  # OMFG
 
 
+# WTF ?!?
 def _make_id(target):
     if hasattr(target, '__func__'):
         return id(target.__self__), id(target.__func__)
