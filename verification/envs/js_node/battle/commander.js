@@ -28,6 +28,7 @@ Client.prototype.askMyInfo = function (callBack) {
         'field': 'my_info'
     }, setMeUp.bind(this));
 };
+Client.prototype.start = Client.prototype.askMyInfo;
 
 Client.prototype.askItemInfo = function (id, callBack) {
     return this.ask({
@@ -151,19 +152,19 @@ Client.prototype.whenItemInArea = function (center, radius, callBack) {
 };
 
 Client.prototype.whenStoped = function (callBack) {
-    this.when('im_stop', undefined, callBack);
+    this.when('im_stop', {}, callBack);
 };
 
 Client.prototype.whenIdle = function (callBack) {
-    this.when('im_idle', undefined, callBack);
+    this.when('im_idle', {}, callBack);
 };
 
 Client.prototype.whenEnemyInRange = function (callBack) {
-    this.when('enemy_in_my_firing_range', undefined, callBack);
+    this.when('enemy_in_my_firing_range', {}, callBack);
 };
 
 Client.prototype.whenEnemyOutRange = function (callBack) {
-    this.when('the_item_out_my_firing_range', undefined, callBack);
+    this.when('the_item_out_my_firing_range', {}, callBack);
 };
 
 Client.prototype.whenItemDestroyed = function (id, callBack) {
