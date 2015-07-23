@@ -98,7 +98,8 @@ class OUTPUT():
     CRAFTS = 'crafts'
     BUILDINGS = 'buildings'
     PLAYERS = "players"
-    PLAYER_ID = "player_id"
+    PLAYER_ID = "playerId"
+    PLAYER_ID_DEP = "player_id"
     USERNAME = "username"
     ITEM_ID = 'id'
     TILE_POSITION = 'tilePosition'

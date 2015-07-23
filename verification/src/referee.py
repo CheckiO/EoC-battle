@@ -595,7 +595,8 @@ class FightHandler(BaseHandler):
             OUTPUT.ITEM_ID: unit.id,
             OUTPUT.TILE_POSITION: unit.tile_position,
             OUTPUT.ITEM_TYPE: unit.item_type,
-            OUTPUT.PLAYER_ID: unit.player[PLAYER.ID]
+            OUTPUT.PLAYER_ID: unit.player[PLAYER.ID],
+            OUTPUT.PLAYER_ID_DEP: unit.player[PLAYER.ID]
         })
 
     def _log_initial_building(self, building):
@@ -607,7 +608,8 @@ class FightHandler(BaseHandler):
             OUTPUT.ALIAS: building.alias,
             OUTPUT.ITEM_STATUS: building.item_status,
             OUTPUT.ITEM_LEVEL: building.level,
-            OUTPUT.PLAYER_ID: building.player[PLAYER.ID]
+            OUTPUT.PLAYER_ID: building.player[PLAYER.ID],
+            OUTPUT.PLAYER_ID_DEP: building.player[PLAYER.ID]
         })
 
     def _log_initial_craft(self, craft):
@@ -618,7 +620,8 @@ class FightHandler(BaseHandler):
             OUTPUT.ITEM_TYPE: craft.item_type,
             OUTPUT.ALIAS: craft.alias,
             OUTPUT.ITEM_LEVEL: craft.level,
-            OUTPUT.PLAYER_ID: craft.player[PLAYER.ID]
+            OUTPUT.PLAYER_ID: craft.player[PLAYER.ID],
+            OUTPUT.PLAYER_ID_DEP: craft.player[PLAYER.ID]
         })
 
     def _log_initial_player(self, player):
