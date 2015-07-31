@@ -81,7 +81,14 @@ Client.prototype.askTowers = function (callBack) {
 };
 
 Client.prototype.askCenter = function (callBack) {
-    return this.askItems(undefined, [ROLE.CENTER], callBack);
+    function setMeUp(data) {
+        if (data.length === 0) {
+            callBack(undefined);
+        } else {
+            callBack(data[0]);
+        }
+    }
+    return this.askItems(undefined, [ROLE.CENTER], setMeUp);
 };
 
 Client.prototype.askUnits = function (callBack) {
