@@ -77,7 +77,7 @@ Client.prototype.askBuildings = function (callBack) {
 };
 
 Client.prototype.askTowers = function (callBack) {
-    return this.askItems(undefined, [ROLE.TOWERS], callBack);
+    return this.askItems(undefined, [ROLE.TOWER], callBack);
 };
 
 Client.prototype.askCenter = function (callBack) {
