@@ -232,7 +232,7 @@ class FightItem(Item):
         return self.select_item_info({ATTRIBUTE.ID: self.id})
 
     def select_item_info(self, data):
-        return self._fight_handler.get_item_info(data[ATTRIBUTE.ID])
+        return self._fight_handler.get_item_info(data.get(ATTRIBUTE.ID, None))
 
     def select_players(self, data):
         return self._fight_handler.get_public_players_info(data, self.player[ATTRIBUTE.ID])
@@ -678,7 +678,7 @@ class FightHandler(BaseHandler):
         return [el for el in sequence if el[ATTRIBUTE.ROLE] in roles]
 
     def get_item_info(self, item_id):
-        return self.fighters[item_id].info
+        return self.fighters[item_id].info if item_id in self.fighters else {}
 
     def get_public_players_info(self, data, applicant_player_id):
         players = [{PLAYER.PLAYER_ID: p} for p in self.players if p >= 0]
