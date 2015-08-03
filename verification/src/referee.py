@@ -301,7 +301,7 @@ class FightHandler(BaseHandler):
         Where all the game calculation do
     """
 
-    FRAME_TIME = 0.1  # compute and send info each time per FRAME_TIME
+    FRAME_TIME = 0.02  # compute and send info each time per FRAME_TIME
     GAME_FRAME_TIME = 0.1  # per one FRAME_TIME in real, in game it would be GAME_FRAME_TIME
     GRID_SCALE = 2
     CELL_SHIFT = 1 / (GRID_SCALE * 2)
