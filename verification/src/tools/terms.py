@@ -97,6 +97,8 @@ class OUTPUT():
     UNITS = 'units'
     CRAFTS = 'crafts'
     BUILDINGS = 'buildings'
+    OBSTACLES = 'obstacles'
+    SIZE = 'size'
     PLAYERS = "players"
     PLAYER_ID = "playerId"
     PLAYER_ID_DEP = "player_id"
