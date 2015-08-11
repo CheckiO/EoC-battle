@@ -300,7 +300,7 @@ class FightHandler(BaseHandler):
         The main class of the game.
         Where all the game calculation do
     """
-
+    FIRST_STEP_FRAME_TIME = 2
     FRAME_TIME = 0.02  # compute and send info each time per FRAME_TIME
     GAME_FRAME_TIME = 0.1  # per one FRAME_TIME in real, in game it would be GAME_FRAME_TIME
     GRID_SCALE = 2
@@ -506,7 +506,8 @@ class FightHandler(BaseHandler):
             self.send_frame({'winner': winner}, True)
             IOLoop.current().call_later(3, self.stop)
         else:
-            IOLoop.current().call_later(self.FRAME_TIME, self.compute_frame)
+            frame_time = self.FRAME_TIME if self.current_frame > 1 else self.FIRST_STEP_FRAME_TIME
+            IOLoop.current().call_later(frame_time, self.compute_frame)
 
     def count_unit_casualties(self):
         result = {craft.craft_id: {
