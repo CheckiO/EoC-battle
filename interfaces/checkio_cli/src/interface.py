@@ -53,7 +53,8 @@ class FightHandler(BaseHandler):
             self.write_log(data)
             return
         out_map = []
-        map_size = data['map_size']
+        # temporarily spike (I know about "temporarily" (we have ticket for this))
+        map_size = [t + 1 for t in data['map_size']]
         for item in range(map_size[0] * MAP_X):
             out_map.append([None] * (map_size[1] * MAP_X))
 
