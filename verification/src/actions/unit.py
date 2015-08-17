@@ -1,6 +1,6 @@
 from .base import BaseItemActions, euclidean_distance
 from .exceptions import ActionValidateError
-from tools import find_route, straighten_route
+from tools import find_route, straighten_route, is_coordinates
 
 
 class UnitActions(BaseItemActions):
@@ -29,7 +29,8 @@ class UnitActions(BaseItemActions):
         return self._shot(enemy)
 
     def action_move(self, data):
-        coordinates = data['coordinates']
+        coordinates = data.get('coordinates')
+        coordinates = self._fight_handler.adjust_coordinates(*coordinates)
         return self._move(coordinates)
 
     def check_or_create_route(self, destination_point):

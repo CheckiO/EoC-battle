@@ -17,9 +17,10 @@ class BattleEnvironmentClient(EnvironmentClient):
             'status': 200
         })
 
-    def bad_action(self):
+    def bad_action(self, description=""):
         self.write({
-            'status': 400
+            'status': 400,
+            'description': description
         })
 
     def send_event(self, lookup_key, data):

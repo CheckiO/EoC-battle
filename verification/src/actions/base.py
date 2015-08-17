@@ -1,5 +1,6 @@
 from .exceptions import ActionValidateError
 from tools.distances import euclidean_distance
+from tools import is_coordinates
 
 
 class BaseItemActions(object):
@@ -77,7 +78,7 @@ class BaseItemActions(object):
             raise ActionValidateError("Can not attack item, it's big distance")
 
     def validate_move(self, action, data):
-        if not self._fight_handler.is_point_on_map(*data["coordinates"]):
+        if not is_coordinates(data.get("coordinates")):
             raise ActionValidateError("Wrong coordinates")
 
     def do_action(self, action_data):

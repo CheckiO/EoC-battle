@@ -17,6 +17,7 @@ from tools.terms import PLAYER
 
 
 CUT_FROM_BUILDING = 1
+COORDINATE_EDGE_CUT = 10 ** -3
 
 
 class Item(object):
@@ -257,7 +258,7 @@ class FightItem(Item):
     def method_subscribe(self, event, lookup_key, data):
         result = self._fight_handler.subscribe(event, self.id, lookup_key, data)
         if not result:
-            self._env.bad_action()
+            self._env.bad_action("Subscribing Error")
             return
         self._env.confirm()
 
@@ -420,8 +421,9 @@ class FightHandler(BaseHandler):
                         int(it.coordinates[1] * self.GRID_SCALE) - size // 2, size, 0)
         self.hash_grid()
 
-    def is_point_on_map(self, x, y):
-        return 0 < x < self.map_size[0] and 0 < y < self.map_size[1]
+    def adjust_coordinates(self, x, y):
+        adjust = lambda t, edge: min(max(t, 0), edge - COORDINATE_EDGE_CUT)
+        return adjust(x, self.map_size[0]), adjust(y, self.map_size[1])
 
     def create_route_graph(self):
         self.map_graph = grid_to_graph(self.map_grid)

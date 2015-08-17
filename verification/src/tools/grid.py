@@ -1,4 +1,4 @@
-__all__ = ["fill_square", "find_route", "straighten_route", "grid_to_graph"]
+__all__ = ["fill_square", "find_route", "straighten_route", "grid_to_graph", "is_coordinates"]
 
 from heapq import heappop, heappush
 from .distances import euclidean_distance
@@ -19,6 +19,12 @@ DIRS = (
     # (-1, -1, SQRT_2),
     # (1, 1, SQRT_2),
 )
+
+
+def is_coordinates(coordinates):
+    return (isinstance(coordinates, (list, tuple)) and
+            len(coordinates) == 2 and
+            all(isinstance(n, (float, int)) for n in coordinates))
 
 
 def fill_square(matrix: list, row: int, column: int, size: int, fill_element=1) -> list:
