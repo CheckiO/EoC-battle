@@ -60,7 +60,6 @@ function checkRadius(number) {
 
 function Client() {
     this.loop = BattleClientLoop.lastLoop;
-    this.myInfo = undefined;
 }
 
 
@@ -79,19 +78,9 @@ Client.prototype.ask = function (fields, callBack) {
 };
 
 Client.prototype.askMyInfo = function (callBack) {
-    if (callBack) {
-        checkCallable(callBack, "Callback");
-    }
-    function setMeUp(data) {
-        this.myInfo = data;
-        if (callBack) {
-            callBack(data);
-        }
-    }
-
     return this.ask({
         'field': 'my_info'
-    }, setMeUp.bind(this));
+    }, callBack);
 };
 Client.prototype.start = Client.prototype.askMyInfo;
 
@@ -107,10 +96,7 @@ Client.prototype.askItemInfo = function (id, callBack) {
 
 Client.prototype.askNearestEnemy = function (callBack) {
     return this.ask({
-        'field': 'nearest_enemy',
-        'data': {
-            'id': this.myInfo.id
-        }
+        'field': 'nearest_enemy'
     }, callBack);
 };
 
@@ -176,10 +162,7 @@ Client.prototype.askEnemyPlayers = function (callBack) {
 
 Client.prototype.askMyRangeEnemyItems = function (callBack) {
     return this.ask({
-        'field': 'enemy_items_in_my_firing_range',
-        'data': {
-            'id': this.myInfo.id
-        }
+        'field': 'enemy_items_in_my_firing_range'
     }, callBack);
 };
 

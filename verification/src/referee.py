@@ -241,10 +241,10 @@ class FightItem(Item):
         return self._fight_handler.get_group_item_info(data, self.player[ATTRIBUTE.ID])
 
     def select_nearest_enemy(self, data):
-        return self._fight_handler.get_nearest_enemy(data[ATTRIBUTE.ID])
+        return self._fight_handler.get_nearest_enemy(self.id)
 
     def select_enemy_items_in_my_firing_range(self, data):
-        return self._fight_handler.get_enemy_items_in_my_firing_range(data[ATTRIBUTE.ID])
+        return self._fight_handler.get_enemy_items_in_my_firing_range(self.id)
 
     def method_set_action(self, action, data):
         try:
