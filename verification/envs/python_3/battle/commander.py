@@ -51,15 +51,6 @@ class Client(object):
 
     def __init__(self):
         assert self.CLIENT
-        self._initial_info = self.ask_my_info()
-
-    @property
-    def item_id(self):
-        return self._initial_info["id"]
-
-    @property
-    def player_id(self):
-        return self._initial_info["player_id"]
 
     @classmethod
     def set_client(cls, client):
@@ -134,18 +125,12 @@ class Client(object):
         return self.ask(
             {
                 'field': 'nearest_enemy',
-                'data': {
-                    'id': self.item_id
-                }
             })
 
     def ask_my_range_enemy_items(self):
         return self.ask(
             {
                 'field': 'enemy_items_in_my_firing_range',
-                'data': {
-                    'id': self.item_id
-                }
             })
 
     ask_enemy_items_in_my_firing_range = ask_my_range_enemy_items
