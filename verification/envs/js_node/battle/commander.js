@@ -15,7 +15,13 @@ var ERR_ID_TYPE = "%s ID must be an integer",
     ERR_STR_TYPE = "%s must be a string",
     ERR_NUMBER_TYPE = "%s must be a number.",
     ERR_NUMBER_POSITIVE_VALUE = "%s must be a positive.",
-    ERR_ARRAY_VALUE = "%s must contains only correct values";
+    ERR_ARRAY_VALUE = "%s must contains only correct values",
+    ERR_CALLBACK_DEPRECATED = "[WARNING][DEPRECATED] " +
+        "Callbacks for 'do' (action) commands are deprecated. " +
+        "They will be disabled soon." +
+        " Be careful - callback for 'do' is called after command sending," +
+        " not after end of the action";
+
 
 // Type and values check functions
 
@@ -171,6 +177,7 @@ Client.prototype.askMyRangeEnemyItems = function (callBack) {
 Client.prototype.do = function (action, data, callBack) {
     if (callBack) {
         checkCallable(callBack, "Callback");
+        console.log(ERR_CALLBACK_DEPRECATED);
     }
     return this.loop.setAction(action, data, callBack);
 };
