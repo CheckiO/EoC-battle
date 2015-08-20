@@ -707,7 +707,7 @@ class FightHandler(BaseHandler):
             if length < min_length:
                 min_length = length
                 nearest_enemy = item
-        return self.get_item_info(nearest_enemy.id)
+        return self.get_item_info(nearest_enemy.id) if nearest_enemy else {}
 
     def get_enemy_items_in_my_firing_range(self, item_id):
         seeker = self.fighters[item_id]
