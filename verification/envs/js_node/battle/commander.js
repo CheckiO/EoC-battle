@@ -242,6 +242,7 @@ Client.prototype.whenEnemyOutRange = function (callBack) {
 };
 
 Client.prototype.whenItemDestroyed = function (id, callBack) {
+    checkItemId(id);
     this.when('death', {'id': id}, callBack);
 };
 
