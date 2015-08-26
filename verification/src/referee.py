@@ -14,7 +14,7 @@ from actions.exceptions import ActionValidateError
 from environment import BattleEnvironmentsController
 from tools.distances import euclidean_distance
 from tools.terms import PLAYER
-
+from tools.result_processors import unit_dispersion
 
 CUT_FROM_BUILDING = 1
 COORDINATE_EDGE_CUT = 10 ** -3
@@ -302,6 +302,7 @@ class FightHandler(BaseHandler):
         Where all the game calculation do
     """
 
+    FIRST_STEP_FRAME_TIME = 2
     FRAME_TIME = 0.02  # compute and send info each time per FRAME_TIME
     GAME_FRAME_TIME = 0.1  # per one FRAME_TIME in real, in game it would be GAME_FRAME_TIME
     GRID_SCALE = 2
@@ -346,6 +347,7 @@ class FightHandler(BaseHandler):
         self.battle_log = {
             OUTPUT.INITIAL_CATEGORY: {
                 OUTPUT.BUILDINGS: [],
+                OUTPUT.OBSTACLES: [],
                 OUTPUT.UNITS: [],
                 OUTPUT.CRAFTS: [],
                 OUTPUT.PLAYERS: []
@@ -507,7 +509,8 @@ class FightHandler(BaseHandler):
             self.send_frame({'winner': winner}, True)
             IOLoop.current().call_later(3, self.stop)
         else:
-            IOLoop.current().call_later(self.FRAME_TIME, self.compute_frame)
+            frame_time = self.FRAME_TIME if self.current_frame > 1 else self.FIRST_STEP_FRAME_TIME
+            IOLoop.current().call_later(frame_time, self.compute_frame)
 
     def count_unit_casualties(self):
         result = {craft.craft_id: {
@@ -578,7 +581,7 @@ class FightHandler(BaseHandler):
             })
         self.battle_log["frames"].append(self._get_battle_snapshot())
         if battle_finished:
-            self.editor_client.send_battle(self.battle_log)
+            self.editor_client.send_battle(unit_dispersion(self.battle_log))
 
     def _log_initial_state(self):
         for item in self.fighters.values():
@@ -586,6 +589,8 @@ class FightHandler(BaseHandler):
                 self._log_initial_unit(item)
             elif item.role in ROLE.PLAYER_STATIC:
                 self._log_initial_building(item)
+            elif item.role == ROLE.OBSTACLE:
+                self._log_initial_obstacle(item)
         for craft in self.crafts.values():
             self._log_initial_craft(craft)
         for player in self.initial_data[PLAYER.KEY]:
@@ -607,11 +612,20 @@ class FightHandler(BaseHandler):
             OUTPUT.ITEM_ID: building.id,
             OUTPUT.TILE_POSITION: building.tile_position,
             OUTPUT.ITEM_TYPE: building.item_type,
+            OUTPUT.SIZE: building.base_size,
             OUTPUT.ALIAS: building.alias,
             OUTPUT.ITEM_STATUS: building.item_status,
             OUTPUT.ITEM_LEVEL: building.level,
             OUTPUT.PLAYER_ID: building.player[PLAYER.ID],
             OUTPUT.PLAYER_ID_DEP: building.player[PLAYER.ID]
+        })
+
+    def _log_initial_obstacle(self, obstacle):
+        log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.OBSTACLES]
+        log.append({
+            OUTPUT.TILE_POSITION: obstacle.tile_position,
+            OUTPUT.SIZE: obstacle.base_size,
+            OUTPUT.ID: obstacle.id,
         })
 
     def _log_initial_craft(self, craft):

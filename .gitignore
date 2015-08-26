@@ -57,3 +57,5 @@ target/
 verification/*.py[cod]
 
 .idea
+
+.checkio_cli.yaml
