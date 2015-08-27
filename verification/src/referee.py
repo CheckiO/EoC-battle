@@ -392,6 +392,7 @@ class FightHandler(BaseHandler):
 
         self.map_size = self.initial_data[INITIAL.MAP_SIZE]
         self.rewards = self.initial_data.get(INITIAL.REWARDS, {})
+        self.strat_rewards = self.initial_data.get(INITIAL.STRAT_REWARDS, {})
         self.time_limit = self.initial_data.get(INITIAL.TIME_LIMIT, float("inf"))
         fight_items = []
         for item in self.initial_data[INITIAL.MAP_ELEMENTS]:
@@ -531,6 +532,7 @@ class FightHandler(BaseHandler):
                 self.battle_log[OUTPUT.RESULT_CATEGORY] = {
                     OUTPUT.WINNER: real_players[0],
                     OUTPUT.REWARDS: self.rewards,
+                    OUTPUT.STRAT_REWARDS: self.strat_rewards,
                     OUTPUT.CASUALTIES: self.count_unit_casualties(),
                     OUTPUT.DEFEAT_REASON: self.defeat_reason
                 }

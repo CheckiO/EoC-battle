@@ -66,6 +66,7 @@ class INITIAL():
     MAP_ELEMENTS = 'map_elements'
     IS_STREAM = 'is_stream'
     REWARDS = 'rewards'
+    STRAT_REWARDS = 'strategies_rewards'
     CODES = 'codes'
 
 
@@ -114,6 +115,7 @@ class OUTPUT():
     FIRING_POINT_LEGACY = "firing_point"
     DEFEAT_REASON = 'reason'
     REWARDS = 'rewards'
+    STRAT_REWARDS = 'strategies_rewards'
     WINNER = 'winner'
     CASUALTIES = "casualties"
     CRAFT_ID = "craft_id"
