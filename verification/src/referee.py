@@ -661,14 +661,21 @@ class FightHandler(BaseHandler):
                 OUTPUT.HIT_POINTS_PERCENTAGE: item.get_percentage_hit_points(),
                 OUTPUT.ITEM_STATUS: item.get_action_status()
             }
-            if item_info[ACTION.STATUS] == ACTION.ATTACK:
+            if item_info[ACTION.STATUS] in (ACTION.ATTACK, ACTION.CHARGE):
                 item_info[OUTPUT.FIRING_POINT] = item._state[ACTION.FIRING_POINT]
+                item_info[OUTPUT.FIRING_ID] = item._state[ACTION.AID]
                 # TODO LEGACY DEPRECATED
                 item_info[OUTPUT.FIRING_POINT_LEGACY] = item_info[OUTPUT.FIRING_POINT]
+
+            if item_info[ACTION.STATUS] == ACTION.ATTACK:
+                item_info[OUTPUT.DEMAGED] = item._state[ACTION.DEMAGED]
+
             if item.has_std(STD.OUT):
                 item_info[OUTPUT.STDOUT] = item.pull_std(STD.OUT)
             if item.has_std(STD.ERR):
                 item_info[OUTPUT.STDERR] = item.pull_std(STD.ERR)
+
+            print(item_info)
 
             snapshot.append(item_info)
         return snapshot

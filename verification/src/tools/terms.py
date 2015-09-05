@@ -52,7 +52,10 @@ class ACTION():
     REQUEST_NAME = 'action'
     STATUS = 'status'
     ATTACK = 'attack'
-    FIRING_POINT = "firing_point"
+    FIRING_POINT = 'firing_point'
+    AID = 'aid'
+    DEMAGED = 'damaged'
+    CHARGE = 'charge'
 
 
 class STATUS():
@@ -112,6 +115,7 @@ class OUTPUT():
     ITEM_LEVEL = 'level'
     HIT_POINTS_PERCENTAGE = 'hitPointPercentage'
     FIRING_POINT = "firingPoint"
+    FIRING_ID = "firingId"
     FIRING_POINT_LEGACY = "firing_point"
     DEFEAT_REASON = 'reason'
     REWARDS = 'rewards'
@@ -122,6 +126,7 @@ class OUTPUT():
     COUNT = "count"
     STDOUT = "stdout"
     STDERR = "stderr"
+    DEMAGED = 'demaged'
 
 
 class STD():

@@ -34,7 +34,11 @@ class BaseItemActions(object):
         attacker = self._item
         attacker.charging += self._fight_handler.GAME_FRAME_TIME * attacker.rate_of_fire
         if attacker.charging < 1:
-            return {'action': 'charge'}
+            return {
+                'action': 'charge',
+                'firing_point': enemy.coordinates,
+                'aid': enemy.id
+            }
 
         enemy.hit_points -= attacker.damage_per_shot
         if enemy.hit_points <= 0:
