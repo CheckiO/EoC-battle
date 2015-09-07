@@ -675,8 +675,6 @@ class FightHandler(BaseHandler):
             if item.has_std(STD.ERR):
                 item_info[OUTPUT.STDERR] = item.pull_std(STD.ERR)
 
-            print(item_info)
-
             snapshot.append(item_info)
         return snapshot
 
