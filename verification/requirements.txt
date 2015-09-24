@@ -1,4 +1,5 @@
 coloredlogs==1.0.1
+raven==5.0.0
 tornado==4.0.2
 -e git://github.com/Checkio/checkio-referee.git#egg=checkio-referee
 -e git://github.com/CheckiO/EoC-battle-mocks.git#egg=battle-mocks
