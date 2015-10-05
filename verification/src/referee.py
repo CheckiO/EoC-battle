@@ -85,7 +85,6 @@ class FightItem(Item):
         # {'action': 'idle'}
         # {'action': 'dead'}
         self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
-        self.set_state_idle()
 
     @property
     def is_dead(self):
@@ -186,6 +185,7 @@ class FightItem(Item):
         result = yield self._env.run_code(self.code)
         while True:
             if result is not None:
+                print(result)
                 status = result.pop('status')
                 if status and status != STATUS.SUCCESS:
                     pass  # TODO:
@@ -282,6 +282,13 @@ class CraftItem(Item):
         self.level = item_data.get(ATTRIBUTE.LEVEL)
         self.alias = item_data.get(ATTRIBUTE.ALIAS)
         self.item_type = item_data.get(ATTRIBUTE.ITEM_TYPE)
+        self.amount_units_in = item_data.get(ATTRIBUTE.UNIT_QUANTITY)
+        craft_coor = item_data[ATTRIBUTE.COORDINATES]
+        self.units_position = [[craft_coor[0] + shift[0], craft_coor[1] + shift[1]]
+                               for shift in precalculated.LAND_POSITION_SHIFTS[:self.amount_units_in]]
+
+        # im not sute it is nessesary, but still...
+        self.item_data = item_data
         self.player = player
         self.role = ROLE.CRAFT
 
@@ -308,6 +315,7 @@ class FightHandler(BaseHandler):
     GRID_SCALE = 2
     CELL_SHIFT = 1 / (GRID_SCALE * 2)
     ACCURACY_RANGE = 0.1
+    UNITS_LANDING_PERIOD = 0.5
 
     """
     Each item of an EVENT must have next structure:
@@ -380,6 +388,9 @@ class FightHandler(BaseHandler):
         self._is_stopping = None
         self._stop_callback = None
 
+        self.unit_landing_countdown = 0
+        self.crafts_landing_stack = []
+
     @gen.coroutine
     def start(self):
         self.is_stream = self.initial_data.get(INITIAL.IS_STREAM, True)
@@ -398,12 +409,9 @@ class FightHandler(BaseHandler):
         for item in self.initial_data[INITIAL.MAP_ELEMENTS]:
             player = self.players[item.get(PLAYER.PLAYER_ID, -1)]
             if item[ATTRIBUTE.ROLE] == ROLE.CRAFT:
-                members = self.add_craft_item(item, player)
+                craft = self.add_craft_item(item, player)
             else:
-                members = (item,)
-
-            for member in members:
-                fight_items.append(self.add_fight_item(member, player))
+                fight_items.append(self.add_fight_item(item, player))
 
         self._log_initial_state()
 
@@ -456,28 +464,33 @@ class FightHandler(BaseHandler):
         item_data[ATTRIBUTE.COORDINATES] = coordinates
         fight_item = FightItem(item_data, player=player, fight_handler=self)
         self.fighters[fight_item.id] = fight_item
+        fight_item.set_state_idle()
         yield fight_item.start()
 
     def add_craft_item(self, craft_data, player):
         craft_coor = self.generate_craft_place()
         if not craft_coor[1]:
             return
-        unit_quantity = craft_data[ATTRIBUTE.UNIT_QUANTITY]
-        unit_positions = [[craft_coor[0] + shift[0], craft_coor[1] + shift[1]]
-                          for shift in precalculated.LAND_POSITION_SHIFTS[:unit_quantity]]
         craft_data[ATTRIBUTE.COORDINATES] = craft_coor
         in_unit_description = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION]
         craft_data[ATTRIBUTE.UNIT_TYPE] = in_unit_description[ATTRIBUTE.ITEM_TYPE]
         craft = CraftItem(craft_data, player=player, fight_handler=self)
         self.crafts[craft.id] = craft
-        for i in range(min(unit_quantity, precalculated.MAX_LAND_POSITIONS)):
-            unit = in_unit_description.copy()
-            unit[ATTRIBUTE.OPERATING_CODE] = craft_data[ATTRIBUTE.OPERATING_CODE]
-            unit[ATTRIBUTE.COORDINATES] = unit_positions[i]
-            unit[ATTRIBUTE.TILE_POSITION] = unit_positions[i][:]
-            unit[ATTRIBUTE.ROLE] = ROLE.UNIT
-            unit[ATTRIBUTE.CRAFT_ID] = craft.craft_id
-            yield unit
+        self.crafts_landing_stack.append(craft.id)
+        return craft
+
+    @gen.coroutine
+    def add_unit_from_craft(self, craft):
+        craft_data = craft.item_data
+        unit = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION].copy()
+        unit[ATTRIBUTE.OPERATING_CODE] = craft_data[ATTRIBUTE.OPERATING_CODE]
+        unit_position = craft.units_position.pop()
+        unit[ATTRIBUTE.COORDINATES] = unit_position
+        unit[ATTRIBUTE.TILE_POSITION] = unit_position[:]
+        unit[ATTRIBUTE.ROLE] = ROLE.UNIT
+        unit[ATTRIBUTE.CRAFT_ID] = craft.craft_id
+        craft.amount_units_in -= 1
+        yield self.add_fight_item(unit, self.players[craft_data.get(PLAYER.PLAYER_ID, -1)])
 
     def generate_craft_place(self):
         width = self.map_size[1]
@@ -486,6 +499,25 @@ class FightHandler(BaseHandler):
                      if not any(pos - 2 <= y <= pos + 2 for pos in craft_positions)]
         return [self.map_size[0], choice(available) if available else 0]
 
+    def all_crafts_empty(self):
+        for craft in self.crafts.values():
+            if craft.amount_units_in:
+                return False
+        return True
+
+    @gen.coroutine
+    def unit_lands_from_stack(self):
+        if self.unit_landing_countdown > 0:
+            self.unit_landing_countdown -= self.GAME_FRAME_TIME
+            return
+        self.unit_landing_countdown = self.UNITS_LANDING_PERIOD
+        craft_id = self.crafts_landing_stack.pop()
+        craft = self.crafts[craft_id]
+        if craft.amount_units_in > 1:
+            self.crafts_landing_stack.insert(0, craft_id)
+        yield self.add_unit_from_craft(craft)
+
+    @gen.coroutine
     def compute_frame(self):
         """
             calculate every frame and action for every FightItem
@@ -493,6 +525,7 @@ class FightHandler(BaseHandler):
         self.send_frame()
         self.current_frame += 1
         self.current_game_time += self.GAME_FRAME_TIME
+
         for key, fighter in self.fighters.items():
             # WHY: can't we move in the FightItem class?
             # When in can be None?
@@ -505,13 +538,19 @@ class FightHandler(BaseHandler):
 
             fighter.do_frame_action()
 
-        winner = self.get_winner()
+        winner = None
+        if self.all_crafts_empty():
+            winner = self.get_winner()
+
         if winner is not None:
             self.send_frame({'winner': winner}, True)
             IOLoop.current().call_later(3, self.stop)
         else:
             frame_time = self.FRAME_TIME if self.current_frame > 1 else self.FIRST_STEP_FRAME_TIME
             IOLoop.current().call_later(frame_time, self.compute_frame)
+
+        if self.crafts_landing_stack:
+            yield self.unit_lands_from_stack()
 
     def count_unit_casualties(self):
         result = {craft.craft_id: {
