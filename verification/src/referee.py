@@ -315,7 +315,7 @@ class FightHandler(BaseHandler):
     GRID_SCALE = 2
     CELL_SHIFT = 1 / (GRID_SCALE * 2)
     ACCURACY_RANGE = 0.1
-    UNITS_LANDING_PERIOD = 0.5
+    UNITS_LANDING_PERIOD = 0.2
 
     """
     Each item of an EVENT must have next structure:
