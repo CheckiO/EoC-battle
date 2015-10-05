@@ -548,7 +548,10 @@ class FightHandler(BaseHandler):
             self.send_frame({'winner': winner}, True)
             IOLoop.current().call_later(3, self.stop)
         else:
-            frame_time = self.FRAME_TIME if self.all_crafts_empty() else self.FIRST_STEP_FRAME_TIME
+            if self.all_crafts_empty() or self.unit_landing_countdown > 0:
+                frame_time = self.FRAME_TIME
+            else:
+                frame_time = self.FIRST_STEP_FRAME_TIME
             IOLoop.current().call_later(frame_time, self.compute_frame)
 
         if self.crafts_landing_stack:
