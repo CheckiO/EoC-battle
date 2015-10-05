@@ -464,6 +464,8 @@ class FightHandler(BaseHandler):
         item_data[ATTRIBUTE.COORDINATES] = coordinates
         fight_item = FightItem(item_data, player=player, fight_handler=self)
         self.fighters[fight_item.id] = fight_item
+        if self.current_frame:
+            self._log_initial_unit(fight_item)
         fight_item.set_state_idle()
         yield fight_item.start()
 
