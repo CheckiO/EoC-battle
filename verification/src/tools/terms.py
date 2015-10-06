@@ -131,6 +131,7 @@ class OUTPUT():
     STDOUT = "stdout"
     STDERR = "stderr"
     DEMAGED = 'demaged'
+    SYSTEM = 'system'
 
 
 class STD():

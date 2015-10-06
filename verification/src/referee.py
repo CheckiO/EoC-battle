@@ -634,6 +634,14 @@ class FightHandler(BaseHandler):
             self._log_initial_craft(craft)
         for player in self.initial_data[PLAYER.KEY]:
             self._log_initial_player(player)
+        self._log_system()
+
+    def _log_system(self):
+        self.battle_log[OUTPUT.SYSTEM] = {
+            'map_size': self.map_size,
+            'time_limit': self.time_limit,
+            'time_accuracy': self.GAME_FRAME_TIME
+        }
 
     def _log_initial_unit(self, unit):
         log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.UNITS]
