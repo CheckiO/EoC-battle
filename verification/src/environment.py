@@ -21,12 +21,6 @@ class BattleEnvironmentClient(EnvironmentClient):
         })
         return result
 
-    def select_result(self, data):
-        self.write({
-            'status': 200,
-            'data': data
-        })
-
     def confirm(self):
         self.write({
             'status': 200

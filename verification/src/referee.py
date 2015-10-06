@@ -37,7 +37,6 @@ class FightItem(Item):
     """
     HANDLERS = None
     ACTIONS = None
-    SELECT_HANDLERS = None
 
     def __init__(self, item_data, player, fight_handler):
         self.init_handlers()
@@ -128,23 +127,12 @@ class FightItem(Item):
     def init_handlers(self):
         """
             there are only 3 kind of actions that can be send from FightItem to Referee
-            select - to ask data from system
             set_action - to command unit to do
             subscribe - to subscribe on some event
         """
         self.HANDLERS = {
-            'select': self.method_select,
             'set_action': self.method_set_action,
             'subscribe': self.method_subscribe,
-        }
-
-        self.SELECT_HANDLERS = {
-            'my_info': self.select_my_info,
-            'item_info': self.select_item_info,
-            'players': self.select_players,
-            'items': self.select_items,
-            'nearest_enemy': self.select_nearest_enemy,
-            'enemy_items_in_my_firing_range': self.select_enemy_items_in_my_firing_range
         }
 
     def get_percentage_hit_points(self):
@@ -215,39 +203,6 @@ class FightItem(Item):
             return  # TODO: this data is not from commander, then for what?
         handler = self.HANDLERS[handler_name]
         handler(**data)
-
-    def method_select(self, fields):
-        data = []
-        for field in fields:
-            field_key = field.get('field')
-            if field_key is None:
-                data.append({'error': 'wrong format, field did not passed'})
-                continue
-            if field_key not in self.SELECT_HANDLERS:
-                data.append({'error': 'wrong format, wrong field'})
-                continue
-
-            data.append(self.SELECT_HANDLERS[field_key](field.get('data')))
-
-        self._env.select_result(data)
-
-    def select_my_info(self, data):
-        return self.select_item_info({ATTRIBUTE.ID: self.id})
-
-    def select_item_info(self, data):
-        return self._fight_handler.get_item_info(data.get(ATTRIBUTE.ID, None))
-
-    def select_players(self, data):
-        return self._fight_handler.get_public_players_info(data, self.player[ATTRIBUTE.ID])
-
-    def select_items(self, data):
-        return self._fight_handler.get_group_item_info(data, self.player[ATTRIBUTE.ID])
-
-    def select_nearest_enemy(self, data):
-        return self._fight_handler.get_nearest_enemy(self.id)
-
-    def select_enemy_items_in_my_firing_range(self, data):
-        return self._fight_handler.get_enemy_items_in_my_firing_range(self.id)
 
     def method_set_action(self, action, data):
         try:
@@ -447,7 +402,7 @@ class FightHandler(BaseHandler):
         for item in self.initial_data[INITIAL.MAP_ELEMENTS]:
             player = self.players[item.get(PLAYER.PLAYER_ID, -1)]
             if item[ATTRIBUTE.ROLE] == ROLE.CRAFT:
-                craft = self.add_craft_item(item, player)
+                self.add_craft_item(item, player)
             else:
                 fight_items.append(self.add_fight_item(item, player))
 
@@ -759,69 +714,6 @@ class FightHandler(BaseHandler):
 
             snapshot.append(item_info)
         return snapshot
-
-    @staticmethod
-    def filter_enemy_party(sequence, player_id):
-        return [d for d in sequence
-                if d[ATTRIBUTE.PLAYER_ID] >= 0 and d[ATTRIBUTE.PLAYER_ID] != player_id]
-
-    @staticmethod
-    def filter_my_party(sequence, player_id):
-        return [d for d in sequence
-                if d[ATTRIBUTE.PLAYER_ID] >= 0 and d[ATTRIBUTE.PLAYER_ID] == player_id]
-
-    def filter_by_party(self, sequence, parties, player_id):
-        result = []
-        if PARTY.ENEMY in parties:
-            result.extend(self.filter_enemy_party(sequence, player_id))
-        if PARTY.MY in parties:
-            result.extend(self.filter_my_party(sequence, player_id))
-        return result
-
-    @staticmethod
-    def filter_by_role(sequence, roles):
-        return [el for el in sequence if el[ATTRIBUTE.ROLE] in roles]
-
-    def get_item_info(self, item_id):
-        return self.fighters[item_id].info if item_id in self.fighters else {}
-
-    def get_public_players_info(self, data, applicant_player_id):
-        players = [{PLAYER.PLAYER_ID: p} for p in self.players if p >= 0]
-        return self.filter_by_party(players, data[PARTY.REQUEST_NAME], applicant_player_id)
-
-    def get_group_item_info(self, data, applicant_player_id):
-        items = [it.info for it in self.fighters.values() if not it.is_dead]
-        items = self.filter_by_party(items, data[PARTY.REQUEST_NAME], applicant_player_id)
-        items = self.filter_by_role(items, data[ROLE.REQUEST_NAME])
-        return items
-
-    def get_nearest_enemy(self, item_id):
-        min_length = 1000
-        nearest_enemy = None
-
-        fighter = self.fighters[item_id]
-
-        for item in self.fighters.values():
-            if item.player == fighter.player or item.is_dead or item.is_obstacle:
-                continue
-
-            length = euclidean_distance(item.coordinates, fighter.coordinates)
-
-            if length < min_length:
-                min_length = length
-                nearest_enemy = item
-        return self.get_item_info(nearest_enemy.id) if nearest_enemy else {}
-
-    def get_enemy_items_in_my_firing_range(self, item_id):
-        seeker = self.fighters[item_id]
-        result = []
-        for other in self.fighters.values():
-            if other.player == seeker.player or other.is_dead or other.is_obstacle:
-                continue
-            distance = euclidean_distance(other.coordinates, seeker.coordinates)
-            if distance - other.size / 2 <= seeker.firing_range:
-                result.append(self.get_item_info(other.id))
-        return result
 
     def subscribe(self, event_name, item_id, lookup_key, data):
         """
