@@ -46,6 +46,10 @@ class ATTRIBUTE():
     UNIT_QUANTITY = 'unit_quantity'
     IN_UNIT_DESCRIPTION = 'unit'
     OPERATING_CODE = 'code'
+    ACTION = 'action'
+    INITIAL_UNITS_IN = 'initial_units_in'
+    UNITS_IN = 'units_in'
+    IS_DEAD = 'is_dead'
 
 
 class ACTION():
@@ -132,3 +136,8 @@ class OUTPUT():
 class STD():
     OUT = "out"
     ERR = "err"
+
+
+class ENV():
+    DATA = '__env_data'
+    MY_DATA = '__my_data'

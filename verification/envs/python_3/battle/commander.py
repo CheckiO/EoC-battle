@@ -1,4 +1,6 @@
 from battle import ROLE, PARTY
+from battle.tools import euclidean_distance
+import battle.map_filters as MF
 
 ERR_ID_TYPE = "{name} ID must be an integer"
 ERR_ARRAY_TYPE = "{name} must be a list/tuple"
@@ -52,6 +54,22 @@ class Client(object):
     def __init__(self):
         assert self.CLIENT
 
+    @property
+    def my_data(self):
+        return self.CLIENT._my_data
+
+    @property
+    def env_data(self):
+        return self.CLIENT._env_data
+
+    @property
+    def env_map(self):
+        return self.env_data['map']
+
+    @property
+    def my_info(self):
+        return self.env_map[str(self.my_data['id'])]
+
     @classmethod
     def set_client(cls, client):
         cls.CLIENT = client
@@ -62,32 +80,40 @@ class Client(object):
     select = ask
 
     def ask_my_info(self):
-        return self.ask(
-            {
-                'field': 'my_info'
-            })
+        return self.my_info
 
     def ask_item_info(self, item_id):
         check_item_id(item_id)
-        return self.ask(
-            {
-                'field': 'item_info',
-                'data': {
-                    "id": item_id
-                }
-            })
+        return self.env_map[str(item_id)]
+
+    def env_map_filter(self, filters):
+        def _filters_passed(item):
+            for _filter in filters:
+                if not _filter(self, item):
+                    return False
+            return True
+
+        ret = []  # TODO: change to generators
+        for item in self.env_map.values():
+            if item['is_dead']:
+                continue
+            if _filters_passed(item):
+                ret.append(item)
+        return ret
 
     def ask_items(self, parties=PARTY.ALL, roles=ROLE.ALL):
+        #  DEPRECATED function
         check_array(parties, PARTY.ALL, "Parties")
         check_array(roles, ROLE.ALL, "Roles")
-        return self.ask(
-            {
-                'field': 'items',
-                'data': {
-                    PARTY.REQUEST_NAME: parties,
-                    ROLE.REQUEST_NAME: roles
-                }
-            })
+        _filters = []
+        if len(set(parties)) <= 1:
+            if parties[0] == PARTY.MY:
+                _filters.append(MF.my)
+            if parties[0] == PARTY.ENEMY:
+                _filters.append(MF.enemy)
+
+        _filters.append(MF.roles(roles))
+        return self.env_map_filter(_filters)
 
     def ask_enemy_items(self):
         return self.ask_items(parties=(PARTY.ENEMY,))
@@ -122,16 +148,21 @@ class Client(object):
         return self.ask_players(parties=(PARTY.ENEMY,))
 
     def ask_nearest_enemy(self):
-        return self.ask(
-            {
-                'field': 'nearest_enemy',
-            })
+        min_length = 1000
+        nearest_enemy = None
+
+        fighter = self.my_info
+
+        for item in self.env_map_filter([MF.enemy]):
+            length = euclidean_distance(item['coordinates'], fighter['coordinates'])
+
+            if length < min_length:
+                min_length = length
+                nearest_enemy = item
+        return self.ask_item_info(nearest_enemy['id']) if nearest_enemy else {}
 
     def ask_my_range_enemy_items(self):
-        return self.ask(
-            {
-                'field': 'enemy_items_in_my_firing_range',
-            })
+        return self.env_map_filter([MF.enemy, MF.in_my_range])
 
     ask_enemy_items_in_my_firing_range = ask_my_range_enemy_items
 

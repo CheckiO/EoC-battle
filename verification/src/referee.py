@@ -13,7 +13,7 @@ from actions import ItemActions
 from actions.exceptions import ActionValidateError
 from environment import BattleEnvironmentsController
 from tools.distances import euclidean_distance
-from tools.terms import PLAYER
+from tools.terms import PLAYER, ENV
 from tools.result_processors import unit_dispersion
 
 CUT_FROM_BUILDING = 1
@@ -96,7 +96,6 @@ class FightItem(Item):
 
     @property
     def info(self):
-        # DEPRECATED
         return {
             ATTRIBUTE.ID: self.id,
             ATTRIBUTE.CRAFT_ID: self.craft_id,
@@ -112,7 +111,9 @@ class FightItem(Item):
             ATTRIBUTE.AREA_DAMAGE_RADIUS: self.area_damage_radius,
             ATTRIBUTE.FIRING_RANGE: self.firing_range,
             ACTION.REQUEST_NAME: self.action,
+            ATTRIBUTE.LEVEL: self.level,
             # TODO State should be reworked
+            ATTRIBUTE.IS_DEAD: self.is_dead,
             'state': self._state
         }
 
@@ -182,10 +183,11 @@ class FightItem(Item):
         self._env = yield controller.get_environment(self.player[PLAYER.ENV_NAME],
                                                      on_stdout=self.stdout,
                                                      on_stderr=self.stderr)
-        result = yield self._env.run_code(self.code)
+        env_data = self._fight_handler.get_env_data()
+        my_data = self._fight_handler.get_my_data(self.id)
+        result = yield self._env.run_code(self.code, env_data, my_data)
         while True:
             if result is not None:
-                print(result)
                 status = result.pop('status')
                 if status and status != STATUS.SUCCESS:
                     pass  # TODO:
@@ -282,7 +284,7 @@ class CraftItem(Item):
         self.level = item_data.get(ATTRIBUTE.LEVEL)
         self.alias = item_data.get(ATTRIBUTE.ALIAS)
         self.item_type = item_data.get(ATTRIBUTE.ITEM_TYPE)
-        self.amount_units_in = item_data.get(ATTRIBUTE.UNIT_QUANTITY)
+        self.initial_amount_units_in = self.amount_units_in = item_data.get(ATTRIBUTE.UNIT_QUANTITY)
         craft_coor = item_data[ATTRIBUTE.COORDINATES]
         self.units_position = [[craft_coor[0] + shift[0], craft_coor[1] + shift[1]]
                                for shift in precalculated.LAND_POSITION_SHIFTS[:self.amount_units_in]]
@@ -299,7 +301,11 @@ class CraftItem(Item):
             ATTRIBUTE.PLAYER_ID: self.player.get("id"),
             ATTRIBUTE.ROLE: self.role,
             ATTRIBUTE.COORDINATES: self.coordinates,
-            ATTRIBUTE.LEVEL: self.level
+            ATTRIBUTE.LEVEL: self.level,
+            ATTRIBUTE.ITEM_TYPE: self.item_type,  # TODO: I think we need only one of them :)
+            ATTRIBUTE.UNIT_TYPE: self.unit_type,
+            ATTRIBUTE.INITIAL_UNITS_IN: self.initial_amount_units_in,
+            ATTRIBUTE.UNITS_IN: self.amount_units_in
         }
 
 
@@ -309,7 +315,7 @@ class FightHandler(BaseHandler):
         Where all the game calculation do
     """
 
-    FIRST_STEP_FRAME_TIME = 2
+    FIRST_STEP_FRAME_TIME = 0.5
     FRAME_TIME = 0.02  # compute and send info each time per FRAME_TIME
     GAME_FRAME_TIME = 0.1  # per one FRAME_TIME in real, in game it would be GAME_FRAME_TIME
     GRID_SCALE = 2
@@ -390,6 +396,38 @@ class FightHandler(BaseHandler):
 
         self.unit_landing_countdown = 0
         self.crafts_landing_stack = []
+
+    def get_my_data(self, id):
+        return {
+            'id': id
+        }
+
+    def get_env_data(self):
+        return {
+            'map': self.get_env_map_data(),
+            'crafts': self.get_env_crafts_data(),
+            'game': self.get_env_game_data()
+        }
+
+    def get_env_map_data(self):
+        data = {}
+        for key, value in self.fighters.items():
+            data[key] = value.info
+        return data
+
+    def get_env_crafts_data(self):
+        data = {}
+        for key, value in self.crafts.items():
+            data[key] = value.info
+        return data
+
+    def get_env_game_data(self):
+        return {
+            'time': self.current_game_time,
+            'time_accuracy': self.GAME_FRAME_TIME,
+            'map_size': self.map_size,
+            'time_limit': self.time_limit
+        }
 
     @gen.coroutine
     def start(self):
@@ -825,8 +863,13 @@ class FightHandler(BaseHandler):
         for event in events[:]:
             receiver = self.fighters[event['receiver_id']]
             if check_function(event, event_item, receiver):
+                data_to_event = data_function(event, event_item, receiver)
+                data_to_event.update({
+                    ENV.DATA: self.get_env_data(),
+                    ENV.MY_DATA: self.get_my_data(event['receiver_id'])
+                })
                 receiver.send_event(lookup_key=event['lookup_key'],
-                                    data=data_function(event, event_item, receiver))
+                                    data=data_to_event)
                 events.remove(event)
 
     @staticmethod
