@@ -7,6 +7,7 @@ var Terms = require('./terms.js');
 var util = require('util');
 var PARTY = Terms.PARTY;
 var ROLE = Terms.ROLE;
+var _ = require("underscore");
 
 var ERR_ID_TYPE = "%s ID must be an integer",
     ERR_ARRAY_TYPE = "%s must be a list/tuple",
@@ -64,60 +65,121 @@ function checkRadius(number) {
     }
 }
 
+function retCall(data, callBack) {
+    if (callBack){
+        setTimeout(function(){callBack(data);}, 1);
+    }
+    return data;
+}
+
 function Client() {
     this.loop = BattleClientLoop.lastLoop;
 }
 
+Client.prototype.myData = function () {
+    return this.loop.myData;
+};
+
+Client.prototype.envData = function () {
+    return this.loop.envData;
+};
+
+Client.prototype.envMap = function () {
+    return this.envData().map;
+};
+
+Client.prototype.myInfo = function () {
+    return this.envMap()[this.myData().id];
+};
+
+var MapMath = {
+    euclideanDistance: function(point1, point2){
+        return Math.sqrt(Math.pow(point1[0] - point2[0], 2) + Math.pow(point1[1] - point2[1], 2));
+    }
+};
+
+var Filters = {
+    enemy: function(client, item){
+        return client.myInfo().player_id != item.player_id && item.player_id != -1;
+    },
+    my: function(client, item){
+        return client.myInfo().player_id != item.player_id;
+    },
+    roles: function(roles){
+        var _filter = function(client, item){
+            return roles.indexOf(item.role) + 1;
+        };
+        return _filter;
+    },
+    inMyRange: function(client, item){
+        var distance = MapMath.euclideanDistance(item.coordinates, client.myInfo().coordinates);
+        return distance - item.size/2 <= client.myInfo().firing_range;
+    }
+};
+
+Client.prototype.mapFilter = function (filters) {
+    var _filter_passed = function(item){
+        return typeof _.find(filters, function(_filter){
+            if (!_filter(this, item)) {
+                return true;
+            }
+        }, this) === 'undefined';
+    }.bind(this);
+    return _.filter(_.values(this.envMap()), function(item){
+        if (item.is_dead) {
+            return false;
+        }
+        if (_filter_passed(item)) {
+            return true;
+        }
+    }, this);
+};
+
 
 // ASK
 
-Client.prototype.ask = function (fields, callBack) {
-    if (callBack) {
-        checkCallable(callBack, "Callback");
-    }
-    if (typeof(callBack) !== 'function') {
-        throw new TypeError(util.format(ERR_CALLABLE_TYPE, "Callback"));
-    }
-    return this.loop.select([fields], function (data) {
-        callBack(data[0]);
-    });
-};
-
 Client.prototype.askMyInfo = function (callBack) {
-    return this.ask({
-        'field': 'my_info'
-    }, callBack);
+    return retCall(this.myInfo(), callBack);
 };
 Client.prototype.start = Client.prototype.askMyInfo;
 
 Client.prototype.askItemInfo = function (id, callBack) {
     checkItemId(id);
-    return this.ask({
-        'field': 'item_info',
-        'data': {
-            'id': id
-        }
-    }, callBack);
+    return retCall(this.envMap()[id], callBack);
 };
 
 Client.prototype.askNearestEnemy = function (callBack) {
-    return this.ask({
-        'field': 'nearest_enemy'
-    }, callBack);
+    var minLen = 1000,
+        nearest,
+        fighter = this.myInfo();
+
+    _.each(this.mapFilter([Filters.enemy]), function(item){
+        var length = MapMath.euclideanDistance(item.coordinates, fighter.coordinates);
+        if (length < minLen) {
+            minLen = length;
+            nearest = item;
+        }
+    });
+    return retCall(nearest, callBack);
 };
 
 Client.prototype.askItems = function (parties, roles, callBack) {
     roles = roles || ROLE.ALL;
+    roles = _.uniq(roles);
     parties = parties || PARTY.ALL;
+    parties = _.uniq(parties);
     checkArray(parties, PARTY.ALL, "Parties");
     checkArray(roles, ROLE.ALL, "Roles");
-    var data = {};
-    data[PARTY.REQUEST_NAME] = parties;
-    data[ROLE.REQUEST_NAME] = roles;
-    return this.ask({
-        'field': 'items',
-        'data': data
-    }, callBack);
+    var filters = [];
+    if (parties.length === 1) {
+        if (parties[0] === PARTY.ENEMY) {
+            filters.push(Filters.enemy);
+        } else if (parties[0] === PARTY.MY) {
+            filters.push(Filters.my);
+        }
+    }
+    filters.push(Filters.roles(roles));
+    return retCall(this.mapFilter(filters), callBack);
 };
 
 Client.prototype.askEnemyItems = function (callBack) {
@@ -137,39 +199,21 @@ Client.prototype.askTowers = function (callBack) {
 };
 
 Client.prototype.askCenter = function (callBack) {
-    function setMeUp(data) {
-        if (data.length === 0) {
-            callBack(undefined);
-        } else {
-            callBack(data[0]);
-        }
+    var ret = this.askItems(undefined, [ROLE.CENTER]);
+    if (ret.length === 0) {
+        ret = undefined;
+    } else {
+        ret = ret[0];
     }
-    return this.askItems(undefined, [ROLE.CENTER], setMeUp);
+    return retCall(ret, callBack);
 };
 
 Client.prototype.askUnits = function (callBack) {
     return this.askItems([PARTY.UNIT], undefined, callBack);
 };
 
-Client.prototype.askPlayers = function (parties, callBack) {
-    parties = parties || PARTY.ALL;
-    checkArray(parties, PARTY.ALL, "Parties");
-    var data = {};
-    data[PARTY.REQUEST_NAME] = parties;
-    return this.select({
-        'field': 'players',
-        'data': data
-    }, callBack);
-};
-
-Client.prototype.askEnemyPlayers = function (callBack) {
-    return this.askItems([PARTY.ENEMY], undefined, callBack);
-};
-
 Client.prototype.askMyRangeEnemyItems = function (callBack) {
-    return this.ask({
-        'field': 'enemy_items_in_my_firing_range'
-    }, callBack);
+    return retCall(this.mapFilter([Filters.inMyRange]), callBack);
 };
 
 // DO

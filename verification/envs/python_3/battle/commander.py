@@ -74,11 +74,6 @@ class Client(object):
     def set_client(cls, client):
         cls.CLIENT = client
 
-    def ask(self, fields):
-        return self.CLIENT.select(fields=[fields])[0]
-
-    select = ask
-
     def ask_my_info(self):
         return self.my_info
 
@@ -133,19 +128,6 @@ class Client(object):
 
     def ask_units(self):
         return self.ask_items(roles=(ROLE.UNIT,))
-
-    def ask_players(self, parties=PARTY.ALL):
-        check_array(parties, PARTY.ALL, "Parties")
-        return self.ask(
-            {
-                'field': 'players',
-                'data': {
-                    PARTY.REQUEST_NAME: parties
-                }
-            })
-
-    def ask_enemy_players(self):
-        return self.ask_players(parties=(PARTY.ENEMY,))
 
     def ask_nearest_enemy(self):
         min_length = 1000

@@ -12,11 +12,26 @@ function BattleClientLoop(port, environment_id) {
     this.requestQueue = [];
     this.currentRequest = undefined;
     this.currentCallBack = undefined;
+    this.myData = {};
+    this.envData = {};
     BattleClientLoop.lastLoop = this;
 }
 
 BattleClientLoop.prototype = new ClientLoop();
 BattleClientLoop.prototype.parent = ClientLoop.prototype;
+
+BattleClientLoop.prototype.actionRunCode = function (data) {
+    data = this.grabEnvData(data);
+    ClientLoop.prototype.actionRunCode.apply(this, [data]);
+};
+
+BattleClientLoop.prototype.grabEnvData = function (data) {
+    this.myData = data.__my_data;
+    this.envData = data.__env_data;
+    delete data.__my_data;
+    delete data.__env_data;
+    return data;
+};
 
 BattleClientLoop.prototype.pushRequestQueue = function (data, callBack) {
     this.requestQueue.push([data, callBack]);
@@ -78,7 +93,10 @@ BattleClientLoop.prototype.subscribe = function (action, data, callBack) {
     var key = makeId();
     this.actualRequest({'method': 'subscribe', 'lookup_key': key,
                         'event': action, 'data': data});
-    this.waitEvents[key] = callBack;
+    this.waitEvents[key] = function(data){
+        data = this.grabEnvData(data);
+        callBack(data);
+    }.bind(this);
 };
 
 exports.BattleClientLoop = BattleClientLoop;
