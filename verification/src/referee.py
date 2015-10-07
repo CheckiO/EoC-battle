@@ -637,10 +637,11 @@ class FightHandler(BaseHandler):
         self._log_system()
 
     def _log_system(self):
+        #  We should use cammel-case attributes while server issue
         self.battle_log[OUTPUT.SYSTEM] = {
-            'map_size': self.map_size,
-            'time_limit': self.time_limit,
-            'time_accuracy': self.GAME_FRAME_TIME
+            'mapSize': self.map_size,
+            'timeLimit': self.time_limit,
+            'timeAccuracy': self.GAME_FRAME_TIME
         }
 
     def _log_initial_unit(self, unit):
