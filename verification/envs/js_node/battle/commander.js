@@ -126,12 +126,7 @@ Client.prototype.mapFilter = function (filters) {
         }, this) === 'undefined';
     }.bind(this);
     return _.filter(_.values(this.envMap()), function(item){
-        if (item.is_dead) {
-            return false;
-        }
-        if (_filter_passed(item)) {
-            return true;
-        }
+        return !item.is_dead && _filter_passed(item);
     }, this);
 };
 
@@ -213,7 +208,7 @@ Client.prototype.askUnits = function (callBack) {
 };
 
 Client.prototype.askMyRangeEnemyItems = function (callBack) {
-    return retCall(this.mapFilter([Filters.inMyRange]), callBack);
+    return retCall(this.mapFilter([Filters.enemy, Filters.inMyRange]), callBack);
 };
 
 // DO
