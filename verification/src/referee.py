@@ -490,7 +490,7 @@ class FightHandler(BaseHandler):
     def generate_craft_place(self):
         width = self.map_size[1]
         craft_positions = [cr.coordinates[1] for cr in self.crafts.values()]
-        available = [y for y in range(1, width)
+        available = [y for y in range(6, width - 6)
                      if not any(pos - 5 <= y <= pos + 5 for pos in craft_positions)]
         return [self.map_size[0], choice(available) if available else 0]
 
