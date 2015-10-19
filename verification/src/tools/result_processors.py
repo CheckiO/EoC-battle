@@ -27,7 +27,7 @@ MOVE = "move"
 
 
 class Grid():
-    RINGS = tuple(tuple((x, y) for x in range(-k, k + 1) for y in range(-k, k + 1) if
+    RINGS = tuple(tuple((x, y) for x in range(-k, k + 4) for y in range(-k, k + 4) if
                         abs(x) == k or abs(y) == k)
                   for k in range(10))
 
