@@ -13,7 +13,7 @@ from actions import ItemActions
 from actions.exceptions import ActionValidateError
 from environment import BattleEnvironmentsController
 from tools.distances import euclidean_distance
-from tools.terms import PLAYER
+from tools.terms import PLAYER, ENV
 from tools.result_processors import unit_dispersion
 
 CUT_FROM_BUILDING = 1
@@ -37,7 +37,6 @@ class FightItem(Item):
     """
     HANDLERS = None
     ACTIONS = None
-    SELECT_HANDLERS = None
 
     def __init__(self, item_data, player, fight_handler):
         self.init_handlers()
@@ -85,7 +84,6 @@ class FightItem(Item):
         # {'action': 'idle'}
         # {'action': 'dead'}
         self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
-        self.set_state_idle()
 
     @property
     def is_dead(self):
@@ -97,7 +95,6 @@ class FightItem(Item):
 
     @property
     def info(self):
-        # DEPRECATED
         return {
             ATTRIBUTE.ID: self.id,
             ATTRIBUTE.CRAFT_ID: self.craft_id,
@@ -113,7 +110,9 @@ class FightItem(Item):
             ATTRIBUTE.AREA_DAMAGE_RADIUS: self.area_damage_radius,
             ATTRIBUTE.FIRING_RANGE: self.firing_range,
             ACTION.REQUEST_NAME: self.action,
+            ATTRIBUTE.LEVEL: self.level,
             # TODO State should be reworked
+            ATTRIBUTE.IS_DEAD: self.is_dead,
             'state': self._state
         }
 
@@ -128,23 +127,12 @@ class FightItem(Item):
     def init_handlers(self):
         """
             there are only 3 kind of actions that can be send from FightItem to Referee
-            select - to ask data from system
             set_action - to command unit to do
             subscribe - to subscribe on some event
         """
         self.HANDLERS = {
-            'select': self.method_select,
             'set_action': self.method_set_action,
             'subscribe': self.method_subscribe,
-        }
-
-        self.SELECT_HANDLERS = {
-            'my_info': self.select_my_info,
-            'item_info': self.select_item_info,
-            'players': self.select_players,
-            'items': self.select_items,
-            'nearest_enemy': self.select_nearest_enemy,
-            'enemy_items_in_my_firing_range': self.select_enemy_items_in_my_firing_range
         }
 
     def get_percentage_hit_points(self):
@@ -183,7 +171,9 @@ class FightItem(Item):
         self._env = yield controller.get_environment(self.player[PLAYER.ENV_NAME],
                                                      on_stdout=self.stdout,
                                                      on_stderr=self.stderr)
-        result = yield self._env.run_code(self.code)
+        env_data = self._fight_handler.get_env_data()
+        my_data = self._fight_handler.get_my_data(self.id)
+        result = yield self._env.run_code(self.code, env_data, my_data)
         while True:
             if result is not None:
                 status = result.pop('status')
@@ -213,39 +203,6 @@ class FightItem(Item):
             return  # TODO: this data is not from commander, then for what?
         handler = self.HANDLERS[handler_name]
         handler(**data)
-
-    def method_select(self, fields):
-        data = []
-        for field in fields:
-            field_key = field.get('field')
-            if field_key is None:
-                data.append({'error': 'wrong format, field did not passed'})
-                continue
-            if field_key not in self.SELECT_HANDLERS:
-                data.append({'error': 'wrong format, wrong field'})
-                continue
-
-            data.append(self.SELECT_HANDLERS[field_key](field.get('data')))
-
-        self._env.select_result(data)
-
-    def select_my_info(self, data):
-        return self.select_item_info({ATTRIBUTE.ID: self.id})
-
-    def select_item_info(self, data):
-        return self._fight_handler.get_item_info(data.get(ATTRIBUTE.ID, None))
-
-    def select_players(self, data):
-        return self._fight_handler.get_public_players_info(data, self.player[ATTRIBUTE.ID])
-
-    def select_items(self, data):
-        return self._fight_handler.get_group_item_info(data, self.player[ATTRIBUTE.ID])
-
-    def select_nearest_enemy(self, data):
-        return self._fight_handler.get_nearest_enemy(self.id)
-
-    def select_enemy_items_in_my_firing_range(self, data):
-        return self._fight_handler.get_enemy_items_in_my_firing_range(self.id)
 
     def method_set_action(self, action, data):
         try:
@@ -282,6 +239,13 @@ class CraftItem(Item):
         self.level = item_data.get(ATTRIBUTE.LEVEL)
         self.alias = item_data.get(ATTRIBUTE.ALIAS)
         self.item_type = item_data.get(ATTRIBUTE.ITEM_TYPE)
+        self.initial_amount_units_in = self.amount_units_in = item_data.get(ATTRIBUTE.UNIT_QUANTITY)
+        craft_coor = item_data[ATTRIBUTE.COORDINATES]
+        self.units_position = [[craft_coor[0] + shift[0], craft_coor[1] + shift[1]]
+                               for shift in precalculated.LAND_POSITION_SHIFTS[:self.amount_units_in]]
+
+        # im not sute it is nessesary, but still...
+        self.item_data = item_data
         self.player = player
         self.role = ROLE.CRAFT
 
@@ -292,7 +256,11 @@ class CraftItem(Item):
             ATTRIBUTE.PLAYER_ID: self.player.get("id"),
             ATTRIBUTE.ROLE: self.role,
             ATTRIBUTE.COORDINATES: self.coordinates,
-            ATTRIBUTE.LEVEL: self.level
+            ATTRIBUTE.LEVEL: self.level,
+            ATTRIBUTE.ITEM_TYPE: self.item_type,  # TODO: I think we need only one of them :)
+            ATTRIBUTE.UNIT_TYPE: self.unit_type,
+            ATTRIBUTE.INITIAL_UNITS_IN: self.initial_amount_units_in,
+            ATTRIBUTE.UNITS_IN: self.amount_units_in
         }
 
 
@@ -302,12 +270,13 @@ class FightHandler(BaseHandler):
         Where all the game calculation do
     """
 
-    FIRST_STEP_FRAME_TIME = 2
+    FIRST_STEP_FRAME_TIME = 0.5
     FRAME_TIME = 0.02  # compute and send info each time per FRAME_TIME
     GAME_FRAME_TIME = 0.1  # per one FRAME_TIME in real, in game it would be GAME_FRAME_TIME
     GRID_SCALE = 2
     CELL_SHIFT = 1 / (GRID_SCALE * 2)
     ACCURACY_RANGE = 0.1
+    UNITS_LANDING_PERIOD = 0.2
 
     """
     Each item of an EVENT must have next structure:
@@ -380,6 +349,41 @@ class FightHandler(BaseHandler):
         self._is_stopping = None
         self._stop_callback = None
 
+        self.unit_landing_countdown = 0
+        self.crafts_landing_stack = []
+
+    def get_my_data(self, id):
+        return {
+            'id': id
+        }
+
+    def get_env_data(self):
+        return {
+            'map': self.get_env_map_data(),
+            'crafts': self.get_env_crafts_data(),
+            'game': self.get_env_game_data()
+        }
+
+    def get_env_map_data(self):
+        data = {}
+        for key, value in self.fighters.items():
+            data[key] = value.info
+        return data
+
+    def get_env_crafts_data(self):
+        data = {}
+        for key, value in self.crafts.items():
+            data[key] = value.info
+        return data
+
+    def get_env_game_data(self):
+        return {
+            'time': self.current_game_time,
+            'time_accuracy': self.GAME_FRAME_TIME,
+            'map_size': self.map_size,
+            'time_limit': self.time_limit
+        }
+
     @gen.coroutine
     def start(self):
         self.is_stream = self.initial_data.get(INITIAL.IS_STREAM, True)
@@ -398,12 +402,9 @@ class FightHandler(BaseHandler):
         for item in self.initial_data[INITIAL.MAP_ELEMENTS]:
             player = self.players[item.get(PLAYER.PLAYER_ID, -1)]
             if item[ATTRIBUTE.ROLE] == ROLE.CRAFT:
-                members = self.add_craft_item(item, player)
+                self.add_craft_item(item, player)
             else:
-                members = (item,)
-
-            for member in members:
-                fight_items.append(self.add_fight_item(member, player))
+                fight_items.append(self.add_fight_item(item, player))
 
         self._log_initial_state()
 
@@ -456,36 +457,62 @@ class FightHandler(BaseHandler):
         item_data[ATTRIBUTE.COORDINATES] = coordinates
         fight_item = FightItem(item_data, player=player, fight_handler=self)
         self.fighters[fight_item.id] = fight_item
+        if self.current_frame:
+            self._log_initial_unit(fight_item)
+        fight_item.set_state_idle()
         yield fight_item.start()
 
     def add_craft_item(self, craft_data, player):
         craft_coor = self.generate_craft_place()
         if not craft_coor[1]:
             return
-        unit_quantity = craft_data[ATTRIBUTE.UNIT_QUANTITY]
-        unit_positions = [[craft_coor[0] + shift[0], craft_coor[1] + shift[1]]
-                          for shift in precalculated.LAND_POSITION_SHIFTS[:unit_quantity]]
         craft_data[ATTRIBUTE.COORDINATES] = craft_coor
         in_unit_description = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION]
         craft_data[ATTRIBUTE.UNIT_TYPE] = in_unit_description[ATTRIBUTE.ITEM_TYPE]
         craft = CraftItem(craft_data, player=player, fight_handler=self)
         self.crafts[craft.id] = craft
-        for i in range(min(unit_quantity, precalculated.MAX_LAND_POSITIONS)):
-            unit = in_unit_description.copy()
-            unit[ATTRIBUTE.OPERATING_CODE] = craft_data[ATTRIBUTE.OPERATING_CODE]
-            unit[ATTRIBUTE.COORDINATES] = unit_positions[i]
-            unit[ATTRIBUTE.TILE_POSITION] = unit_positions[i][:]
-            unit[ATTRIBUTE.ROLE] = ROLE.UNIT
-            unit[ATTRIBUTE.CRAFT_ID] = craft.craft_id
-            yield unit
+        self.crafts_landing_stack.append(craft.id)
+        return craft
+
+    @gen.coroutine
+    def add_unit_from_craft(self, craft):
+        craft_data = craft.item_data
+        unit = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION].copy()
+        unit[ATTRIBUTE.OPERATING_CODE] = craft_data[ATTRIBUTE.OPERATING_CODE]
+        unit_position = craft.units_position.pop()
+        unit[ATTRIBUTE.COORDINATES] = unit_position
+        unit[ATTRIBUTE.TILE_POSITION] = unit_position[:]
+        unit[ATTRIBUTE.ROLE] = ROLE.UNIT
+        unit[ATTRIBUTE.CRAFT_ID] = craft.craft_id
+        craft.amount_units_in -= 1
+        yield self.add_fight_item(unit, self.players[craft_data.get(PLAYER.PLAYER_ID, -1)])
 
     def generate_craft_place(self):
         width = self.map_size[1]
         craft_positions = [cr.coordinates[1] for cr in self.crafts.values()]
-        available = [y for y in range(1, width)
-                     if not any(pos - 2 <= y <= pos + 2 for pos in craft_positions)]
+        available = [y for y in range(6, width - 6)
+                     if not any(pos - 5 <= y <= pos + 5 for pos in craft_positions)]
         return [self.map_size[0], choice(available) if available else 0]
 
+    def all_crafts_empty(self):
+        for craft in self.crafts.values():
+            if craft.amount_units_in:
+                return False
+        return True
+
+    @gen.coroutine
+    def unit_lands_from_stack(self):
+        if self.unit_landing_countdown > 0:
+            self.unit_landing_countdown -= self.GAME_FRAME_TIME
+            return
+        self.unit_landing_countdown = self.UNITS_LANDING_PERIOD
+        craft_id = self.crafts_landing_stack.pop()
+        craft = self.crafts[craft_id]
+        if craft.amount_units_in > 1:
+            self.crafts_landing_stack.insert(0, craft_id)
+        yield self.add_unit_from_craft(craft)
+
+    @gen.coroutine
     def compute_frame(self):
         """
             calculate every frame and action for every FightItem
@@ -493,6 +520,7 @@ class FightHandler(BaseHandler):
         self.send_frame()
         self.current_frame += 1
         self.current_game_time += self.GAME_FRAME_TIME
+
         for key, fighter in self.fighters.items():
             # WHY: can't we move in the FightItem class?
             # When in can be None?
@@ -505,13 +533,22 @@ class FightHandler(BaseHandler):
 
             fighter.do_frame_action()
 
-        winner = self.get_winner()
+        winner = None
+        if self.all_crafts_empty():
+            winner = self.get_winner()
+
         if winner is not None:
             self.send_frame({'winner': winner}, True)
             IOLoop.current().call_later(3, self.stop)
         else:
-            frame_time = self.FRAME_TIME if self.current_frame > 1 else self.FIRST_STEP_FRAME_TIME
+            if self.all_crafts_empty() or self.unit_landing_countdown > 0:
+                frame_time = self.FRAME_TIME
+            else:
+                frame_time = self.FIRST_STEP_FRAME_TIME
             IOLoop.current().call_later(frame_time, self.compute_frame)
+
+        if self.crafts_landing_stack:
+            yield self.unit_lands_from_stack()
 
     def count_unit_casualties(self):
         result = {craft.craft_id: {
@@ -597,6 +634,15 @@ class FightHandler(BaseHandler):
             self._log_initial_craft(craft)
         for player in self.initial_data[PLAYER.KEY]:
             self._log_initial_player(player)
+        self._log_system()
+
+    def _log_system(self):
+        #  We should use cammel-case attributes while server issue
+        self.battle_log[OUTPUT.SYSTEM] = {
+            'mapSize': self.map_size,
+            'timeLimit': self.time_limit,
+            'timeAccuracy': self.GAME_FRAME_TIME
+        }
 
     def _log_initial_unit(self, unit):
         log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.UNITS]
@@ -678,69 +724,6 @@ class FightHandler(BaseHandler):
             snapshot.append(item_info)
         return snapshot
 
-    @staticmethod
-    def filter_enemy_party(sequence, player_id):
-        return [d for d in sequence
-                if d[ATTRIBUTE.PLAYER_ID] >= 0 and d[ATTRIBUTE.PLAYER_ID] != player_id]
-
-    @staticmethod
-    def filter_my_party(sequence, player_id):
-        return [d for d in sequence
-                if d[ATTRIBUTE.PLAYER_ID] >= 0 and d[ATTRIBUTE.PLAYER_ID] == player_id]
-
-    def filter_by_party(self, sequence, parties, player_id):
-        result = []
-        if PARTY.ENEMY in parties:
-            result.extend(self.filter_enemy_party(sequence, player_id))
-        if PARTY.MY in parties:
-            result.extend(self.filter_my_party(sequence, player_id))
-        return result
-
-    @staticmethod
-    def filter_by_role(sequence, roles):
-        return [el for el in sequence if el[ATTRIBUTE.ROLE] in roles]
-
-    def get_item_info(self, item_id):
-        return self.fighters[item_id].info if item_id in self.fighters else {}
-
-    def get_public_players_info(self, data, applicant_player_id):
-        players = [{PLAYER.PLAYER_ID: p} for p in self.players if p >= 0]
-        return self.filter_by_party(players, data[PARTY.REQUEST_NAME], applicant_player_id)
-
-    def get_group_item_info(self, data, applicant_player_id):
-        items = [it.info for it in self.fighters.values() if not it.is_dead]
-        items = self.filter_by_party(items, data[PARTY.REQUEST_NAME], applicant_player_id)
-        items = self.filter_by_role(items, data[ROLE.REQUEST_NAME])
-        return items
-
-    def get_nearest_enemy(self, item_id):
-        min_length = 1000
-        nearest_enemy = None
-
-        fighter = self.fighters[item_id]
-
-        for item in self.fighters.values():
-            if item.player == fighter.player or item.is_dead or item.is_obstacle:
-                continue
-
-            length = euclidean_distance(item.coordinates, fighter.coordinates)
-
-            if length < min_length:
-                min_length = length
-                nearest_enemy = item
-        return self.get_item_info(nearest_enemy.id) if nearest_enemy else {}
-
-    def get_enemy_items_in_my_firing_range(self, item_id):
-        seeker = self.fighters[item_id]
-        result = []
-        for other in self.fighters.values():
-            if other.player == seeker.player or other.is_dead or other.is_obstacle:
-                continue
-            distance = euclidean_distance(other.coordinates, seeker.coordinates)
-            if distance - other.size / 2 <= seeker.firing_range:
-                result.append(self.get_item_info(other.id))
-        return result
-
     def subscribe(self, event_name, item_id, lookup_key, data):
         """
             subscribe an FightItem with ID "item_id" on event "event_name" with data "data"
@@ -781,8 +764,13 @@ class FightHandler(BaseHandler):
         for event in events[:]:
             receiver = self.fighters[event['receiver_id']]
             if check_function(event, event_item, receiver):
+                data_to_event = data_function(event, event_item, receiver)
+                data_to_event.update({
+                    ENV.DATA: self.get_env_data(),
+                    ENV.MY_DATA: self.get_my_data(event['receiver_id'])
+                })
                 receiver.send_event(lookup_key=event['lookup_key'],
-                                    data=data_function(event, event_item, receiver))
+                                    data=data_to_event)
                 events.remove(event)
 
     @staticmethod

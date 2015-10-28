@@ -42,6 +42,21 @@ class PlayerRefereeClient(RefereeClient):
         self._events = {}
         self.events_call = Queue()
         self.runner = None
+        self._env_data = {}
+        self._my_data = {}
+
+    def grab_env_data(self, response):
+        try:
+            self._env_data = response.pop('__env_data')
+        except KeyError:
+            pass
+
+        try:
+            self._my_data = response.pop('__my_data')
+        except KeyError:
+            pass
+
+        return response
 
     def set_runner(self, runner):
         self.runner = runner
@@ -70,11 +85,14 @@ class PlayerRefereeClient(RefereeClient):
         return self.wait_actual_response(response)
 
     def subscribe(self, event, callback, data=None):
-        lookup_key = _make_id(callback)
+        def _grab_call_back(data):
+            data = self.grab_env_data(data)
+            return callback(data)
+        lookup_key = _make_id(_grab_call_back)
         response = self.actual_request({'method': 'subscribe', 'lookup_key': lookup_key,
                                         'event': event, 'data': data})
         if response.get('status') == 200:
-            self.runner.subscribe(lookup_key, callback)
+            self.runner.subscribe(lookup_key, _grab_call_back)
             return True
         return False
 
@@ -101,6 +119,7 @@ class PlayerClientLoop(ClientLoop):
             'environment_id': self.environment_id,
             'pid': os.getpid(),
         })
+        execution_data = self.client.grab_env_data(execution_data)
         while True:
             try:
                 results = self.runner.execute(execution_data)

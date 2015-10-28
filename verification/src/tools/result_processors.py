@@ -31,7 +31,7 @@ class Grid():
                         abs(x) == k or abs(y) == k)
                   for k in range(10))
 
-    SCALE = 6
+    SCALE = 2
     CELL_SHIFT = 0.5 / SCALE
 
     def __init__(self, rows, columns=None):

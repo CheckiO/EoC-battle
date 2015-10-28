@@ -3,14 +3,23 @@ from tornado import gen
 from checkio_referee.environment.controller import EnvironmentsController
 from checkio_referee.environment.client import EnvironmentClient
 
+from tools.terms import ENV
+
 
 class BattleEnvironmentClient(EnvironmentClient):
 
-    def select_result(self, data):
-        self.write({
-            'status': 200,
-            'data': data
+    @gen.coroutine
+    def run_code(self, code, env_data, my_data):
+        # this function is from checkio_referee.environment.client.py
+        # it is better to rewrite it in that module so parents can pass some addidion
+        # arguments
+        result = yield self._request({
+            'action': 'run_code',
+            'code': code,
+            ENV.DATA: env_data,
+            ENV.MY_DATA: my_data
         })
+        return result
 
     def confirm(self):
         self.write({
