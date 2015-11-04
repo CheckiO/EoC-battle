@@ -137,7 +137,7 @@ class OUTPUT():
     STDERR = "stderr"
     DEMAGED = 'demaged'
     SYSTEM = 'system'
-    FLUG_SLUG = 'flugType'
+    FLUG_SLUG = 'flagSlug'
 
 
 class STD():

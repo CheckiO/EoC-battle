@@ -678,7 +678,7 @@ class FightHandler(BaseHandler):
 
     def _log_initial_flag_stock(self, building):
         log = self._log_initial_building(building)
-        log[OUTPUT.FLAG_SLUG] = building.player[PLAYER.ENV_NAME].split[0]
+        log[OUTPUT.FLAG_SLUG] = building.player[PLAYER.ENV_NAME]
 
     def _log_initial_obstacle(self, obstacle):
         log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.OBSTACLES]
