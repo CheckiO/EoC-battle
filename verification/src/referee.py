@@ -368,6 +368,8 @@ class FightHandler(BaseHandler):
     def get_env_map_data(self):
         data = {}
         for key, value in self.fighters.items():
+            if value.is_obstacle:
+                continue
             data[key] = value.info
         return data
 
