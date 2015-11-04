@@ -49,9 +49,9 @@ class FightItem(Item):
 
         self.item_type = item_data.get(ATTRIBUTE.ITEM_TYPE)
         self.alias = item_data.get(ATTRIBUTE.ALIAS)
-        self.level = item_data.get(ATTRIBUTE.LEVEL)
+        self.level = item_data.get(ATTRIBUTE.LEVEL, 1)
         self.tile_position = item_data.get(ATTRIBUTE.TILE_POSITION)
-        self.item_status = item_data.get(ATTRIBUTE.ITEM_STATUS)
+        self.item_status = item_data.get(ATTRIBUTE.ITEM_STATUS, 'idle')
 
         self.start_hit_points = item_data.get(ATTRIBUTE.HIT_POINTS)
         self.hit_points = item_data.get(ATTRIBUTE.HIT_POINTS)
