@@ -1,5 +1,5 @@
 __all__ = ['ROLE', 'PARTY', 'ATTRIBUTE', 'ACTION', 'STATUS',
-           'INITIAL', 'PLAYER', 'DEFEAT_REASON', 'OUTPUT', "STD"]
+           'INITIAL', 'PLAYER', 'DEFEAT_REASON', 'OUTPUT', "STD", 'OBSTACLE']
 
 
 class PARTY():
@@ -20,6 +20,11 @@ class ROLE():
     ALL = (CENTER, TOWER, UNIT, BUILDING, OBSTACLE)
     STATIC = (BUILDING, CENTER, OBSTACLE, TOWER)
     PLAYER_STATIC = (BUILDING, CENTER, TOWER)
+
+
+class OBSTACLE():
+    ROCK = 'rock'
+    FLAG_STOCK = 'flagStock'
 
 
 class ATTRIBUTE():
@@ -132,6 +137,7 @@ class OUTPUT():
     STDERR = "stderr"
     DEMAGED = 'demaged'
     SYSTEM = 'system'
+    FLUG_SLUG = 'flugType'
 
 
 class STD():

@@ -3,7 +3,8 @@ from tornado.ioloop import IOLoop
 
 from random import choice
 from tools import precalculated, fill_square, grid_to_graph
-from tools import ROLE, ATTRIBUTE, PARTY, ACTION, STATUS, INITIAL, DEFEAT_REASON, OUTPUT, STD
+from tools import ROLE, ATTRIBUTE, PARTY, ACTION, STATUS, INITIAL, DEFEAT_REASON, OUTPUT, STD,\
+    OBSTACLE
 
 from checkio_referee import RefereeBase
 from checkio_referee.handlers.base import BaseHandler
@@ -629,7 +630,12 @@ class FightHandler(BaseHandler):
             elif item.role in ROLE.PLAYER_STATIC:
                 self._log_initial_building(item)
             elif item.role == ROLE.OBSTACLE:
-                self._log_initial_obstacle(item)
+                if item.item_type == OBSTACLE.ROCK:
+                    self._log_initial_obstacle(item)
+                elif item.item_type == OBSTACLE.FLAG_STOCK:
+                    self._log_initial_flag_stock(item)
+                else:
+                    self._log_initial_building(item)
         for craft in self.crafts.values():
             self._log_initial_craft(craft)
         for player in self.initial_data[PLAYER.KEY]:
@@ -655,8 +661,7 @@ class FightHandler(BaseHandler):
         })
 
     def _log_initial_building(self, building):
-        log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.BUILDINGS]
-        log.append({
+        log_record = {
             OUTPUT.ITEM_ID: building.id,
             OUTPUT.TILE_POSITION: building.tile_position,
             OUTPUT.ITEM_TYPE: building.item_type,
@@ -666,7 +671,14 @@ class FightHandler(BaseHandler):
             OUTPUT.ITEM_LEVEL: building.level,
             OUTPUT.PLAYER_ID: building.player[PLAYER.ID],
             OUTPUT.PLAYER_ID_DEP: building.player[PLAYER.ID]
-        })
+        }
+        log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.BUILDINGS]
+        log.append(log_record)
+        return log_record
+
+    def _log_initial_flag_stock(self, building):
+        log = self._log_initial_building(building)
+        log[OUTPUT.FLAG_SLUG] = building.player[PLAYER.ENV_NAME].split[0]
 
     def _log_initial_obstacle(self, obstacle):
         log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.OBSTACLES]
