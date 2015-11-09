@@ -176,7 +176,7 @@ class FightItem(Item):
 
     @gen.coroutine
     def start(self):
-        print('START BATTLE')
+        raise ValueError('SSTART')
         if not self.is_executable:
             return
         controller = self._fight_handler._referee.environments_controller
