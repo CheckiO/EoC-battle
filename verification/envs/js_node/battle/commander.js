@@ -65,13 +65,6 @@ function checkRadius(number) {
     }
 }
 
-function retCall(data, callBack) {
-    if (callBack){
-        setTimeout(function(){callBack(data);}, 1);
-    }
-    return data;
-}
-
 function Client() {
     this.loop = BattleClientLoop.lastLoop;
 }
@@ -133,17 +126,22 @@ Client.prototype.mapFilter = function (filters) {
 
 // ASK
 
-Client.prototype.askMyInfo = function (callBack) {
-    return retCall(this.myInfo(), callBack);
+
+Client.prototype.askCurTime = function() {
+    return this.envData()['game']['time'];
+};
+
+Client.prototype.askMyInfo = function () {
+    return this.myInfo();
 };
 Client.prototype.start = Client.prototype.askMyInfo;
 
-Client.prototype.askItemInfo = function (id, callBack) {
+Client.prototype.askItemInfo = function (id) {
     checkItemId(id);
-    return retCall(this.envMap()[id], callBack);
+    return this.envMap()[id];
 };
 
-Client.prototype.askNearestEnemy = function (callBack) {
+Client.prototype.askNearestEnemy = function () {
     var minLen = 1000,
         nearest,
         fighter = this.myInfo();
@@ -155,10 +153,10 @@ Client.prototype.askNearestEnemy = function (callBack) {
             nearest = item;
         }
     });
-    return retCall(nearest, callBack);
+    return nearest;
 };
 
-Client.prototype.askItems = function (parties, roles, callBack) {
+Client.prototype.askItems = function (parties, roles) {
     roles = roles || ROLE.ALL;
     roles = _.uniq(roles);
     parties = parties || PARTY.ALL;
@@ -174,115 +172,168 @@ Client.prototype.askItems = function (parties, roles, callBack) {
         }
     }
     filters.push(Filters.roles(roles));
-    return retCall(this.mapFilter(filters), callBack);
+    return this.mapFilter(filters)
 };
 
-Client.prototype.askEnemyItems = function (callBack) {
-    return this.askItems([PARTY.ENEMY], undefined, callBack);
+Client.prototype.askEnemyItems = function () {
+    return this.askItems([PARTY.ENEMY], undefined);
 };
 
-Client.prototype.askMyItems = function (callBack) {
-    return this.askItems([PARTY.MY], undefined, callBack);
+Client.prototype.askMyItems = function () {
+    return this.askItems([PARTY.MY], undefined);
 };
 
-Client.prototype.askBuildings = function (callBack) {
-    return this.askItems(undefined, [ROLE.CENTER, ROLE.BUILDING], callBack);
+Client.prototype.askBuildings = function () {
+    return this.askItems(undefined, [ROLE.CENTER, ROLE.BUILDING]);
 };
 
-Client.prototype.askTowers = function (callBack) {
-    return this.askItems(undefined, [ROLE.TOWER], callBack);
+Client.prototype.askTowers = function () {
+    return this.askItems(undefined, [ROLE.TOWER]);
 };
 
-Client.prototype.askCenter = function (callBack) {
+Client.prototype.askCenter = function () {
     var ret = this.askItems(undefined, [ROLE.CENTER]);
     if (ret.length === 0) {
-        ret = undefined;
+        return
     } else {
-        ret = ret[0];
+        return ret[0];
     }
-    return retCall(ret, callBack);
 };
 
-Client.prototype.askUnits = function (callBack) {
-    return this.askItems([PARTY.UNIT], undefined, callBack);
+Client.prototype.askUnits = function () {
+    return this.askItems([PARTY.UNIT], undefined);
 };
 
-Client.prototype.askMyRangeEnemyItems = function (callBack) {
-    return retCall(this.mapFilter([Filters.enemy, Filters.inMyRange]), callBack);
+Client.prototype.askMyRangeEnemyItems = function () {
+    return this.mapFilter([Filters.enemy, Filters.inMyRange]);
+};
+
+// IDs
+
+Client.prototype.idsMyCraft = function () {
+    var ret = [];
+    var myInfo = this.myInfo();
+    _.each(this.envMap(), function(item, id){
+        if (id != myInfo.id && item.craft_id === myInfo.craft_id) {
+            ret.push(id);
+        }
+    });
+    return ret;
+};
+
+Client.prototype.idsMyTeam = function () {
+    var ret = [];
+    var myInfo = this.myInfo();
+    _.each(this.envMap(), function(item, id){
+        if (id != myInfo.id && item.player_id === myInfo.player_id) {
+            ret.push(id);
+        }
+    });
+    return ret;
 };
 
 // DO
 
-Client.prototype.do = function (action, data, callBack) {
-    if (callBack) {
-        checkCallable(callBack, "Callback");
-        console.log(ERR_CALLBACK_DEPRECATED);
-    }
-    return this.loop.setAction(action, data, callBack);
+Client.prototype.do = function (action, data) {
+    console.log('DO:');
+    console.log(action);
+    console.log(data);
+    return this.loop.setAction(action, data);
 };
 
-Client.prototype.doAttack = function (id, callBack) {
+Client.prototype.doAttack = function (id) {
     checkItemId(id);
-    this.do('attack', {'id': id}, callBack);
+    return this.do('attack', {'id': id});
 };
 
-Client.prototype.doMove = function (coordinates, callBack) {
+Client.prototype.doMove = function (coordinates) {
     checkCoordinates(coordinates, "Coordinates");
-    this.do('move', {'coordinates': coordinates}, callBack);
+    return this.do('move', {'coordinates': coordinates});
+};
+
+Client.prototype.doMessage = function (message, ids) {
+    if (this.myData().level < 4) {
+        return new Promise(function(resolve){
+            setTimeout(resolve, 1, {});
+        });
+    }
+    return this.do('message', {'message': message, 'ids': ids});
+};
+
+Client.prototype.doMessageToId = function (message, id) {
+    return this.doMessage(message, [id]);
+};
+
+Client.prototype.doMessageToCraft = function (message) {
+    return this.doMessage(message, this.idsMyCraft());
+};
+
+Client.prototype.doMessageToTeam = function (message) {
+    return this.doMessage(message, this.idsMyTeam());
 };
 
 // SUBSCRIBE
 
-Client.prototype.when = function (action, data, callBack) {
-    if (callBack) {
-        checkCallable(callBack, "Callback");
-    }
-    this.loop.subscribe(action, data, callBack);
+Client.prototype.when = function (action, data) {
+    return this.loop.subscribe(action, data);
 };
 
-Client.prototype.unSubscribeAll = function (callBack) {
-    if (callBack) {
-        checkCallable(callBack, "Callback");
-    }
-    this.when('unsubscribe_all', undefined, callBack);
+Client.prototype.unSubscribeAll = function () {
+    return this.when('unsubscribe_all', undefined);
 };
 
-Client.prototype.whenInArea = function (center, radius, callBack) {
+Client.prototype.whenInArea = function (center, radius) {
     checkCoordinates(center, "Center coordinates");
     checkRadius(radius);
-    this.when('im_in_area', {
+    return this.when('im_in_area', {
         'coordinates': center,
         'radius': radius
-    }, callBack);
+    });
 };
 
-Client.prototype.whenItemInArea = function (center, radius, callBack) {
+Client.prototype.whenItemInArea = function (center, radius) {
     checkCoordinates(center, "Center coordinates");
-    this.when('any_item_in_area', {
+    return this.when('any_item_in_area', {
         'coordinates': center,
         'radius': radius
-    }, callBack);
+    });
 };
 
-Client.prototype.whenStoped = function (callBack) {
-    this.when('im_stop', {}, callBack);
+Client.prototype.whenTime = function(atTime) {
+    if (this.myData().level < 2) {
+        return new Promise(function(resolve){
+            setTimeout(resolve, 1, {'time': atTime});
+        });
+    }
+    return this.when('time', {'time': atTime});
 };
 
-Client.prototype.whenIdle = function (callBack) {
-    this.when('im_idle', {}, callBack);
+Client.prototype.whenStoped = function () {
+    return this.when('im_stop', {});
 };
 
-Client.prototype.whenEnemyInRange = function (callBack) {
-    this.when('enemy_in_my_firing_range', {}, callBack);
+Client.prototype.whenIdle = function () {
+    return this.when('im_idle', {});
 };
 
-Client.prototype.whenEnemyOutRange = function (callBack) {
-    this.when('the_item_out_my_firing_range', {}, callBack);
+Client.prototype.whenEnemyInRange = function () {
+    return this.when('enemy_in_my_firing_range', {});
 };
 
-Client.prototype.whenItemDestroyed = function (id, callBack) {
+Client.prototype.whenEnemyOutRange = function () {
+    return this.when('the_item_out_my_firing_range', {});
+};
+
+Client.prototype.whenItemDestroyed = function (id) {
     checkItemId(id);
-    this.when('death', {'id': id}, callBack);
+    return this.when('death', {'id': id});
+};
+
+Client.prototype.whenMessage = function() {
+    if (this.myData().level < 4) {
+        return new Promise(function(resolve){});
+    }
+    return this.when('message', {});
 };
 
 exports.Client = Client;

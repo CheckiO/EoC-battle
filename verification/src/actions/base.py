@@ -1,4 +1,4 @@
-from .exceptions import ActionValidateError
+from .exceptions import ActionValidateError, ActionSkip
 from tools.distances import euclidean_distance
 from tools import is_coordinates
 
@@ -15,7 +15,8 @@ class BaseItemActions(object):
         :return:
         """
         return {
-            'attack': self.action_attack
+            'attack': self.action_attack,
+            'message': None
         }
 
     def _idle(self):
@@ -61,7 +62,7 @@ class BaseItemActions(object):
         if action not in self._actions:
             raise NotImplementedError  # TODO: custom exception
 
-        validator = getattr(self, 'validate_{}'.format(action))
+        validator = getattr(self, 'validate_{}'.format(action), None)
         if validator is not None:
             validator(action, data)
         return {
@@ -84,6 +85,10 @@ class BaseItemActions(object):
     def validate_move(self, action, data):
         if not is_coordinates(data.get("coordinates")):
             raise ActionValidateError("Wrong coordinates")
+
+    def validate_message(self, action, data):
+        self._fight_handler.add_messages_to(data['message'], map(int, data['ids']), self._item.id)
+        raise ActionSkip
 
     def do_action(self, action_data):
         validator = getattr(self, 'validate_{}'.format(action_data['name']))

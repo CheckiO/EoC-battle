@@ -11,7 +11,7 @@ from checkio_referee.handlers.base import BaseHandler
 
 import settings_env
 from actions import ItemActions
-from actions.exceptions import ActionValidateError
+from actions.exceptions import ActionValidateError, ActionSkip
 from environment import BattleEnvironmentsController
 from tools.distances import euclidean_distance
 from tools.terms import PLAYER, ENV
@@ -76,15 +76,25 @@ class FightItem(Item):
         self._initial = item_data
         self._env = None  # ??
         self._state = None  # dict of current FightItem state
+        self._action_queue = []
 
         self._std = {
             "out": [],
             "err": []
         }
+        self.messages =[]
         # every state has a key "action"
         # {'action': 'idle'}
         # {'action': 'dead'}
         self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
+
+    def add_message(self, message, from_id):
+        self.messages.append([message, from_id])
+
+    def pop_last_message(self):
+        if not self.messages:
+            return
+        return self.messages.pop(0)
 
     @property
     def is_dead(self):
@@ -210,6 +220,8 @@ class FightItem(Item):
             self.action = self._actions_handlers.parse_action_data(action, data)
         except ActionValidateError as e:
             self._env.bad_action(e)
+        except ActionSkip:
+            self._env.confirm()
         else:
             self._env.confirm()
 
@@ -295,6 +307,8 @@ class FightHandler(BaseHandler):
         'im_idle': [],
         'enemy_in_my_firing_range': [],
         'the_item_out_my_firing_range': [],
+        'time': [],
+        'message': []
     }
 
     def __init__(self, editor_data, editor_client, referee):
@@ -354,8 +368,12 @@ class FightHandler(BaseHandler):
         self.crafts_landing_stack = []
 
     def get_my_data(self, id):
+        fighter = self.fighters[id]
         return {
-            'id': id
+            'id': id,
+            'level': fighter.level,
+            'role': fighter.role,
+            'type': fighter.item_type
         }
 
     def get_env_data(self):
@@ -386,6 +404,10 @@ class FightHandler(BaseHandler):
             'map_size': self.map_size,
             'time_limit': self.time_limit
         }
+
+    def add_messages_to(self, message, ids, from_id):
+        for item_id in ids:
+            self.fighters[item_id].add_message(message, from_id)
 
     @gen.coroutine
     def start(self):
@@ -535,6 +557,9 @@ class FightHandler(BaseHandler):
                 continue
 
             fighter.do_frame_action()
+
+        self._send_time()
+        self._send_message()
 
         winner = None
         if self.all_crafts_empty():
@@ -773,7 +798,10 @@ class FightHandler(BaseHandler):
                     events.remove(event)
 
     def _send_event(self, event_item_id, event_name, check_function, data_function):
-        event_item = self.fighters.get(event_item_id)
+        if event_item_id:
+            event_item = self.fighters.get(event_item_id)
+        else:
+            event_item = None
         events = self.EVENTS.get(event_name, [])
         for event in events[:]:
             receiver = self.fighters[event['receiver_id']]
@@ -892,6 +920,32 @@ class FightHandler(BaseHandler):
             return distance <= event['data']['radius']
 
         self._send_event(event_item_id, "any_item_in_area", check_function, self._data_event_id)
+
+    def _send_time(self):
+        """
+            Send Time at specific time
+        """
+
+        def check_function(event, event_item, receiver):
+            return self.current_game_time >= event['data']['time']
+
+        def time_data(event, event_item, receiver):
+            return {'time': event['data']['time']}
+
+        self._send_event(None, 'time', check_function, time_data)
+
+    def _send_message(self):
+        '''
+            Send message to a specific unit
+        '''
+        def check_function(event, event_item, receiver):
+            return receiver.messages
+
+        def message_data(event, event_item, receiver):
+            mess = receiver.pop_last_message()
+            return {'message': mess[0], 'from_id': mess[1]}
+
+        self._send_event(None, 'message', check_function, message_data)
 
 
 class Referee(RefereeBase):

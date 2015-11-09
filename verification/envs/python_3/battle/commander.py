@@ -74,6 +74,26 @@ class Client(object):
     def set_client(cls, client):
         cls.CLIENT = client
 
+    def ids_my_craft(self):
+        my_info = self.my_info
+        ret = []
+        for uid, unit in self.env_map.items():
+            if uid == str(my_info['id']):
+                continue
+            if my_info['craft_id'] == unit['craft_id']:
+                ret.append(uid)
+        return ret
+
+    def ids_my_team(self):
+        my_info = self.my_info
+        ret = []
+        for uid, unit in self.env_map.items():
+            if uid == str(my_info['id']):
+                continue
+            if my_info['player_id'] == unit['player_id']:
+                ret.append(uid)
+        return ret
+
     def ask_my_info(self):
         return self.my_info
 
@@ -95,6 +115,9 @@ class Client(object):
             if _filters_passed(item):
                 ret.append(item)
         return ret
+
+    def ask_cur_time(self):
+        return self.env_data['game']['time']
 
     def ask_items(self, parties=PARTY.ALL, roles=ROLE.ALL):
         #  DEPRECATED function
@@ -163,10 +186,30 @@ class Client(object):
 
     move_to_point = do_move
 
-    def when(self, event, callback, data=None):
+    def do_message(self, message, ids):
+        if self.my_data['level'] < 4:
+            return
+        self.do('message', {'message': message, 'ids': ids})
+
+    def do_message_to_id(self, message, id):
+        return self.do_message(message, [id])
+
+    def do_message_to_craft(self, message):
+        return self.do_message(message, self.ids_my_craft())
+
+    def do_message_to_team(self, message):
+        return self.do_message(message, self.ids_my_team())
+
+    def when(self, event, callback, data=None, infinity=False):
         check_callable(callback, "Callback")
         check_str_type(event, "Event")
-        return self.CLIENT.subscribe(event, callback, data)
+        if infinity:
+            def new_call(*args, **kwargs):
+                self.when(event, callback, data, infinity=True)
+                callback(*args, **kwargs)
+        else:
+            new_call = callback
+        return self.CLIENT.subscribe(event, new_call, data)
 
     subscribe = when
 
@@ -219,3 +262,13 @@ class Client(object):
         return self.when('death', callback, {'id': item_id})
 
     subscribe_the_item_is_dead = when_item_destroyed
+
+    def when_time(self, secs, callback):
+        if self.my_data['level'] < 2:
+            return callback({'time': secs})
+        return self.when('time', callback, {'time': secs})
+
+    def when_message(self, callback, infinity=True):
+        if self.my_data['level'] < 4:
+            return
+        return self.when('message', callback, infinity=infinity)

@@ -4,3 +4,6 @@ class ActionError(Exception):
 
 class ActionValidateError(ActionError):
     pass
+
+class ActionSkip(Exception):
+    pass

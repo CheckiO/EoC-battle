@@ -37,15 +37,17 @@ BattleClientLoop.prototype.pushRequestQueue = function (data, callBack) {
     this.requestQueue.push([data, callBack]);
 };
 
-BattleClientLoop.prototype.actualRequest = function (data, callBack) {
-    if (this.currentRequest) {
-        this.pushRequestQueue(data, callBack);
-        return;
-    }
-    this.currentRequest = data;
-    this.currentCallBack = callBack;
-    data.status = 'success';
-    this.connection.write(JSON.stringify(data) + '\u0000');
+BattleClientLoop.prototype.actualRequest = function (data) {
+    return new Promise(function(resolve, reject){
+        if (this.currentRequest) {
+            this.pushRequestQueue(data, resolve);
+            return;
+        }
+        this.currentRequest = data;
+        this.currentCallBack = resolve;
+        data.status = 'success';
+        this.connection.write(JSON.stringify(data) + '\u0000');
+    }.bind(this));
 };
 
 BattleClientLoop.prototype.getCallActions = function () {
@@ -81,22 +83,20 @@ BattleClientLoop.prototype.onClientData = function (data) {
     }
 };
 
-BattleClientLoop.prototype.select = function (fields, callBack) {
-    this.actualRequest({'method': 'select', 'fields': fields}, callBack);
+BattleClientLoop.prototype.setAction = function (action, data) {
+    return this.actualRequest({'method': 'set_action', 'action': action, 'data': data});
 };
 
-BattleClientLoop.prototype.setAction = function (action, data, callBack) {
-    this.actualRequest({'method': 'set_action', 'action': action, 'data': data}, callBack);
-};
-
-BattleClientLoop.prototype.subscribe = function (action, data, callBack) {
+BattleClientLoop.prototype.subscribe = function (action, data) {
     var key = makeId();
-    this.actualRequest({'method': 'subscribe', 'lookup_key': key,
-                        'event': action, 'data': data});
-    this.waitEvents[key] = function(data){
-        data = this.grabEnvData(data);
-        callBack(data);
-    }.bind(this);
+    return new Promise(function(resolve, reject){
+        this.actualRequest({'method': 'subscribe', 'lookup_key': key,
+                            'event': action, 'data': data});
+        this.waitEvents[key] = function(data){
+            data = this.grabEnvData(data);
+            resolve(data);
+        }.bind(this);
+    }.bind(this));
 };
 
 exports.BattleClientLoop = BattleClientLoop;
