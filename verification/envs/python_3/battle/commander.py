@@ -191,8 +191,8 @@ class Client(object):
             return
         self.do('message', {'message': message, 'ids': ids})
 
-    def do_message_to_id(self, message, id):
-        return self.do_message(message, [id])
+    def do_message_to_id(self, message, item_id):
+        return self.do_message(message, [item_id])
 
     def do_message_to_craft(self, message):
         return self.do_message(message, self.ids_my_craft())

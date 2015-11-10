@@ -299,15 +299,6 @@ Client.prototype.whenItemInArea = function (center, radius) {
     });
 };
 
-Client.prototype.whenTime = function(atTime) {
-    if (this.myData().level < 2) {
-        return new Promise(function(resolve){
-            setTimeout(resolve, 1, {'time': atTime});
-        });
-    }
-    return this.when('time', {'time': atTime});
-};
-
 Client.prototype.whenStoped = function () {
     return this.when('im_stop', {});
 };
@@ -327,6 +318,15 @@ Client.prototype.whenEnemyOutRange = function () {
 Client.prototype.whenItemDestroyed = function (id) {
     checkItemId(id);
     return this.when('death', {'id': id});
+};
+
+Client.prototype.whenTime = function(atTime) {
+    if (this.myData().level < 2) {
+        return new Promise(function(resolve){
+            setTimeout(resolve, 1, {'time': atTime});
+        });
+    }
+    return this.when('time', {'time': atTime});
 };
 
 Client.prototype.whenMessage = function() {
