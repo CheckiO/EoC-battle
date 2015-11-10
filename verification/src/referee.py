@@ -179,12 +179,13 @@ class FightItem(Item):
         if not self.is_executable:
             return
         controller = self._fight_handler._referee.environments_controller
-        self._env = yield controller.get_environment(self.player[PLAYER.ENV_NAME],
+        self._env = yield controller.get_environment(self.code.get('env_name',
+                                                                   self.player[PLAYER.ENV_NAME]),
                                                      on_stdout=self.stdout,
                                                      on_stderr=self.stderr)
         env_data = self._fight_handler.get_env_data()
         my_data = self._fight_handler.get_my_data(self.id)
-        result = yield self._env.run_code(self.code, env_data, my_data)
+        result = yield self._env.run_code(self.code["code"], env_data, my_data)
         while True:
             if result is not None:
                 status = result.pop('status')
@@ -417,7 +418,7 @@ class FightHandler(BaseHandler):
         self.players = {p['id']: p for p in self.initial_data[PLAYER.KEY]}
         self.players[-1] = {"id": -1}
         for code_data in self.initial_data[INITIAL.CODES]:
-            self.codes[code_data["id"]] = code_data["code"]
+            self.codes[code_data["id"]] = code_data
 
         self.map_size = self.initial_data[INITIAL.MAP_SIZE]
         self.rewards = self.initial_data.get(INITIAL.REWARDS, {})
