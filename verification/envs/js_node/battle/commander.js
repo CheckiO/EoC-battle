@@ -96,7 +96,7 @@ var Filters = {
         return client.myInfo().player_id != item.player_id && item.player_id != -1;
     },
     my: function(client, item){
-        return client.myInfo().player_id != item.player_id;
+        return client.myInfo().player_id == item.player_id;
     },
     roles: function(roles){
         var _filter = function(client, item){
