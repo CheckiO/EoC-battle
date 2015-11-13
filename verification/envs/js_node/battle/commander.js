@@ -201,7 +201,7 @@ Client.prototype.askCenter = function () {
 };
 
 Client.prototype.askUnits = function () {
-    return this.askItems([PARTY.UNIT], undefined);
+    return this.askItems(undefined, [ROLE.UNIT]);
 };
 
 Client.prototype.askMyRangeEnemyItems = function () {
