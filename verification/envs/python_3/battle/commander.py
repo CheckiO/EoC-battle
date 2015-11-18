@@ -40,12 +40,12 @@ def check_radius(number):
 
 def check_callable(func, name):
     if not callable(func):
-        raise TypeError(ERR_CALLABLE_TYPE.format(name))
+        raise TypeError(ERR_CALLABLE_TYPE.format(name=name))
 
 
 def check_str_type(data, name):
     if not isinstance(data, str):
-        raise TypeError(ERR_STR_TYPE.format(name))
+        raise TypeError(ERR_STR_TYPE.format(name=name))
 
 
 class Client(object):
