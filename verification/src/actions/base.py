@@ -40,8 +40,8 @@ class BaseItemActions(object):
                 'firing_point': enemy.coordinates,
                 'aid': enemy.id
             }
-
-        enemy.hit_points -= attacker.damage_per_shot
+        if not enemy.is_immortal:
+            enemy.hit_points -= attacker.damage_per_shot
         if enemy.hit_points <= 0:
             self._dead(enemy)
 

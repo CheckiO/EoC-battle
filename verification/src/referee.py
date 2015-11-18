@@ -19,6 +19,7 @@ from tools.result_processors import unit_dispersion
 
 CUT_FROM_BUILDING = 1
 COORDINATE_EDGE_CUT = 10 ** -3
+IMMORTAL_TIME = 3
 
 
 class Item(object):
@@ -46,6 +47,8 @@ class FightItem(Item):
         self.player = player  # dict, data about the player who owns this Item
         # available types: center, unit, tower, building, obstacle
         self.role = item_data.get(ATTRIBUTE.ROLE)  # type of current Item
+
+        self.land_time = fight_handler.current_game_time
 
         self.item_type = item_data.get(ATTRIBUTE.ITEM_TYPE)
         self.alias = item_data.get(ATTRIBUTE.ALIAS)
@@ -87,6 +90,11 @@ class FightItem(Item):
         # {'action': 'idle'}
         # {'action': 'dead'}
         self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
+
+    @property
+    def is_immortal(self):
+        return (self.role == ROLE.UNIT and
+                self._fight_handler.current_game_time - self.land_time < IMMORTAL_TIME)
 
     def add_message(self, message, from_id):
         self.messages.append([message, from_id])
