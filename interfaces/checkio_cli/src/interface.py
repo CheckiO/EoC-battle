@@ -152,7 +152,7 @@ class FightHandler(BaseHandler):
             )
 
     def short_name(self, item):
-        player_id = item['player_id']
+        player_id = item['id']
         return item['role'][0].upper() + str(player_id) if player_id >= 0 else "XX"
 
 
