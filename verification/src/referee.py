@@ -476,7 +476,8 @@ class FightHandler(BaseHandler):
             round(item_data[ATTRIBUTE.TILE_POSITION][0] + size / 2, 6),
             round(item_data[ATTRIBUTE.TILE_POSITION][1] + size / 2, 6)]
         # [SPIKE] We use center coordinates
-        cut_size = (size if item_data[ATTRIBUTE.ROLE] == ROLE.OBSTACLE
+        cut_size = (size if (item_data[ATTRIBUTE.ROLE] == ROLE.OBSTACLE
+                             and item_data[ATTRIBUTE.ITEM_TYPE] == 'rock')
                     else max(size - CUT_FROM_BUILDING, 0))
         item_data[ATTRIBUTE.BASE_SIZE] = size
         item_data[ATTRIBUTE.SIZE] = cut_size
