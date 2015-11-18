@@ -76,23 +76,13 @@ class Client(object):
 
     def ids_my_craft(self):
         my_info = self.my_info
-        ret = []
-        for uid, unit in self.env_map.items():
-            if uid == str(my_info['id']):
-                continue
-            if my_info['craft_id'] == unit['craft_id']:
-                ret.append(uid)
-        return ret
+        return [uid for uid, unit in self.env_map.items()
+                if uid != str(my_info['id']) and my_info['craft_id'] == unit['craft_id']]
 
     def ids_my_team(self):
         my_info = self.my_info
-        ret = []
-        for uid, unit in self.env_map.items():
-            if uid == str(my_info['id']):
-                continue
-            if my_info['player_id'] == unit['player_id']:
-                ret.append(uid)
-        return ret
+        return [uid for uid, unit in self.env_map.items()
+                if uid != str(my_info['id']) and my_info['player_id'] == unit['player_id']]
 
     def ask_my_info(self):
         return self.my_info
@@ -103,18 +93,9 @@ class Client(object):
 
     def env_map_filter(self, filters):
         def _filters_passed(item):
-            for _filter in filters:
-                if not _filter(self, item):
-                    return False
-            return True
+            return all(_filter(self, item) for _filter in filters)
 
-        ret = []  # TODO: change to generators
-        for item in self.env_map.values():
-            if item['is_dead']:
-                continue
-            if _filters_passed(item):
-                ret.append(item)
-        return ret
+        return [item for item in self.env_map.values() if not item['is_dead'] and _filters_passed(item)]
 
     def ask_cur_time(self):
         return self.env_data['game']['time']
