@@ -20,6 +20,7 @@ from tools.result_processors import unit_dispersion
 CUT_FROM_BUILDING = 1
 COORDINATE_EDGE_CUT = 10 ** -3
 IMMORTAL_TIME = 3
+PERCENT_CENTER_AUTO_DEMAGE = 0.75
 
 
 class Item(object):
@@ -47,6 +48,8 @@ class FightItem(Item):
         self.player = player  # dict, data about the player who owns this Item
         # available types: center, unit, tower, building, obstacle
         self.role = item_data.get(ATTRIBUTE.ROLE)  # type of current Item
+        if self.role == ROLE.CENTER:
+            fight_handler.set_center(self)
 
         self.land_time = fight_handler.current_game_time
 
@@ -95,6 +98,22 @@ class FightItem(Item):
     def is_immortal(self):
         return (self.role == ROLE.UNIT and
                 self._fight_handler.current_game_time - self.land_time < IMMORTAL_TIME)
+
+    def get_shoted(self, damage):
+        if not self.is_immortal:
+            self.hit_points -= damage
+
+        if self.hit_points <= 0:
+            self._dead()
+
+        return [self.id]
+
+    def _dead(self):
+        self.set_state_dead()
+        self._fight_handler.send_death_event(self.id)
+        self._fight_handler.unsubscribe(self)
+        if self.role == ROLE.BUILDING:
+            self._fight_handler.demage_center(self)
 
     def add_message(self, message, from_id):
         self.messages.append([message, from_id])
@@ -375,6 +394,17 @@ class FightHandler(BaseHandler):
 
         self.unit_landing_countdown = 0
         self.crafts_landing_stack = []
+
+        # FightItem for CommandCenter
+        self.fi_center = None
+
+    def set_center(self, center):
+        self.fi_center = center
+
+    def demage_center(self, building):
+        auto_health_part = self.fi_center.start_hit_points * PERCENT_CENTER_AUTO_DEMAGE
+        total_buildings = len(list(filter(lambda a: a.role == ROLE.BUILDING, self.fighters.values())))
+        self.fi_center.get_shoted(auto_health_part/total_buildings)
 
     def get_my_data(self, id):
         fighter = self.fighters[id]

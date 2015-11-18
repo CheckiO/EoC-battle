@@ -40,23 +40,16 @@ class BaseItemActions(object):
                 'firing_point': enemy.coordinates,
                 'aid': enemy.id
             }
-        if not enemy.is_immortal:
-            enemy.hit_points -= attacker.damage_per_shot
-        if enemy.hit_points <= 0:
-            self._dead(enemy)
+
+        demaged_ids = enemy.get_shoted(attacker.damage_per_shot)
 
         attacker.charging -= 1
         return {
             'action': 'attack',
             'firing_point': enemy.coordinates,
             'aid': enemy.id,
-            'damaged': [enemy.id],  # TODO:
+            'damaged': demaged_ids,  # TODO:
         }
-
-    def _dead(self, enemy):
-        enemy.set_state_dead()
-        self._fight_handler.send_death_event(enemy.id)
-        self._fight_handler.unsubscribe(enemy)
 
     def parse_action_data(self, action, data):
         if action not in self._actions:
