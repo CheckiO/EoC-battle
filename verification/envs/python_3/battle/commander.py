@@ -76,13 +76,13 @@ class Client(object):
 
     def ids_my_craft(self):
         my_info = self.my_info
-        return [uid for uid, unit in self.env_map.items()
-                if uid != str(my_info['id']) and my_info['craft_id'] == unit['craft_id']]
+        return (uid for uid, unit in self.env_map.items()
+                if uid != str(my_info['id']) and my_info['craft_id'] == unit['craft_id'])
 
     def ids_my_team(self):
         my_info = self.my_info
-        return [uid for uid, unit in self.env_map.items()
-                if uid != str(my_info['id']) and my_info['player_id'] == unit['player_id']]
+        return (uid for uid, unit in self.env_map.items()
+                if uid != str(my_info['id']) and my_info['player_id'] == unit['player_id'])
 
     def ask_my_info(self):
         return self.my_info
@@ -95,7 +95,7 @@ class Client(object):
         def _filters_passed(item):
             return all(_filter(self, item) for _filter in filters)
 
-        return [item for item in self.env_map.values() if not item['is_dead'] and _filters_passed(item)]
+        return (item for item in self.env_map.values() if not item['is_dead'] and _filters_passed(item))
 
     def ask_cur_time(self):
         return self.env_data['game']['time']
