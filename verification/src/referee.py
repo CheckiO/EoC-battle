@@ -449,7 +449,13 @@ class FightHandler(BaseHandler):
             self.fighters[item_id].add_message(message, from_id)
 
     @gen.coroutine
+    def send_editor_current_frame(self):
+        self.editor_client.send_process({'type': 'frame', 'current': self.current_frame})
+        IOLoop.current().call_later(1, self.send_editor_current_frame)
+
+    @gen.coroutine
     def start(self):
+        self.send_editor_current_frame()
         self.is_stream = self.initial_data.get(INITIAL.IS_STREAM, True)
         # WHY: can't we move an initialisation of players in the __init__ function?
         # in that case we can use it before start
