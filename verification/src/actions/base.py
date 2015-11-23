@@ -31,19 +31,36 @@ class BaseItemActions(object):
 
         return self._shot(enemy)
 
-    def _shot(self, enemy):
+    def _get_charged(self, coordinates, enemy_id=None):
         attacker = self._item
         attacker.charging += self._fight_handler.GAME_FRAME_TIME * attacker.rate_of_fire
         if attacker.charging < 1:
             return {
                 'action': 'charge',
-                'firing_point': enemy.coordinates,
-                'aid': enemy.id
+                'firing_point': coordinates,
+                'aid': enemy_id
             }
 
+        attacker.charging -= 1
+
+    def _shot(self, enemy):
+        charged = self._get_charged(enemy.coordinates, enemy.id)
+        if charged:
+            return charged
+
+        attacker = self._item
+
+        if (euclidean_distance(enemy.coordinates, attacker.coordinates) -
+                enemy.size / 2) <= attacker.firing_range:
+            return self._actual_shot(enemy)
+
+        # I'm not sure should we throu an event here
+        return {'action': 'idle'}
+
+    def _actual_shot(self, enemy):
+        attacker = self._item
         demaged_ids = enemy.get_shoted(attacker.damage_per_shot)
 
-        attacker.charging -= 1
         return {
             'action': 'attack',
             'firing_point': enemy.coordinates,

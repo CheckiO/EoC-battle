@@ -180,6 +180,10 @@ class Client(object):
 
     attack_item = do_attack
 
+    def do_attack_coordinates(self, coordinates):
+        check_coordinates(coordinates, "Coordinates")
+        return self.do('attack_coor', {'coordinates': coordinates})
+
     def do_move(self, coordinates):
         check_coordinates(coordinates, "Coordinates")
         return self.do('move', {'coordinates': coordinates})

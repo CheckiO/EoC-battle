@@ -84,6 +84,9 @@ class FightItem(Item):
         self._state = None  # dict of current FightItem state
         self._action_queue = []
 
+        self.sub_items = {}
+        self._sub_items_counter = 0
+
         self._std = {
             "out": [],
             "err": []
@@ -93,6 +96,20 @@ class FightItem(Item):
         # {'action': 'idle'}
         # {'action': 'dead'}
         self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
+
+    def add_sub_item(self, sub_item):
+        self._sub_items_counter += 1
+        sub_item.set_id(self._sub_items_counter)
+        self.sub_items[self._sub_items_counter] = sub_item
+
+    def remove_sub_item(self, sub_item):
+        del self.sub_items[sub_item.id]
+
+    def get_sub_items(self):
+        return self.sub_items.values()
+
+    def output_sub_items(self):
+        return list(map(lambda a: a.output(), self.get_sub_items()))
 
     @property
     def is_immortal(self):
@@ -593,6 +610,10 @@ class FightHandler(BaseHandler):
         self.current_game_time += self.GAME_FRAME_TIME
 
         for key, fighter in self.fighters.items():
+            for sub_item in list(fighter.get_sub_items()):
+                if sub_item.is_dead:
+                    fighter.remove_sub_item(sub_item)
+                sub_item.do_frame_action()
             # WHY: can't we move in the FightItem class?
             # When in can be None?
             if fighter.is_dead:
@@ -693,7 +714,7 @@ class FightHandler(BaseHandler):
                 'current_game_time': self.current_game_time
             })
         self.battle_log["frames"].append(self._get_battle_snapshot())
-        if battle_finished:
+        if battle_finished and not self.is_stream:
             self.editor_client.send_battle(unit_dispersion(self.battle_log))
 
     def _log_initial_state(self):
@@ -805,6 +826,9 @@ class FightHandler(BaseHandler):
                 item_info[OUTPUT.STDOUT] = item.pull_std(STD.OUT)
             if item.has_std(STD.ERR):
                 item_info[OUTPUT.STDERR] = item.pull_std(STD.ERR)
+
+            if item.sub_items:
+                item_info[OUTPUT.SUBITEMS] = item.output_sub_items()
 
             snapshot.append(item_info)
         return snapshot

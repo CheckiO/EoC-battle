@@ -14,7 +14,7 @@ MAP_BUILDING = 1
 
 # TODO: out current lap
 
-LOG_DIRNAME = "log"
+LOG_DIRNAME = "/tmp/"
 ERR_LOG_FILE_OPEN = "Cann't open log file for writing - {}"
 
 
@@ -43,13 +43,16 @@ class FightHandler(BaseHandler):
         print('ERROR {}: {}'.format(request_id, line))
 
     def close_log_file(self):
-        self.log_file.close()
+        if self.log_file:
+            self.log_file.close()
 
     def write_log(self, data):
-        self.log_file.write(json.dumps(data))
+        if self.log_file:
+            self.log_file.write(json.dumps(data))
 
     def handler_battle(self, data, request_id, stream_r):
-        if not data.get("is_stream") and self.log_file:
+        if not data.get("is_stream"):
+            print('DONE!')
             self.write_log(data)
             return
         out_map = []
