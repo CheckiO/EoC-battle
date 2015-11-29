@@ -715,7 +715,7 @@ class FightHandler(BaseHandler):
             })
         self.battle_log["frames"].append(self._get_battle_snapshot())
         if battle_finished and not self.is_stream:
-            self.editor_client.send_battle(unit_dispersion(self.battle_log))
+            self.editor_client.send_battle(self.battle_log)
 
     def _log_initial_state(self):
         for item in self.fighters.values():
