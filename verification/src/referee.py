@@ -399,6 +399,8 @@ class FightHandler(BaseHandler):
         self.current_frame = 0
         self.current_game_time = 0
         self.initial_data = editor_data['battle_info']
+        import pdb
+        pdb.set_trace()
         self.rewards = {}
         self.defeat_reason = None
 
@@ -489,6 +491,9 @@ class FightHandler(BaseHandler):
         for item in self.initial_data[INITIAL.MAP_ELEMENTS]:
             player = self.players[item.get(PLAYER.PLAYER_ID, -1)]
             if item[ATTRIBUTE.ROLE] == ROLE.CRAFT:
+                print(item)
+                #import pdb
+                #pdb.set_trace()
                 self.add_craft_item(item, player)
             else:
                 fight_items.append(self.add_fight_item(item, player))
@@ -611,9 +616,9 @@ class FightHandler(BaseHandler):
 
         for key, fighter in self.fighters.items():
             for sub_item in list(fighter.get_sub_items()):
+                sub_item.do_frame_action()
                 if sub_item.is_dead:
                     fighter.remove_sub_item(sub_item)
-                sub_item.do_frame_action()
             # WHY: can't we move in the FightItem class?
             # When in can be None?
             if fighter.is_dead:
