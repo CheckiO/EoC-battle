@@ -399,8 +399,6 @@ class FightHandler(BaseHandler):
         self.current_frame = 0
         self.current_game_time = 0
         self.initial_data = editor_data['battle_info']
-        import pdb
-        pdb.set_trace()
         self.rewards = {}
         self.defeat_reason = None
 
