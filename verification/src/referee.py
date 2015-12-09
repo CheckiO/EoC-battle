@@ -489,9 +489,6 @@ class FightHandler(BaseHandler):
         for item in self.initial_data[INITIAL.MAP_ELEMENTS]:
             player = self.players[item.get(PLAYER.PLAYER_ID, -1)]
             if item[ATTRIBUTE.ROLE] == ROLE.CRAFT:
-                print(item)
-                #import pdb
-                #pdb.set_trace()
                 self.add_craft_item(item, player)
             else:
                 fight_items.append(self.add_fight_item(item, player))
