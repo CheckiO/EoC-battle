@@ -3,6 +3,7 @@ import sys
 from datetime import datetime
 import json
 import atexit
+import time
 
 from handlers.base import BaseHandler
 from server import TCPConsoleServer
@@ -29,6 +30,7 @@ class FightHandler(BaseHandler):
             global MAP_X
             MAP_X = gg['MAP_X']
         self.ROUTING['battle'] = 'handler_battle'
+        self.last_print_time = 0
         if not os.path.exists(LOG_DIRNAME):
             os.mkdir(LOG_DIRNAME)
         log_filename = "battle_log_{}.json".format(str(datetime.now()))
@@ -55,6 +57,19 @@ class FightHandler(BaseHandler):
             print('DONE!')
             self.write_log(data)
             return
+        if 'winner' not in data['status'] and self.last_print_time + 0.3 > time.time():
+            # Print unit output even it the frame is skipped
+            for item in data['fight_items']:
+                if 'std' in item and any(item['std'].values()):
+                    print('{:<10}'.format(item['id']), end='')
+                    print('-' * 20)
+                    if item['std']['out']:
+                        print(''.join(item['std']['out']))
+                    if item['std']['err']:
+                        print(''.join(item['std']['err']), file=sys.stderr)
+            return
+        self.last_print_time = time.time()
+
         out_map = []
         # temporarily spike (I know about "temporarily" (we have ticket for this))
         map_size = [t + 1 for t in data['map_size']]
@@ -98,15 +113,18 @@ class FightHandler(BaseHandler):
         print('-' * 20)
         print('-' * 30)
         print('  ', end='')
-        for i in range(map_size[0]):
+        for i in range(map_size[0] - 1, -1, -1):
             print('{num:<{size}}'.format(num=i, size=MAP_X * 2), end='')
         print()
         for num, line in enumerate(out_map):
+            # Ignore uninhabited part of the map
+            if num < len(out_map) / 2:
+                continue
             if num % MAP_X:
                 out_line = '  '
             else:
                 out_line = '{:>2}'.format(num // MAP_X)
-            for el in line:
+            for el in reversed(line):
                 if el is None:
                     out_line += '..'
                 elif el == MAP_BUILDING:
@@ -116,15 +134,16 @@ class FightHandler(BaseHandler):
             print(out_line)
         craft_positions = [craft["coordinates"][1] for craft in data["craft_items"]]
 
-        craft_line = "  "
 
-        for i in range(len(out_map[0] if out_map else 0)):
-            pos = i / MAP_X
-            if any(p - 1 < pos < p + 1 for p in craft_positions):
-                craft_line += "^^"
-            else:
-                craft_line += "  "
-        print(craft_line + "\n" + craft_line)
+        if out_map:
+            craft_line = "  "
+            for i in range(len(out_map[0]) - 1, -1, -1):
+                pos = i / MAP_X
+                if any(p - 1 < pos < p + 1 for p in craft_positions):
+                    craft_line += "^^"
+                else:
+                    craft_line += "  "
+            print(craft_line + "\n" + craft_line)
 
         for num, player in players_groups.items():
 
