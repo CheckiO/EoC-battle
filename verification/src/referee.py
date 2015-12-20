@@ -548,6 +548,7 @@ class FightHandler(BaseHandler):
         if self.current_frame:
             self._log_initial_unit(fight_item)
         fight_item.set_state_idle()
+        self.send_range_events(fight_item.id)
         yield fight_item.start()
 
     def add_craft_item(self, craft_data, player):
