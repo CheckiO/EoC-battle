@@ -54,8 +54,10 @@ class BaseItemActions(object):
                 enemy.size / 2) <= attacker.firing_range:
             return self._actual_shot(enemy)
 
-        # I'm not sure should we throu an event here
-        return {'action': 'idle'}
+        if enemy.is_dead:
+            return self._idle()
+
+        return self._idle()
 
     def _actual_shot(self, enemy):
         attacker = self._item
