@@ -42,7 +42,6 @@ class UnitActions(BaseItemActions):
             self._last_destination_point = tuple(destination_point)
 
     def _stop(self):
-        self._fight_handler.send_im_stop(self._item.id)
         return self._idle()
 
     def process_near_turns(self, distance):

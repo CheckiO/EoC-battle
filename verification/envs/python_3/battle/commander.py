@@ -1,6 +1,7 @@
 from battle import ROLE, PARTY
 from battle.tools import euclidean_distance
 import battle.map_filters as MF
+import warnings
 
 ERR_ID_TYPE = "{name} ID must be an integer"
 ERR_ARRAY_TYPE = "{name} must be a list/tuple"
@@ -192,6 +193,7 @@ class Client(object):
 
     def do_message(self, message, ids):
         if self.my_data['level'] < 4:
+            warnings.warn("'do_message' can't be used. Unit level should be at least 4")
             return
         self.do('message', {'message': message, 'ids': ids})
 
@@ -241,7 +243,7 @@ class Client(object):
     subscribe_any_item_in_area = when_item_in_area
 
     def when_stop(self, callback):
-        return self.when('im_stop', callback, {})
+        warnings.warn("Function 'when_stop' is deprecated. Please use 'when_idle' instaed")
 
     subscribe_im_stop = when_stop
 
@@ -256,8 +258,7 @@ class Client(object):
     subscribe_enemy_in_my_firing_range = when_enemy_in_range
 
     def when_enemy_out_range(self, item_id, callback):
-        check_item_id(item_id)
-        return self.when('the_item_out_my_firing_range', callback, {"item_id": item_id})
+        warnings.warn("Function 'when_enemy_out_range' is deprecated.")
 
     subscribe_the_item_out_my_firing_range = when_enemy_out_range
 
@@ -269,10 +270,12 @@ class Client(object):
 
     def when_time(self, secs, callback):
         if self.my_data['level'] < 2:
+            warnings.warn("'when_time' can't be used. Unit level should be at least 2")
             return callback({'time': secs})
         return self.when('time', callback, {'time': secs})
 
     def when_message(self, callback, infinity=True):
         if self.my_data['level'] < 4:
+            warnings.warn("'when_message' can't be used. Unit level should be at least 4")
             return
         return self.when('message', callback, infinity=infinity)

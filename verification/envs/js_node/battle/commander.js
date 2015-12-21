@@ -258,6 +258,7 @@ Client.prototype.doAttackCoordinated = function (coordinates) {
 
 Client.prototype.doMessage = function (message, ids) {
     if (this.myData().level < 4) {
+        console.error("'doMessage' can't be used. Unit level should be at least 4");
         return new Promise(function(resolve){
             setTimeout(resolve, 1, {});
         });
@@ -305,7 +306,8 @@ Client.prototype.whenItemInArea = function (center, radius) {
 };
 
 Client.prototype.whenStoped = function () {
-    return this.when('im_stop', {});
+    console.warn("'whenStoped' is deprecated. Please use 'whenIdle' instaed");
+    return new Promise(function(resolve){});
 };
 
 Client.prototype.whenIdle = function () {
@@ -317,7 +319,8 @@ Client.prototype.whenEnemyInRange = function () {
 };
 
 Client.prototype.whenEnemyOutRange = function () {
-    return this.when('the_item_out_my_firing_range', {});
+    console.warn("'whenEnemyOutRange' is deprecated");
+    return new Promise(function(resolve){});
 };
 
 Client.prototype.whenItemDestroyed = function (id) {
@@ -327,6 +330,7 @@ Client.prototype.whenItemDestroyed = function (id) {
 
 Client.prototype.whenTime = function(atTime) {
     if (this.myData().level < 2) {
+        console.error("'whenTime' can't be used. Unit level should be at least 2");
         return new Promise(function(resolve){
             setTimeout(resolve, 1, {'time': atTime});
         });
@@ -336,6 +340,7 @@ Client.prototype.whenTime = function(atTime) {
 
 Client.prototype.whenMessage = function() {
     if (this.myData().level < 4) {
+        console.error("'whenMessage' can't be used. Unit level should be at least 4");
         return new Promise(function(resolve){});
     }
     return this.when('message', {});
