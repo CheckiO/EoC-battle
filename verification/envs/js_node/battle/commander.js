@@ -235,9 +235,6 @@ Client.prototype.idsMyTeam = function () {
 // DO
 
 Client.prototype.do = function (action, data) {
-    console.log('DO:');
-    console.log(action);
-    console.log(data);
     return this.loop.setAction(action, data);
 };
 
