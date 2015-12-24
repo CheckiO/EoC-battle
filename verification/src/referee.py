@@ -928,8 +928,14 @@ class FightHandler(BaseHandler):
             receiver = self.fighters[event['receiver_id']]
             distance = euclidean_distance(receiver.coordinates, event["data"]["coordinates"])
             if distance < event["data"]["radius"]:
+                data_to_event = {
+                    ENV.DATA: self.get_env_data(),
+                    ENV.MY_DATA: self.get_my_data(event['receiver_id']),
+                    ATTRIBUTE.ID: receiver.id,
+                    "distance": distance
+                }
                 receiver.send_event(lookup_key=event['lookup_key'],
-                                    data={ATTRIBUTE.ID: receiver.id, "distance": distance})
+                                    data=data_to_event)
                 events.remove(event)
 
         events = self.EVENTS['enemy_in_my_firing_range']
@@ -945,8 +951,13 @@ class FightHandler(BaseHandler):
                 if distance - event_item.size / 2 > receiver.firing_range:
                     continue
 
+                data_to_event = {
+                    ENV.DATA: self.get_env_data(),
+                    ENV.MY_DATA: self.get_my_data(event['receiver_id']),
+                    'id': event_item.id
+                }
                 receiver.send_event(lookup_key=event['lookup_key'],
-                                    data={'id': event_item.id})
+                                    data=data_to_event)
                 events.remove(event)
                 break
 
@@ -958,8 +969,13 @@ class FightHandler(BaseHandler):
                 if distance > event['data']['radius']:
                     continue
 
+                data_to_event = {
+                    ENV.DATA: self.get_env_data(),
+                    ENV.MY_DATA: self.get_my_data(event['receiver_id']),
+                    'id': event_item.id
+                }
                 receiver.send_event(lookup_key=event['lookup_key'],
-                                    data={'id': event_item.id})
+                                    data=data_to_event)
                 events.remove(event)
                 break
 
