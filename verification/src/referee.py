@@ -243,6 +243,9 @@ class FightItem(Item):
     def stderr(self, connection_id, err):
         self._std[STD.ERR].append(err)
 
+    def show_error(self, error_msg):
+        self.stderr(None, error_msg)
+
     def has_std(self, std_name):
         return bool(self._std[std_name])
 
@@ -263,6 +266,7 @@ class FightItem(Item):
         try:
             self.action = self._actions_handlers.parse_action_data(action, data)
         except ActionValidateError as e:
+            self.show_error(str(e))
             self._env.bad_action(e)
         except ActionSkip:
             self._env.confirm()
