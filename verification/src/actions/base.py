@@ -72,7 +72,7 @@ class BaseItemActions(object):
 
     def parse_action_data(self, action, data):
         if action not in self._actions:
-            raise NotImplementedError  # TODO: custom exception
+            raise ActionValidateError("Unknown action {}".format(action))
 
         validator = getattr(self, 'validate_{}'.format(action), None)
         if validator is not None:
