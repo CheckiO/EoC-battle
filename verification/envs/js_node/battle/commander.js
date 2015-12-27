@@ -248,10 +248,12 @@ Client.prototype.doMove = function (coordinates) {
     return this.do('move', {'coordinates': coordinates});
 };
 
-Client.prototype.doAttackCoordinated = function (coordinates) {
+Client.prototype.doAttackCoordinates = function (coordinates) {
     checkCoordinates(coordinates, "Coordinates");
     return this.do('attack_coor', {'coordinates': coordinates});
 };
+
+Client.prototype.doAttackCoordinated = Client.prototype.doAttackCoordinates; // Used to have a typo, kept to prevent breakage
 
 Client.prototype.doMessage = function (message, ids) {
     if (this.myData().level < 4) {
