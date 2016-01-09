@@ -141,12 +141,16 @@ Client.prototype.askItemInfo = function (id) {
     return this.envMap()[id];
 };
 
-Client.prototype.askNearestEnemy = function () {
+Client.prototype.askNearestEnemy = function (roles) {
     var minLen = 1000,
         nearest,
-        fighter = this.myInfo();
+        fighter = this.myInfo(),
+        filters = [Filters.enemy];
 
-    _.each(this.mapFilter([Filters.enemy]), function(item){
+    if (roles) {
+        roles.push(Filters.roles(roles));
+    }
+    _.each(this.mapFilter(filters), function(item){
         var length = MapMath.euclideanDistance(item.coordinates, fighter.coordinates);
         if (length < minLen) {
             minLen = length;

@@ -153,13 +153,15 @@ class Client(object):
     def ask_units(self):
         return self.ask_items(roles=(ROLE.UNIT,))
 
-    def ask_nearest_enemy(self):
+    def ask_nearest_enemy(self, roles=None):
         min_length = 1000
         nearest_enemy = None
-
         fighter = self.my_info
+        filters = [MF.enemy]
 
-        for item in self.env_map_filter([MF.enemy]):
+        if roles:
+            filters.append(MF.roles(roles))
+        for item in self.env_map_filter(filters):
             length = euclidean_distance(item['coordinates'], fighter['coordinates'])
 
             if length < min_length:
