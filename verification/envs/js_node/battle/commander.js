@@ -148,7 +148,7 @@ Client.prototype.askNearestEnemy = function (roles) {
         filters = [Filters.enemy];
 
     if (roles) {
-        roles.push(Filters.roles(roles));
+        filters.push(Filters.roles(roles));
     }
     _.each(this.mapFilter(filters), function(item){
         var length = MapMath.euclideanDistance(item.coordinates, fighter.coordinates);

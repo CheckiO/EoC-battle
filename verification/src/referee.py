@@ -158,6 +158,7 @@ class FightItem(Item):
             ATTRIBUTE.CRAFT_ID: self.craft_id,
             ATTRIBUTE.PLAYER_ID: self.player["id"],
             ATTRIBUTE.ROLE: self.role,
+            ATTRIBUTE.ITEM_TYPE: self.item_type,
             ATTRIBUTE.HIT_POINTS: self.hit_points,
             ATTRIBUTE.SIZE: self.size,
             ATTRIBUTE.SPEED: self.speed,
@@ -167,11 +168,10 @@ class FightItem(Item):
             ATTRIBUTE.AREA_DAMAGE_PER_SHOT: self.area_damage_per_shot,
             ATTRIBUTE.AREA_DAMAGE_RADIUS: self.area_damage_radius,
             ATTRIBUTE.FIRING_RANGE: self.firing_range,
-            ACTION.REQUEST_NAME: self.action,
             ATTRIBUTE.LEVEL: self.level,
             # TODO State should be reworked
             ATTRIBUTE.IS_DEAD: self.is_dead,
-            'state': self._state
+            ATTRIBUTE.STATE: self._state
         }
 
     @property

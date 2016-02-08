@@ -61,6 +61,7 @@ class ATTRIBUTE():
     INITIAL_UNITS_IN = 'initial_units_in'
     UNITS_IN = 'units_in'
     IS_DEAD = 'is_dead'
+    STATE = 'state'
 
 
 class ACTION():
