@@ -193,10 +193,12 @@ class Client(object):
 
     move_to_point = do_move
 
+    def do_moves(self, steps):
+        for coordinates in steps:
+            check_coordinates(coordinates, "Coordinates")
+        return self.do('move', {'steps': steps})
+
     def do_message(self, message, ids):
-        if self.my_data['level'] < 4:
-            warnings.warn("'do_message' can't be used. Unit level should be at least 4")
-            return
         self.do('message', {'message': message, 'ids': ids})
 
     def do_message_to_id(self, message, item_id):
@@ -271,13 +273,7 @@ class Client(object):
     subscribe_the_item_is_dead = when_item_destroyed
 
     def when_time(self, secs, callback):
-        if self.my_data['level'] < 2:
-            warnings.warn("'when_time' can't be used. Unit level should be at least 2")
-            return callback({'time': secs})
         return self.when('time', callback, {'time': secs})
 
     def when_message(self, callback, infinity=True):
-        if self.my_data['level'] < 4:
-            warnings.warn("'when_message' can't be used. Unit level should be at least 4")
-            return
         return self.when('message', callback, infinity=infinity)

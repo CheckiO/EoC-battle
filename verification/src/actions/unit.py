@@ -2,6 +2,9 @@ from .base import BaseItemActions, euclidean_distance
 from .exceptions import ActionValidateError
 from tools import find_route, straighten_route, is_coordinates
 
+import logging
+logger = logging.getLogger()
+
 
 class UnitActions(BaseItemActions):
     def __init__(self, *args, **kwargs):
@@ -14,7 +17,8 @@ class UnitActions(BaseItemActions):
     def actions_init(self):
         actions = super().actions_init()
         actions.update({
-            'move': self.action_move
+            'move': self.action_move,
+            'moves': self.action_moves
         })
         return actions
 
@@ -32,6 +36,19 @@ class UnitActions(BaseItemActions):
         coordinates = data.get('coordinates')
         coordinates = self._fight_handler.adjust_coordinates(*coordinates)
         return self._move(coordinates)
+
+    def action_moves(self, data):
+        steps = data.get('steps')
+        if not len(steps):
+            return self._stop()
+        coordinates = steps[0]
+        coordinates = self._fight_handler.adjust_coordinates(*coordinates)
+        ret = self._move(coordinates, stop_then=False)
+        if ret:
+            return ret
+
+        data['steps'] = steps[1:]
+        return self.action_moves(data)
 
     def check_or_create_route(self, destination_point):
         if (self._fight_handler.map_hash != self._last_map_hash or
@@ -53,15 +70,15 @@ class UnitActions(BaseItemActions):
             next_point = self._route[0] if self._route else next_point
         return next_point, intermediate_point
 
-    def _move(self, destination_point):
+    def _move(self, destination_point, stop_then=True):
         self.check_or_create_route(destination_point)
         if not self._route:
-            return self._stop()
+            return stop_then and self._stop()
         frame_distance = self._item.speed * self._fight_handler.GAME_FRAME_TIME
         start_point = tuple(self._item.coordinates)
         # We on the end
         if len(self._route) == 1 and start_point == self._route[0]:
-            return self._stop()
+            return stop_then and self._stop()
         next_point, current_point = self.process_near_turns(frame_distance)
         if not self._route:
             self._item.set_coordinates(current_point)
@@ -95,6 +112,15 @@ class UnitActions(BaseItemActions):
         cut_cell_route = straighten_route(self._fight_handler.map_grid, cell_route)
         self._route = [((c[0] / grid_scale) + cell_shift, (c[1] / grid_scale) + cell_shift)
                        for c in cut_cell_route]
+
+    def validate_move(self, action, data):
+        if not is_coordinates(data.get("coordinates")):
+            raise ActionValidateError("Wrong coordinates")
+
+    def validate_moves(self, action, data):
+        for coordinates in data.get('steps'):
+            if not is_coordinates(coordinates):
+                raise ActionValidateError("Wrong coordinates")
 
     def validate_attack(self, action, data):
         enemy = self._fight_handler.fighters.get(data['id'])

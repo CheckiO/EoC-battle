@@ -252,6 +252,14 @@ Client.prototype.doMove = function (coordinates) {
     return this.do('move', {'coordinates': coordinates});
 };
 
+Client.prototype.doMoves = function (steps) {
+    _.each(steps, function(coordinates) {
+        checkCoordinates(coordinates, "Coordinates");
+    });
+    
+    return this.do('moves', {'steps': steps});
+};
+
 Client.prototype.doAttackCoordinates = function (coordinates) {
     checkCoordinates(coordinates, "Coordinates");
     return this.do('attack_coor', {'coordinates': coordinates});
@@ -260,12 +268,6 @@ Client.prototype.doAttackCoordinates = function (coordinates) {
 Client.prototype.doAttackCoordinated = Client.prototype.doAttackCoordinates; // Used to have a typo, kept to prevent breakage
 
 Client.prototype.doMessage = function (message, ids) {
-    if (this.myData().level < 4) {
-        console.error("'doMessage' can't be used. Unit level should be at least 4");
-        return new Promise(function(resolve){
-            setTimeout(resolve, 1, {});
-        });
-    }
     return this.do('message', {'message': message, 'ids': ids});
 };
 
@@ -332,20 +334,10 @@ Client.prototype.whenItemDestroyed = function (id) {
 };
 
 Client.prototype.whenTime = function(atTime) {
-    if (this.myData().level < 2) {
-        console.error("'whenTime' can't be used. Unit level should be at least 2");
-        return new Promise(function(resolve){
-            setTimeout(resolve, 1, {'time': atTime});
-        });
-    }
     return this.when('time', {'time': atTime});
 };
 
 Client.prototype.whenMessage = function() {
-    if (this.myData().level < 4) {
-        console.error("'whenMessage' can't be used. Unit level should be at least 4");
-        return new Promise(function(resolve){});
-    }
     return this.when('message', {});
 };
 

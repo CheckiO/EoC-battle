@@ -99,6 +99,9 @@ class BaseItemActions(object):
             raise ActionValidateError("Wrong coordinates")
 
     def validate_message(self, action, data):
+        if self._item.level < 4:
+            raise ActionValidateError("Unit level should be at least 4 to use message commands")
+
         self._fight_handler.add_messages_to(data['message'], map(int, data['ids']), self._item.id)
         raise ActionSkip
 

@@ -277,7 +277,23 @@ class FightItem(Item):
         else:
             self._env.confirm()
 
+    def subscribe_validation_time(self, data):
+        if self.level < 2:
+            raise ActionValidateError("Unit level should be at least 2 to use time commands")
+
+    def subscribe_validation_message(self, data):
+        if self.level < 4:
+            raise ActionValidateError("Unit level should be at least 4 to use message commands")
+
     def method_subscribe(self, event, lookup_key, data):
+        if hasattr(self, 'subscribe_validation_'+event):
+            try:
+                getattr(self, 'subscribe_validation_' + event)(data)
+            except ActionValidateError as e:
+                self.show_error(str(e))
+                self._env.bad_action(e)
+                return
+
         result = self._fight_handler.subscribe(event, self.id, lookup_key, data)
         if not result:
             self._env.bad_action("Subscribing Error")
