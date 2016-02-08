@@ -117,6 +117,9 @@ class FightItem(Item):
                 self._fight_handler.current_game_time - self.land_time < IMMORTAL_TIME)
 
     def get_shoted(self, damage):
+        if self.is_dead:
+            return []
+
         if not self.is_immortal:
             self.hit_points -= damage
 
