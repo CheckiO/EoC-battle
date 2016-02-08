@@ -271,6 +271,7 @@ class FightItem(Item):
         except ActionValidateError as e:
             self.show_error(str(e))
             self._env.bad_action(e)
+            self.set_state_idle()
         except ActionSkip:
             self._env.confirm()
         else:
