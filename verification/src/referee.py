@@ -134,8 +134,8 @@ class FightItem(Item):
         self._fight_handler.unsubscribe(self)
         if self.role == ROLE.BUILDING:
             self._fight_handler.demage_center(self)
-        # if self._env:
-        #     self._env.stop()
+        if self._env:
+            self._env.stop()
 
     def add_message(self, message, from_id):
         self.messages.append([message, from_id])
@@ -465,6 +465,8 @@ class FightHandler(BaseHandler):
     def get_env_map_data(self):
         data = {}
         for key, value in self.fighters.items():
+            if value.is_dead:
+                continue
             if value.is_obstacle:
                 continue
             data[key] = value.info
@@ -968,6 +970,8 @@ class FightHandler(BaseHandler):
         for event in events[:]:
             receiver = self.fighters[event['receiver_id']]
             for event_item in self.battle_fighters():
+                if event_item.is_dead:
+                    continue
                 if receiver == event_item:
                     continue
                 if event_item.player == receiver.player:
@@ -991,6 +995,8 @@ class FightHandler(BaseHandler):
         for event in events[:]:
             receiver = self.fighters[event['receiver_id']]
             for event_item in self.battle_fighters():
+                if event_item.is_dead:
+                    continue
                 distance = euclidean_distance(event['data']['coordinates'], event_item.coordinates)
                 if distance > event['data']['radius']:
                     continue
