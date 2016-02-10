@@ -134,8 +134,8 @@ class FightItem(Item):
         self._fight_handler.unsubscribe(self)
         if self.role == ROLE.BUILDING:
             self._fight_handler.demage_center(self)
-        if self._env:
-            self._env.stop()
+        # if self._env:
+        #     self._env.stop()
 
     def add_message(self, message, from_id):
         self.messages.append([message, from_id])
