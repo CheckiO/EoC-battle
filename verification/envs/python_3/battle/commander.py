@@ -196,7 +196,7 @@ class Client(object):
     def do_moves(self, steps):
         for coordinates in steps:
             check_coordinates(coordinates, "Coordinates")
-        return self.do('move', {'steps': steps})
+        return self.do('moves', {'steps': steps})
 
     def do_message(self, message, ids):
         self.do('message', {'message': message, 'ids': ids})

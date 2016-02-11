@@ -115,12 +115,12 @@ class UnitActions(BaseItemActions):
 
     def validate_move(self, action, data):
         if not is_coordinates(data.get("coordinates")):
-            raise ActionValidateError("Wrong coordinates")
+            raise ActionValidateError("Wrong coordinates {}".format(data.get("coordinates")))
 
     def validate_moves(self, action, data):
         for coordinates in data.get('steps'):
             if not is_coordinates(coordinates):
-                raise ActionValidateError("Wrong coordinates")
+                raise ActionValidateError("Wrong coordinates {}".format(coordinates))
 
     def validate_attack(self, action, data):
         enemy = self._fight_handler.fighters.get(data['id'])
