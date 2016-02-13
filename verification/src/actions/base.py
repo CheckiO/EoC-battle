@@ -20,7 +20,6 @@ class BaseItemActions(object):
         }
 
     def _idle(self):
-        self._fight_handler.send_im_idle(self._item.id)
         return {'action': 'idle'}
 
     def action_attack(self, data):

@@ -1,5 +1,6 @@
 from tornado import gen
 from tornado.ioloop import IOLoop
+import logging
 
 from random import choice
 from tools import precalculated, fill_square, grid_to_graph
@@ -21,6 +22,8 @@ CUT_FROM_BUILDING = 1
 COORDINATE_EDGE_CUT = 10 ** -3
 IMMORTAL_TIME = 3
 PERCENT_CENTER_AUTO_DEMAGE = 0.75
+
+logger = logging.getLogger(__name__)
 
 
 class Item(object):
@@ -130,7 +133,6 @@ class FightItem(Item):
 
     def _dead(self):
         self.set_state_dead()
-        self._fight_handler.send_death_event(self.id)
         self._fight_handler.unsubscribe(self)
         if self.role == ROLE.BUILDING:
             self._fight_handler.demage_center(self)
@@ -202,7 +204,6 @@ class FightItem(Item):
         return self._state["action"]
 
     def set_state_idle(self):
-        self._fight_handler.send_im_idle(self.id)
         self._state = {'action': 'idle'}
 
     def set_state_dead(self):
@@ -301,6 +302,9 @@ class FightItem(Item):
             self._env.bad_action("Subscribing Error")
             return
         self._env.confirm()
+
+        if hasattr(self, 'subscribe_check_' + event):
+            getattr(self, 'subscribe_check_' + event)(data)
 
     def do_frame_action(self):
         try:
@@ -653,6 +657,8 @@ class FightHandler(BaseHandler):
         self._send_time()
         self._send_message()
         self._send_position()
+        self._send_idle()
+        self._send_dead()
 
         winner = None
         if self.all_crafts_empty():
@@ -920,24 +926,6 @@ class FightHandler(BaseHandler):
     def _check_event_equal_receiver(event, event_item, receiver):
         return receiver.id == event_item.id
 
-    def send_death_event(self, event_item_id):
-        """
-            send "death" event of FightItem with ID "item_id"
-            to all FightItem who subscribe on it
-        """
-
-        def check_function(event, event_item, receiver):
-            return event['data'][ATTRIBUTE.ID] == event_item.id
-
-        self._send_event(event_item_id, "death", check_function, self._data_event_id)
-
-    def send_im_idle(self, event_item_id):
-        """
-        Send "stop" event to Item with "item_id"
-        """
-        self._send_event(event_item_id, "im_idle",
-                         self._check_event_equal_receiver, self._data_event_id)
-
     def battle_fighters(self):
         for item in self.fighters.values():
             if item.is_obstacle:
@@ -1036,6 +1024,26 @@ class FightHandler(BaseHandler):
             return {'message': mess[0], 'from_id': mess[1]}
 
         self._send_event(None, 'message', check_function, message_data)
+
+    def _send_idle(self):
+        def check_function(event, event_item, receiver):
+            return receiver._state.get('action') == 'idle'
+
+        def message_data(event, event_item, receiver):
+            return {'id': receiver.id}
+
+        self._send_event(None, 'im_idle', check_function, message_data)
+
+    def _send_dead(self):
+
+        def check_function(event, event_item, receiver):
+            fighter = receiver._fight_handler.fighters.get(event['data']['id'])
+            return fighter is None or fighter.is_dead
+
+        def data_id(event, event_item, receiver):
+            return {'id': event['data']['id']}
+
+        self._send_event(None, 'death', check_function, data_id)
 
 
 class Referee(RefereeBase):
