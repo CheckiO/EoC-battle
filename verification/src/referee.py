@@ -443,7 +443,7 @@ class FightHandler(BaseHandler):
         # FightItem for CommandCenter
         self.fi_center = None
 
-        self.total_events_sent = 1
+        self._total_events_sent = 1
 
     def set_center(self, center):
         self.fi_center = center
@@ -636,11 +636,11 @@ class FightHandler(BaseHandler):
         self._total_events_sent += 1
 
     def reset_total_events_sent(self):
-        self.total_events_sent = 1
+        self._total_events_sent = 1
 
     def get_frame_time(self):
         if self.all_crafts_empty() or self.unit_landing_countdown > 0:
-            return self.FRAME_TIME * self.total_events_sent
+            return self.FRAME_TIME * self._total_events_sent
         else:
             return self.FIRST_STEP_FRAME_TIME
 
