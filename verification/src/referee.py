@@ -313,6 +313,7 @@ class FightItem(Item):
             self.set_state_idle()
 
     def send_event(self, lookup_key, data):
+        self._fight_handler.inc_total_events_sent()
         self._env.send_event(lookup_key, data)
 
 
@@ -358,7 +359,7 @@ class FightHandler(BaseHandler):
     """
 
     FIRST_STEP_FRAME_TIME = 0.5
-    FRAME_TIME = 0.02  # compute and send info each time per FRAME_TIME
+    FRAME_TIME = 0.005  # compute and send info each time per FRAME_TIME
     GAME_FRAME_TIME = 0.1  # per one FRAME_TIME in real, in game it would be GAME_FRAME_TIME
     GRID_SCALE = 2
     CELL_SHIFT = 1 / (GRID_SCALE * 2)
@@ -441,6 +442,8 @@ class FightHandler(BaseHandler):
 
         # FightItem for CommandCenter
         self.fi_center = None
+
+        self.total_events_sent = 1
 
     def set_center(self, center):
         self.fi_center = center
@@ -629,6 +632,18 @@ class FightHandler(BaseHandler):
             self.crafts_landing_stack.insert(0, craft_id)
         yield self.add_unit_from_craft(craft)
 
+    def inc_total_events_sent(self):
+        self._total_events_sent += 1
+
+    def reset_total_events_sent(self):
+        self.total_events_sent = 1
+
+    def get_frame_time(self):
+        if self.all_crafts_empty() or self.unit_landing_countdown > 0:
+            return self.FRAME_TIME * self.total_events_sent
+        else:
+            return self.FIRST_STEP_FRAME_TIME
+
     @gen.coroutine
     def compute_frame(self):
         """
@@ -668,11 +683,8 @@ class FightHandler(BaseHandler):
             self.send_frame({'winner': winner}, True)
             IOLoop.current().call_later(3, self.stop)
         else:
-            if self.all_crafts_empty() or self.unit_landing_countdown > 0:
-                frame_time = self.FRAME_TIME
-            else:
-                frame_time = self.FIRST_STEP_FRAME_TIME
-            IOLoop.current().call_later(frame_time, self.compute_frame)
+            IOLoop.current().call_later(self.get_frame_time(), self.compute_frame)
+            self.reset_total_events_sent()
 
         if self.crafts_landing_stack:
             yield self.unit_lands_from_stack()
