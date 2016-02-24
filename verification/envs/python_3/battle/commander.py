@@ -161,12 +161,9 @@ class Client(object):
 
         if roles:
             filters.append(MF.roles(roles))
-        for item in self.env_map_filter(filters):
-            length = euclidean_distance(item['coordinates'], fighter['coordinates'])
-
-            if length < min_length:
-                min_length = length
-                nearest_enemy = item
+        enemies = self.env_map_filter(filters)
+        if enemies:
+            nearest_enemy = min(enemies, key=lambda item: euclidean_distance(item['coordinates'], fighter['coordinates']))
         return self.ask_item_info(nearest_enemy['id']) if nearest_enemy else {}
 
     def ask_my_range_enemy_items(self):
