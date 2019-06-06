@@ -1,0 +1,3 @@
+RUN wget https://raw.githubusercontent.com/CheckiO/eoc-balance/master/balance.json -O /opt/balance.json
+
+RUN wget https://raw.githubusercontent.com/CheckiO/eoc-balance/master/private_balance.json -O /opt/private_balance.json

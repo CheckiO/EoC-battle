@@ -53,15 +53,15 @@ class Client(object):
     CLIENT = None
 
     def __init__(self):
-        assert self.CLIENT
+        assert Client.CLIENT
 
     @property
     def my_data(self):
-        return self.CLIENT._my_data
+        return Client.CLIENT._my_data
 
     @property
     def env_data(self):
-        return self.CLIENT._env_data
+        return Client.CLIENT._env_data
 
     @property
     def env_map(self):
@@ -73,7 +73,7 @@ class Client(object):
 
     @classmethod
     def set_client(cls, client):
-        cls.CLIENT = client
+        Client.CLIENT = client
 
     def ids_my_craft(self):
         my_info = self.my_info
@@ -175,7 +175,10 @@ class Client(object):
     ask_enemy_items_in_my_firing_range = ask_my_range_enemy_items
 
     def do(self, action, data):
-        return self.CLIENT.set_action(action, data)
+        return Client.CLIENT.set_action(action, data)
+
+    def command(self, action, data):
+        return Client.CLIENT.send_command(action, data)
 
     def do_attack(self, item_id):
         check_item_id(item_id)
@@ -219,9 +222,7 @@ class Client(object):
                 callback(*args, **kwargs)
         else:
             new_call = callback
-        return self.CLIENT.subscribe(event, new_call, data)
-
-    subscribe = when
+        return Client.CLIENT.subscribe(event, new_call, data)
 
     def unsubscribe_all(self):
         return self.when('unsubscribe_all', None)
@@ -234,8 +235,6 @@ class Client(object):
             'radius': radius
         })
 
-    subscribe_im_in_area = when_in_area
-
     def when_item_in_area(self, center, radius, callback):
         check_coordinates(center, "Center coordinates")
         check_radius(radius)
@@ -244,36 +243,67 @@ class Client(object):
             'radius': radius
         })
 
-    subscribe_any_item_in_area = when_item_in_area
+    def when_im_idle(self, callback):
+        return self.when('idle', callback, {
+            'id': self.my_info['id']
+        })
 
-    def when_stop(self, callback):
-        warnings.warn("Function 'when_stop' is deprecated. Please use 'when_idle' instaed")
-
-    subscribe_im_stop = when_stop
-
-    def when_idle(self, callback):
-        return self.when('im_idle', callback, {})
-
-    subscribe_im_idle = when_idle
+    def when_id_idle(self, item_id, callback):
+        check_item_id(item_id)
+        return self.when('idle', callback, {
+            'id': item_id
+        })
 
     def when_enemy_in_range(self, callback):
         return self.when('enemy_in_my_firing_range', callback)
 
-    subscribe_enemy_in_my_firing_range = when_enemy_in_range
-
-    def when_enemy_out_range(self, item_id, callback):
-        warnings.warn("Function 'when_enemy_out_range' is deprecated.")
-
-    subscribe_the_item_out_my_firing_range = when_enemy_out_range
-
     def when_item_destroyed(self, item_id, callback):
         check_item_id(item_id)
         return self.when('death', callback, {'id': item_id})
-
-    subscribe_the_item_is_dead = when_item_destroyed
 
     def when_time(self, secs, callback):
         return self.when('time', callback, {'time': secs})
 
     def when_message(self, callback, infinity=True):
         return self.when('message', callback, infinity=infinity)
+
+class CraftClient(Client):
+
+    def do_land_units(self):
+        self.do('land_units', {})
+
+    def when_unit_landed(self, callback):
+        self.when('unit_landed', callback, {'craft_id': self.my_info['craft_id']}, infinity=True)
+
+class UnitClient(Client):
+
+    def __init__(self, _id):
+        self._id = _id
+
+    @property
+    def is_alive(self):
+        return str(self._id) in self.env_map
+
+    @property
+    def my_info(self):
+        if self.is_alive:
+            return self.env_map[str(self._id)]
+        else:
+            return {}
+
+    def do(self, action, data):
+        if not self.is_alive:
+            return
+        new_data = {'by': self._id}
+        new_data.update(data)
+        self.command(action, new_data)
+
+    def when(self, event, callback, data=None, infinity=False):
+        if not self.is_alive:
+            return
+        def new_callback(*args, **kwargs):
+            if not self.is_alive:
+                return
+            callback(*args, **kwargs)
+
+        super().when(event, new_callback, data, infinity)

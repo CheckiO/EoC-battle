@@ -92,40 +92,6 @@ class FightHandler(BaseHandler):
 
                     out_map[xs][ys] = MAP_BUILDING
 
-        print()
-        print('-' * 30)
-        print('{:<10}'.format(round(data['current_game_time'] * 1.0, 4)), end='')
-        print('-' * 20)
-        print('-' * 30)
-        print('  ', end='')
-        for i in range(map_size[0]):
-            print('{num:<{size}}'.format(num=i, size=MAP_X * 2), end='')
-        print()
-        for num, line in enumerate(out_map):
-            if num % MAP_X:
-                out_line = '  '
-            else:
-                out_line = '{:>2}'.format(num // MAP_X)
-            for el in line:
-                if el is None:
-                    out_line += '..'
-                elif el == MAP_BUILDING:
-                    out_line += '##'
-                else:
-                    out_line += self.short_name(el)
-            print(out_line)
-        craft_positions = [craft["coordinates"][1] for craft in data["craft_items"]]
-
-        craft_line = "  "
-
-        for i in range(len(out_map[0] if out_map else 0)):
-            pos = i / MAP_X
-            if any(p - 1 < pos < p + 1 for p in craft_positions):
-                craft_line += "^^"
-            else:
-                craft_line += "  "
-        print(craft_line + "\n" + craft_line)
-
         for num, player in players_groups.items():
 
             print('PLAYER {}:'.format(num if num >= 0 else "X"))
@@ -133,13 +99,15 @@ class FightHandler(BaseHandler):
                 print('  {sysid}{role} {hit_points} - {str_state}'.format(
                     sysid=item['id'],
                     role=item['role'],
-                    hit_points=item['hit_points'],
-                    str_state=self.str_state(item['state'])
+                    hit_points=item.get('hit_points'),
+                    str_state=self.str_state(item.get('state'))
                 ))
         if 'winner' in data['status']:
             print('Game Over!!! The Winner is {}'.format(data['status']['winner']['id']))
 
     def str_state(self, state):
+        if state is None:
+            return 'NONE'
         if state['action'] in ('idle', 'charge', 'dead'):
             return state['action']
         if state['action'] == 'attack':

@@ -8,6 +8,7 @@ class BaseItemActions(object):
         self._item = item
         self._fight_handler = fight_handler
         self._actions = self.actions_init()
+        self._commands = self.commands_init()
 
     def actions_init(self):
         """
@@ -18,6 +19,9 @@ class BaseItemActions(object):
             'attack': self.action_attack,
             'message': None
         }
+
+    def commands_init(self):
+        return {}
 
     def _idle(self):
         return {'action': 'idle'}
@@ -81,6 +85,12 @@ class BaseItemActions(object):
             'data': data,
         }
 
+    def parse_command_data(self, action, data):
+        if action not in self._commands:
+            raise ActionValidateError("Unknown command {}".format(action))
+
+        self._commands[action](data)
+
     def validate_attack(self, action, data):
         enemy = self._fight_handler.fighters.get(data['id'])
         if enemy.is_dead:
@@ -105,7 +115,7 @@ class BaseItemActions(object):
         raise ActionSkip
 
     def do_action(self, action_data):
-        validator = getattr(self, 'validate_{}'.format(action_data['name']))
+        validator = getattr(self, 'validate_{}'.format(action_data['name']), None)
         if validator is not None:
             validator(action_data['name'], action_data["data"])
         action_handler = self._actions[action_data['name']]

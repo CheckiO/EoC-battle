@@ -5,6 +5,48 @@ from tools import find_route, straighten_route, is_coordinates
 import logging
 logger = logging.getLogger()
 
+class CraftActions(BaseItemActions):
+
+    def actions_init(self):
+        return {
+            'land_units': self.action_land_units,
+        }
+
+    def action_land_units(self, data):
+        if self._item.land_unit():
+            return {
+                'action': 'land_units'
+            }
+        else:
+            return {
+                'action': 'idle'
+            }
+
+    def commands_init(self):
+        return {
+            'attack': self.forward_by('attack'),
+            'move': self.forward_by('move'),
+            'moves': self.forward_by('moves'),
+        }
+
+    def forward_by(self, command):
+        def _forwarded(data):
+            unit = self._fight_handler.fighters[data['by']]
+
+            # TODO: check if unit from Craft
+            # craft = self._item
+
+            unit.method_set_action(command, data, from_self=False)  
+        return _forwarded
+
+    def forward_do_attack(self, data):
+        unit = self._fight_handler.fighters[data['by']]
+
+        # TODO: check if unit from Craft
+        # craft = self._item
+
+        unit.method_set_action('attack', data, from_self=False)
+
 
 class UnitActions(BaseItemActions):
     def __init__(self, *args, **kwargs):

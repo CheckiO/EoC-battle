@@ -103,6 +103,9 @@ class PlayerRefereeClient(RefereeClient):
     def set_action(self, action, data):
         return self.actual_request({'method': 'set_action', 'action': action, 'data': data})
 
+    def send_command(self, action, data):
+        return self.actual_request({'method': 'command', 'action': action, 'data': data})
+
 
 class PlayerClientLoop(ClientLoop):
     cls_client = PlayerRefereeClient

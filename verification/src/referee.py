@@ -28,11 +28,12 @@ logger = logging.getLogger(__name__)
 
 class Item(object):
     ITEMS_COUNT = 0
+    is_craft = False
 
     @classmethod
     def generate_id(cls):
-        cls.ITEMS_COUNT += 1
-        return cls.ITEMS_COUNT
+        Item.ITEMS_COUNT += 1
+        return Item.ITEMS_COUNT
 
 
 class FightItem(Item):
@@ -45,8 +46,10 @@ class FightItem(Item):
     ACTIONS = None
 
     def __init__(self, item_data, player, fight_handler):
+        self._fight_handler = fight_handler  # object of FightHandler
         self.init_handlers()
         self.id = self.generate_id()
+        item_data = self.adj_item_data(item_data);
         self.craft_id = item_data.get(ATTRIBUTE.CRAFT_ID)
         self.player = player  # dict, data about the player who owns this Item
         # available types: center, unit, tower, building, obstacle
@@ -80,7 +83,6 @@ class FightItem(Item):
         self.action = item_data.get(ACTION.REQUEST_NAME)
         self.charging = 0
 
-        self._fight_handler = fight_handler  # object of FightHandler
         self.code = self._fight_handler.codes.get(item_data.get(ATTRIBUTE.OPERATING_CODE))
         self._initial = item_data
         self._env = None  # ??
@@ -99,6 +101,21 @@ class FightItem(Item):
         # {'action': 'idle'}
         # {'action': 'dead'}
         self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
+
+    def adj_item_data(self, item_data):
+        size = item_data.get(ATTRIBUTE.SIZE, 0)
+        # [SPIKE] We use center coordinates
+        coordinates = [
+            round(item_data[ATTRIBUTE.TILE_POSITION][0] + size / 2, 6),
+            round(item_data[ATTRIBUTE.TILE_POSITION][1] + size / 2, 6)]
+        # [SPIKE] We use center coordinates
+        cut_size = (size if (item_data[ATTRIBUTE.ROLE] == ROLE.OBSTACLE
+                             and item_data[ATTRIBUTE.ITEM_TYPE] == 'rock')
+                    else max(size - CUT_FROM_BUILDING, 0))
+        item_data[ATTRIBUTE.BASE_SIZE] = size
+        item_data[ATTRIBUTE.SIZE] = cut_size
+        item_data[ATTRIBUTE.COORDINATES] = coordinates
+        return item_data
 
     def add_sub_item(self, sub_item):
         self._sub_items_counter += 1
@@ -195,6 +212,7 @@ class FightItem(Item):
         self.HANDLERS = {
             'set_action': self.method_set_action,
             'subscribe': self.method_subscribe,
+            'command': self.method_command
         }
 
     def get_percentage_hit_points(self):
@@ -217,8 +235,7 @@ class FightItem(Item):
     @property
     def is_executable(self):
         if self.role == ROLE.UNIT:
-            if self.coordinates is not None:
-                return True
+            return False
         elif self.code is not None:
             return True
         return False
@@ -268,17 +285,31 @@ class FightItem(Item):
         handler = self.HANDLERS[handler_name]
         handler(**data)
 
-    def method_set_action(self, action, data):
+    def method_set_action(self, action, data, from_self=True):
         try:
             self.action = self._actions_handlers.parse_action_data(action, data)
         except ActionValidateError as e:
             self.show_error(str(e))
-            self._env.bad_action(e)
+            if from_self:
+                self._env.bad_action(str(e))
             self.set_state_idle()
         except ActionSkip:
-            self._env.confirm()
+            if from_self:
+                self._env.confirm()
         else:
-            self._env.confirm()
+            if from_self:
+                self._env.confirm()
+
+    def method_command(self, action, data, from_self=True):
+        try:
+            self._actions_handlers.parse_command_data(action, data)
+        except ActionValidateError as e:
+            self.show_error(str(e))
+            if from_self:
+                self._env.bad_action(str(e))
+        else:
+            if from_self:
+                self._env.confirm()
 
     def subscribe_validation_time(self, data):
         if self.level < 2:
@@ -317,9 +348,12 @@ class FightItem(Item):
         self._env.send_event(lookup_key, data)
 
 
-class CraftItem(Item):
+class CraftItem(FightItem):
+    is_craft = True
+    landing_duration = 3
+    last_landing = -landing_duration
     def __init__(self, item_data, player, fight_handler):
-        self.id = self.generate_id()
+        super().__init__(item_data, player, fight_handler)
         self.craft_id = item_data.get(ATTRIBUTE.CRAFT_ID)
         self.unit_type = item_data.get(ATTRIBUTE.UNIT_TYPE)
         self.coordinates = item_data.get(ATTRIBUTE.COORDINATES)
@@ -337,6 +371,20 @@ class CraftItem(Item):
         self.player = player
         self.role = ROLE.CRAFT
 
+    def is_empty(self):
+        return not self.amount_units_in
+
+    def adj_item_data(self, craft_data):
+        craft_coor = self._fight_handler.generate_craft_place()
+        if not craft_coor[1]:
+            return
+        craft_data[ATTRIBUTE.HIT_POINTS] = 10*10
+        craft_data[ATTRIBUTE.COORDINATES] = craft_coor
+        in_unit_description = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION]
+        craft_data[ATTRIBUTE.UNIT_TYPE] = in_unit_description[ATTRIBUTE.ITEM_TYPE]
+        return craft_data
+
+
     @property
     def info(self):
         return {
@@ -348,8 +396,23 @@ class CraftItem(Item):
             ATTRIBUTE.ITEM_TYPE: self.item_type,  # TODO: I think we need only one of them :)
             ATTRIBUTE.UNIT_TYPE: self.unit_type,
             ATTRIBUTE.INITIAL_UNITS_IN: self.initial_amount_units_in,
-            ATTRIBUTE.UNITS_IN: self.amount_units_in
+            ATTRIBUTE.UNITS_IN: self.amount_units_in,
+            ATTRIBUTE.CRAFT_ID: self.craft_id,
+            ATTRIBUTE.IS_DEAD: False,
+            ATTRIBUTE.SIZE: 0,
         }
+
+    def land_unit(self):
+        if not self.amount_units_in:
+            return False
+        current_frame = self._fight_handler.current_frame
+        if current_frame - self.landing_duration >= self.last_landing:
+            self._fight_handler.add_unit_from_craft(self)
+            self.last_landing = current_frame
+        return True
+
+class UnitItem(FightItem):
+    pass
 
 
 class FightHandler(BaseHandler):
@@ -378,10 +441,11 @@ class FightHandler(BaseHandler):
         'death': [],
         'im_in_area': [],
         'any_item_in_area': [],
-        'im_idle': [],
+        'idle': [],
         'enemy_in_my_firing_range': [],
         'time': [],
-        'message': []
+        'message': [],
+        'unit_landed': [],
     }
 
     def __init__(self, editor_data, editor_client, referee):
@@ -422,7 +486,6 @@ class FightHandler(BaseHandler):
             where key is an id of the fighter and value is an object of FightItem
         """
         self.fighters = {}
-        self.crafts = {}
 
         self.current_frame = 0
         self.current_game_time = 0
@@ -437,13 +500,22 @@ class FightHandler(BaseHandler):
         self._is_stopping = None
         self._stop_callback = None
 
-        self.unit_landing_countdown = 0
-        self.crafts_landing_stack = []
-
         # FightItem for CommandCenter
         self.fi_center = None
 
         self._total_events_sent = 1
+
+    def get_crafts(self):
+        return filter(lambda a: a.is_craft, self.fighters.values())
+
+    def all_crafts_empty(self):
+        return all([item.is_empty() for item in self.get_crafts()])
+
+    def get_battle_fighters(self):
+        '''
+            returns only units that are on the battle
+        '''
+        return filter(lambda a: not a.is_craft, self.fighters.values())
 
     def set_center(self, center):
         self.fi_center = center
@@ -465,7 +537,6 @@ class FightHandler(BaseHandler):
     def get_env_data(self):
         return {
             'map': self.get_env_map_data(),
-            'crafts': self.get_env_crafts_data(),
             'game': self.get_env_game_data()
         }
 
@@ -476,12 +547,6 @@ class FightHandler(BaseHandler):
                 continue
             if value.is_obstacle:
                 continue
-            data[key] = value.info
-        return data
-
-    def get_env_crafts_data(self):
-        data = {}
-        for key, value in self.crafts.items():
             data[key] = value.info
         return data
 
@@ -518,12 +583,16 @@ class FightHandler(BaseHandler):
         self.strat_rewards = self.initial_data.get(INITIAL.STRAT_REWARDS, {})
         self.time_limit = self.initial_data.get(INITIAL.TIME_LIMIT, float("inf"))
         fight_items = []
-        for item in self.initial_data[INITIAL.MAP_ELEMENTS]:
+        for item in sorted(self.initial_data[INITIAL.MAP_ELEMENTS], key=lambda a: a.get(PLAYER.PLAYER_ID, -1), reverse=True):
             player = self.players[item.get(PLAYER.PLAYER_ID, -1)]
             if item[ATTRIBUTE.ROLE] == ROLE.CRAFT:
-                self.add_craft_item(item, player)
+                cls_name = CraftItem
             else:
-                fight_items.append(self.add_fight_item(item, player))
+                cls_name = FightItem
+            fight_item = cls_name(item, player=player, fight_handler=self)
+            self.fighters[fight_item.id] = fight_item
+            fight_item.set_state_idle()
+            fight_items.append(fight_item.start())
 
         self._log_initial_state()
 
@@ -561,40 +630,6 @@ class FightHandler(BaseHandler):
         self.create_route_graph()
         self.hash_grid()
 
-    @gen.coroutine
-    def add_fight_item(self, item_data, player):
-        size = item_data.get(ATTRIBUTE.SIZE, 0)
-        # [SPIKE] We use center coordinates
-        coordinates = [
-            round(item_data[ATTRIBUTE.TILE_POSITION][0] + size / 2, 6),
-            round(item_data[ATTRIBUTE.TILE_POSITION][1] + size / 2, 6)]
-        # [SPIKE] We use center coordinates
-        cut_size = (size if (item_data[ATTRIBUTE.ROLE] == ROLE.OBSTACLE
-                             and item_data[ATTRIBUTE.ITEM_TYPE] == 'rock')
-                    else max(size - CUT_FROM_BUILDING, 0))
-        item_data[ATTRIBUTE.BASE_SIZE] = size
-        item_data[ATTRIBUTE.SIZE] = cut_size
-        item_data[ATTRIBUTE.COORDINATES] = coordinates
-        fight_item = FightItem(item_data, player=player, fight_handler=self)
-        self.fighters[fight_item.id] = fight_item
-        if self.current_frame:
-            self._log_initial_unit(fight_item)
-        fight_item.set_state_idle()
-        yield fight_item.start()
-
-    def add_craft_item(self, craft_data, player):
-        craft_coor = self.generate_craft_place()
-        if not craft_coor[1]:
-            return
-        craft_data[ATTRIBUTE.COORDINATES] = craft_coor
-        in_unit_description = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION]
-        craft_data[ATTRIBUTE.UNIT_TYPE] = in_unit_description[ATTRIBUTE.ITEM_TYPE]
-        craft = CraftItem(craft_data, player=player, fight_handler=self)
-        self.crafts[craft.id] = craft
-        self.crafts_landing_stack.append(craft.id)
-        return craft
-
-    @gen.coroutine
     def add_unit_from_craft(self, craft):
         craft_data = craft.item_data
         unit = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION].copy()
@@ -605,32 +640,19 @@ class FightHandler(BaseHandler):
         unit[ATTRIBUTE.ROLE] = ROLE.UNIT
         unit[ATTRIBUTE.CRAFT_ID] = craft.craft_id
         craft.amount_units_in -= 1
-        yield self.add_fight_item(unit, self.players[craft_data.get(PLAYER.PLAYER_ID, -1)])
+        player = self.players[craft_data.get(PLAYER.PLAYER_ID, -1)]
+        fight_item = UnitItem(unit, player=player, fight_handler=self)
+        self.fighters[fight_item.id] = fight_item
+        fight_item.set_state_idle()
+        self._log_initial_unit(fight_item)
+        self._send_unit_landed(craft.craft_id, fight_item.id)
 
     def generate_craft_place(self):
         width = self.map_size[1]
-        craft_positions = [cr.coordinates[1] for cr in self.crafts.values()]
+        craft_positions = [cr.coordinates[1] for cr in self.get_crafts()]
         available = [y for y in range(3, width - 3)
                      if not any(pos - 2 <= y <= pos + 2 for pos in craft_positions)]
         return [self.map_size[0], choice(available) if available else 0]
-
-    def all_crafts_empty(self):
-        for craft in self.crafts.values():
-            if craft.amount_units_in:
-                return False
-        return True
-
-    @gen.coroutine
-    def unit_lands_from_stack(self):
-        if self.unit_landing_countdown > 0:
-            self.unit_landing_countdown -= self.GAME_FRAME_TIME
-            return
-        self.unit_landing_countdown = self.UNITS_LANDING_PERIOD
-        craft_id = self.crafts_landing_stack.pop()
-        craft = self.crafts[craft_id]
-        if craft.amount_units_in > 1:
-            self.crafts_landing_stack.insert(0, craft_id)
-        yield self.add_unit_from_craft(craft)
 
     def inc_total_events_sent(self):
         self._total_events_sent += 1
@@ -639,10 +661,8 @@ class FightHandler(BaseHandler):
         self._total_events_sent = 1
 
     def get_frame_time(self):
-        if self.all_crafts_empty() or self.unit_landing_countdown > 0:
-            return self.FRAME_TIME * self._total_events_sent
-        else:
-            return self.FIRST_STEP_FRAME_TIME
+        # frame time can be variated depends on factors
+        return self.FIRST_STEP_FRAME_TIME
 
     @gen.coroutine
     def compute_frame(self):
@@ -653,7 +673,9 @@ class FightHandler(BaseHandler):
         self.current_frame += 1
         self.current_game_time += self.GAME_FRAME_TIME
 
-        for key, fighter in self.fighters.items():
+        # list() - function is required here fot coping 
+        # because fighters might be changed during iterations
+        for key, fighter in list(self.fighters.items()):
             for sub_item in list(fighter.get_sub_items()):
                 sub_item.do_frame_action()
                 if sub_item.is_dead:
@@ -675,9 +697,7 @@ class FightHandler(BaseHandler):
         self._send_idle()
         self._send_dead()
 
-        winner = None
-        if self.all_crafts_empty():
-            winner = self.get_winner()
+        winner = self.get_winner()
 
         if winner is not None:
             self.send_frame({'winner': winner}, True)
@@ -686,14 +706,11 @@ class FightHandler(BaseHandler):
             IOLoop.current().call_later(self.get_frame_time(), self.compute_frame)
             self.reset_total_events_sent()
 
-        if self.crafts_landing_stack:
-            yield self.unit_lands_from_stack()
-
     def count_unit_casualties(self):
         result = {craft.craft_id: {
             OUTPUT.CRAFT_ID: craft.craft_id,
             OUTPUT.COUNT: 0,
-            OUTPUT.ITEM_TYPE: craft.unit_type} for craft in self.crafts.values()}
+            OUTPUT.ITEM_TYPE: craft.unit_type} for craft in self.get_crafts()}
         for it in self.fighters.values():
             if it.is_dead and it.role in ROLE.UNIT:
                 result[it.craft_id][OUTPUT.COUNT] += 1
@@ -718,7 +735,8 @@ class FightHandler(BaseHandler):
     def _is_player_defeated(self, player):
         defeat_reasons = player.get(PLAYER.DEFEAT_REASONS, [])
         if (DEFEAT_REASON.UNITS in defeat_reasons and
-                not self._is_player_has_item_role(player, ROLE.UNIT)):
+                not self._is_player_has_item_role(player, ROLE.UNIT) and
+                self.all_crafts_empty()):
             self.defeat_reason = DEFEAT_REASON.UNITS
             return True
         elif (DEFEAT_REASON.CENTER in defeat_reasons and
@@ -746,7 +764,7 @@ class FightHandler(BaseHandler):
                 status = {}
 
             fight_items = [fighter.internal_info for fighter in self.fighters.values()]
-            craft_items = [craft.info for craft in self.crafts.values()]
+            craft_items = [craft.info for craft in self.get_crafts()]
             self.editor_client.send_battle({
                 "is_stream": True,
                 'status': status,
@@ -762,7 +780,7 @@ class FightHandler(BaseHandler):
             self.editor_client.send_battle(self.battle_log)
 
     def _log_initial_state(self):
-        for item in self.fighters.values():
+        for item in self.get_battle_fighters():
             if item.role == ROLE.UNIT:
                 self._log_initial_unit(item)
             elif item.role in ROLE.PLAYER_STATIC:
@@ -774,7 +792,7 @@ class FightHandler(BaseHandler):
                     self._log_initial_flag_stock(item)
                 else:
                     self._log_initial_building(item)
-        for craft in self.crafts.values():
+        for craft in self.get_crafts():
             self._log_initial_craft(craft)
         for player in self.initial_data[PLAYER.KEY]:
             self._log_initial_player(player)
@@ -1039,12 +1057,15 @@ class FightHandler(BaseHandler):
 
     def _send_idle(self):
         def check_function(event, event_item, receiver):
-            return receiver._state.get('action') == 'idle'
+            return (
+                    event['data']['id'] in self.fighters and
+                    self.fighters[event['data']['id']]._state.get('action') == 'idle'
+            )
 
         def message_data(event, event_item, receiver):
-            return {'id': receiver.id}
+            return {'id': event['data']['id']}
 
-        self._send_event(None, 'im_idle', check_function, message_data)
+        self._send_event(None, 'idle', check_function, message_data)
 
     def _send_dead(self):
 
@@ -1056,6 +1077,18 @@ class FightHandler(BaseHandler):
             return {'id': event['data']['id']}
 
         self._send_event(None, 'death', check_function, data_id)
+
+    def _send_unit_landed(self, craft_id, unit_id):
+
+        def check_function(event, event_item, receiver):
+            return event['data']['craft_id'] == craft_id
+
+        def data_id(event, event_item, receiver):
+            return self.fighters[unit_id].info
+
+        self._send_event(None, 'unit_landed', check_function, data_id)
+
+
 
 
 class Referee(RefereeBase):
