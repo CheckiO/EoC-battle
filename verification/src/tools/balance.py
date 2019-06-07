@@ -10,12 +10,12 @@ def building_display_stats(building, level):
     ret = {}
     ret.update(bb['stats'][level-1]['display'])
     ret['size'] = bb['size']['x']
-    ret['rule'] = bb['rule']
+    ret['role'] = bb['role']
     return ret
 
 def unit_display_stats(unit, level):
     bb = BALANCE['units'][unit]
     ret = {}
     ret.update(bb['stats'][level-1])
-    ret['rule'] = 'unit'
+    ret['role'] = 'unit'
     return ret

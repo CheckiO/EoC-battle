@@ -109,13 +109,15 @@ class FightItem(Item):
             round(item_data[ATTRIBUTE.TILE_POSITION][0] + size / 2, 6),
             round(item_data[ATTRIBUTE.TILE_POSITION][1] + size / 2, 6)]
         # [SPIKE] We use center coordinates
+        item_data.update(building_display_stats(item_data[ATTRIBUTE.ITEM_TYPE], item_data[ATTRIBUTE.LEVEL]))
+
         cut_size = (size if (item_data[ATTRIBUTE.ROLE] == ROLE.OBSTACLE
                              and item_data[ATTRIBUTE.ITEM_TYPE] == 'rock')
                     else max(size - CUT_FROM_BUILDING, 0))
         item_data[ATTRIBUTE.BASE_SIZE] = size
         item_data[ATTRIBUTE.SIZE] = cut_size
         item_data[ATTRIBUTE.COORDINATES] = coordinates
-        item_data.update(building_display_stats(item_data[ATTRIBUTE.ITEM_TYPE], item_data[ATTRIBUTE.LEVEL]))
+        
         return item_data
 
     def add_sub_item(self, sub_item):
@@ -382,6 +384,7 @@ class CraftItem(FightItem):
         craft_data[ATTRIBUTE.COORDINATES] = craft_coor
         in_unit_description = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION]
         craft_data[ATTRIBUTE.UNIT_TYPE] = in_unit_description[ATTRIBUTE.ITEM_TYPE]
+        craft_data[ATTRIBUTE.ROLE] = 'craft'
         return craft_data
 
 
@@ -587,7 +590,7 @@ class FightHandler(BaseHandler):
         fight_items = []
         for item in sorted(self.initial_data[INITIAL.MAP_ELEMENTS], key=lambda a: a.get(PLAYER.PLAYER_ID, -1), reverse=True):
             player = self.players[item.get(PLAYER.PLAYER_ID, -1)]
-            if item[ATTRIBUTE.ROLE] == ROLE.CRAFT:
+            if item[ATTRIBUTE.ITEM_TYPE] == 'craft':
                 cls_name = CraftItem
             else:
                 cls_name = FightItem

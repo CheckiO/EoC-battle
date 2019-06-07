@@ -63,6 +63,8 @@ class FightHandler(BaseHandler):
 
         players_groups = defaultdict(list)
         for item in data['fight_items']:
+            if item.get('role') == 'craft':
+                continue
             players_groups[item['player_id']].append(item)
 
             coordinates = item['coordinates']
@@ -91,6 +93,40 @@ class FightHandler(BaseHandler):
                         continue
 
                     out_map[xs][ys] = MAP_BUILDING
+                print()
+        print('-' * 30)
+        print('{:<10}'.format(round(data['current_game_time'] * 1.0, 4)), end='')
+        print('-' * 20)
+        print('-' * 30)
+        print('  ', end='')
+        for i in range(map_size[0]):
+            print('{num:<{size}}'.format(num=i, size=MAP_X * 2), end='')
+        print()
+        for num, line in enumerate(out_map):
+            if num % MAP_X:
+                out_line = '  '
+            else:
+                out_line = '{:>2}'.format(num // MAP_X)
+            for el in line:
+                if el is None:
+                    out_line += '..'
+                elif el == MAP_BUILDING:
+                    out_line += '##'
+                else:
+                    out_line += self.short_name(el)
+            print(out_line)
+        craft_positions = [craft["coordinates"][1] for craft in data["craft_items"]]
+
+        craft_line = "  "
+
+        for i in range(len(out_map[0] if out_map else 0)):
+            pos = i / MAP_X
+            if any(p - 1 < pos < p + 1 for p in craft_positions):
+                craft_line += "^^"
+            else:
+                craft_line += "  "
+        print(craft_line + "\n" + craft_line)
+
 
         for num, player in players_groups.items():
 
