@@ -17,6 +17,7 @@ from environment import BattleEnvironmentsController
 from tools.distances import euclidean_distance
 from tools.terms import PLAYER, ENV
 from tools.result_processors import unit_dispersion
+from tools.balance import unit_display_stats, building_display_stats
 
 CUT_FROM_BUILDING = 1
 COORDINATE_EDGE_CUT = 10 ** -3
@@ -60,7 +61,6 @@ class FightItem(Item):
         self.land_time = fight_handler.current_game_time
 
         self.item_type = item_data.get(ATTRIBUTE.ITEM_TYPE)
-        self.alias = item_data.get(ATTRIBUTE.ALIAS)
         self.level = item_data.get(ATTRIBUTE.LEVEL, 1)
         self.tile_position = item_data.get(ATTRIBUTE.TILE_POSITION)
         self.item_status = item_data.get(ATTRIBUTE.ITEM_STATUS, 'idle')
@@ -115,6 +115,7 @@ class FightItem(Item):
         item_data[ATTRIBUTE.BASE_SIZE] = size
         item_data[ATTRIBUTE.SIZE] = cut_size
         item_data[ATTRIBUTE.COORDINATES] = coordinates
+        item_data.update(building_display_stats(item_data[ATTRIBUTE.ITEM_TYPE], item_data[ATTRIBUTE.LEVEL]))
         return item_data
 
     def add_sub_item(self, sub_item):
@@ -359,7 +360,6 @@ class CraftItem(FightItem):
         self.coordinates = item_data.get(ATTRIBUTE.COORDINATES)
         self.tile_position = item_data.get(ATTRIBUTE.COORDINATES)[:]
         self.level = item_data.get(ATTRIBUTE.LEVEL)
-        self.alias = item_data.get(ATTRIBUTE.ALIAS)
         self.item_type = item_data.get(ATTRIBUTE.ITEM_TYPE)
         self.initial_amount_units_in = self.amount_units_in = item_data.get(ATTRIBUTE.UNIT_QUANTITY)
         craft_coor = item_data[ATTRIBUTE.COORDINATES]
@@ -412,7 +412,9 @@ class CraftItem(FightItem):
         return True
 
 class UnitItem(FightItem):
-    pass
+    def adj_item_data(self, item_data):
+        item_data.update(unit_display_stats(item_data[ATTRIBUTE.ITEM_TYPE], item_data[ATTRIBUTE.LEVEL]))
+        return item_data
 
 
 class FightHandler(BaseHandler):
@@ -822,7 +824,6 @@ class FightHandler(BaseHandler):
             OUTPUT.TILE_POSITION: building.tile_position,
             OUTPUT.ITEM_TYPE: building.item_type,
             OUTPUT.SIZE: building.base_size,
-            OUTPUT.ALIAS: building.alias,
             OUTPUT.ITEM_STATUS: building.item_status,
             OUTPUT.ITEM_LEVEL: building.level,
             OUTPUT.PLAYER_ID: building.player[PLAYER.ID],
@@ -850,7 +851,6 @@ class FightHandler(BaseHandler):
             OUTPUT.ITEM_ID: craft.id,
             OUTPUT.TILE_POSITION: craft.tile_position,
             OUTPUT.ITEM_TYPE: craft.item_type,
-            OUTPUT.ALIAS: craft.alias,
             OUTPUT.ITEM_LEVEL: craft.level,
             OUTPUT.PLAYER_ID: craft.player[PLAYER.ID],
             OUTPUT.PLAYER_ID_DEP: craft.player[PLAYER.ID]
