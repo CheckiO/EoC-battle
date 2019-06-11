@@ -275,6 +275,24 @@ class CraftClient(Client):
     def when_unit_landed(self, callback):
         self.when('unit_landed', callback, {'craft_id': self.my_info['craft_id']}, infinity=True)
 
+class FlagmanClient(Client):
+
+    def command_rocket(self, coordinates):
+        self.command('rocket', {
+                'coordinates': coordinates
+            })
+
+    def command_heal(self, coordinates):
+        self.command('heal', {
+                'coordinates': coordinates
+            })
+
+    def command_power(self, coordinates):
+        self.command('power', {
+                'coordinates': coordinates
+            })
+
+
 class UnitClient(Client):
 
     def __init__(self, _id):

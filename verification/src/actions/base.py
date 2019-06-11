@@ -64,7 +64,8 @@ class BaseItemActions(object):
 
     def _actual_shot(self, enemy):
         attacker = self._item
-        demaged_ids = enemy.get_shoted(attacker.damage_per_shot)
+
+        demaged_ids = enemy.get_shoted(attacker.total_damage)
 
         return {
             'action': 'attack',

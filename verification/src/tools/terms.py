@@ -17,6 +17,7 @@ class ROLE():
     BUILDING = 'building'
     OBSTACLE = 'obstacle'
     CRAFT = 'craft'
+    FLAGMAN = 'flagman'
     ALL = (CENTER, TOWER, UNIT, BUILDING, OBSTACLE)
     STATIC = (BUILDING, CENTER, OBSTACLE, TOWER)
     PLAYER_STATIC = (BUILDING, CENTER, TOWER)
@@ -61,7 +62,13 @@ class ATTRIBUTE():
     UNITS_IN = 'units_in'
     IS_DEAD = 'is_dead'
     STATE = 'state'
-
+    IS_FLYING = 'is_flying'
+    OPERATIONS = 'operations'
+    CHARGE_SIZE = 'charge_size'
+    CHARGE = 'charge'
+    SUBITEMS = 'subitems'
+    EXTRAS = 'extras'
+ 
 
 class ACTION():
     REQUEST_NAME = 'action'
@@ -72,6 +79,10 @@ class ACTION():
     DEMAGED = 'damaged'
     CHARGE = 'charge'
 
+class OPERATION():
+    ROCKET = 'rocket'
+    HEAL = 'heal'
+    POWER = 'power'
 
 class STATUS():
     SUCCESS = 'success'

@@ -9,6 +9,7 @@ from server import TCPConsoleServer
 from collections import defaultdict
 
 MAP_X = 2
+SHOW_MAP = False
 
 MAP_BUILDING = 1
 
@@ -63,14 +64,6 @@ class FightHandler(BaseHandler):
 
         players_groups = defaultdict(list)
         for item in data['fight_items']:
-            if item.get('role') == 'craft':
-                continue
-            players_groups[item['player_id']].append(item)
-
-            coordinates = item['coordinates']
-            r_coordinates = (round(coordinates[0] * MAP_X), round(coordinates[1] * MAP_X))
-            out_map[r_coordinates[0]][r_coordinates[1]] = item
-            size = item.get('size')
             if 'std' in item and any(item['std'].values()):
                 print('{:<10}'.format(item['id']), end='')
                 print('-' * 20)
@@ -78,6 +71,14 @@ class FightHandler(BaseHandler):
                     print(''.join(item['std']['out']))
                 if item['std']['err']:
                     print(''.join(item['std']['err']), file=sys.stderr)
+            if item.get('role') in ('craft', 'flagman'):
+                continue
+            players_groups[item['player_id']].append(item)
+
+            coordinates = item['coordinates']
+            r_coordinates = (round(coordinates[0] * MAP_X), round(coordinates[1] * MAP_X))
+            out_map[r_coordinates[0]][r_coordinates[1]] = item
+            size = item.get('size')
 
             if not size or item.get("state", {}).get("action") == "dead":
                 continue
@@ -99,45 +100,55 @@ class FightHandler(BaseHandler):
         print('-' * 20)
         print('-' * 30)
         print('  ', end='')
-        for i in range(map_size[0]):
-            print('{num:<{size}}'.format(num=i, size=MAP_X * 2), end='')
-        print()
-        for num, line in enumerate(out_map):
-            if num % MAP_X:
-                out_line = '  '
-            else:
-                out_line = '{:>2}'.format(num // MAP_X)
-            for el in line:
-                if el is None:
-                    out_line += '..'
-                elif el == MAP_BUILDING:
-                    out_line += '##'
+        if SHOW_MAP:
+            for i in range(map_size[0]):
+                print('{num:<{size}}'.format(num=i, size=MAP_X * 2), end='')
+            print()
+            for num, line in enumerate(out_map):
+                if num % MAP_X:
+                    out_line = '  '
                 else:
-                    out_line += self.short_name(el)
-            print(out_line)
-        craft_positions = [craft["coordinates"][1] for craft in data["craft_items"]]
+                    out_line = '{:>2}'.format(num // MAP_X)
+                for el in line:
+                    if el is None:
+                        out_line += '..'
+                    elif el == MAP_BUILDING:
+                        out_line += '##'
+                    else:
+                        out_line += self.short_name(el)
+                print(out_line)
+            craft_positions = [craft["coordinates"][1] for craft in data["craft_items"]]
 
-        craft_line = "  "
+            craft_line = "  "
 
-        for i in range(len(out_map[0] if out_map else 0)):
-            pos = i / MAP_X
-            if any(p - 1 < pos < p + 1 for p in craft_positions):
-                craft_line += "^^"
-            else:
-                craft_line += "  "
-        print(craft_line + "\n" + craft_line)
+            for i in range(len(out_map[0] if out_map else 0)):
+                pos = i / MAP_X
+                if any(p - 1 < pos < p + 1 for p in craft_positions):
+                    craft_line += "^^"
+                else:
+                    craft_line += "  "
+            print(craft_line + "\n" + craft_line)
 
 
         for num, player in players_groups.items():
 
             print('PLAYER {}:'.format(num if num >= 0 else "X"))
             for item in player:
-                print('  {sysid}{role} {hit_points} - {str_state}'.format(
+                print('  {sysid}{role}{extras} {hit_points} - {str_state}'.format(
                     sysid=item['id'],
                     role=item['role'],
                     hit_points=item.get('hit_points'),
-                    str_state=self.str_state(item.get('state'))
+                    str_state=self.str_state(item.get('state')),
+                    extras=str(item['extras']),
                 ))
+                if item.get('subitems'):
+                    print('    ', item['subitems'])
+
+        if data.get('flagman'):
+            print('FLAGMAN:', data['flagman']['charge'])
+            #if item.get('subitems'):
+            print('  ', data['flagman']['subitems'])
+
         if 'winner' in data['status']:
             print('Game Over!!! The Winner is {}'.format(data['status']['winner']['id']))
 

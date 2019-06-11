@@ -16,5 +16,8 @@ def roles(roles_list):
 
 
 def in_my_range(client, item):
+    if not client.my_info.get('coordinates') or not item.get('coordinates'):
+        return False
+        
     distance = euclidean_distance(item['coordinates'], client.my_info['coordinates'])
     return distance - item['size'] / 2 <= client.my_info['firing_range']

@@ -1,9 +1,38 @@
 from .base import BaseItemActions, euclidean_distance
 from .exceptions import ActionValidateError
 from tools import find_route, straighten_route, is_coordinates
+from sub_items import VerticalRocketSubItem, HealSubItem
+from tools.terms import OPERATION
 
 import logging
 logger = logging.getLogger()
+
+class FlagActions(BaseItemActions):
+
+    def actions_init(self):
+        return {}
+
+    def commands_init(self):
+        return {
+            'rocket': self.send_rocket,
+            'heal': self.send_heal,
+            'power': self.send_power,
+        }
+
+    def send_rocket(self, data):
+        flagman = self._item
+        if flagman.use_operation(OPERATION.ROCKET):
+            flagman.add_sub_item(VerticalRocketSubItem(flagman, data['coordinates']))
+
+    def send_heal(self, data):
+        flagman = self._item
+        if flagman.use_operation(OPERATION.HEAL):
+            flagman.add_sub_item(HealSubItem(flagman, data['coordinates']))
+
+    def send_power(self, data):
+        flagman = self._item
+        if flagman.use_operation(OPERATION.POWER):
+            flagman.add_sub_item(PowerSubItem(flagman, data['coordinates']))
 
 class CraftActions(BaseItemActions):
 

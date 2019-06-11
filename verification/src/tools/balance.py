@@ -19,3 +19,8 @@ def unit_display_stats(unit, level):
     ret.update(bb['stats'][level-1])
     ret['role'] = 'unit'
     return ret
+
+def operation_stats(action, level):
+    if not level:
+        return None
+    return BALANCE['flagman'][action]['stats'][level-1]
