@@ -7,6 +7,7 @@ from functools import reduce
 
 from actions import ItemActions
 from tools.balance import unit_display_stats, building_display_stats, operation_stats
+from tools.distances import euclidean_distance
 from consts import CUT_FROM_BUILDING, IMMORTAL_TIME
 from tools import ROLE, ATTRIBUTE, ACTION, STD, PLAYER, STATUS
 from tools import precalculated
@@ -110,9 +111,10 @@ class FightItem(Item):
         
         return item_data
 
+
     @property
     def is_hidden(self):
-        return self.item_type == 'mine'
+        return False
     
     def add_sub_item(self, sub_item):
         next_id = self.generate_id()
@@ -248,6 +250,8 @@ class FightItem(Item):
         }
 
     def get_percentage_hit_points(self):
+        if not self.start_hit_points:
+            return 100
         return max(0, round(100 * self.hit_points / self.start_hit_points))
 
     def get_action_status(self):
@@ -487,9 +491,62 @@ class CraftItem(FightItem):
             self.last_landing = current_frame
         return True
 
+
 class UnitItem(FightItem):
     def adj_item_data(self, item_data):
         item_data.update(unit_display_stats(item_data[ATTRIBUTE.ITEM_TYPE], item_data[ATTRIBUTE.LEVEL]))
         return item_data
+
+
+class MineItem(FightItem):
+    is_activated = False
+    is_executable = False
+    timer = 0.3
+
+    @property
+    def is_hidden(self):
+        return self.action.get('name') == 'waiting'
+
+    def detonate(self):
+        self.action = {
+            'name': 'detonate',
+            'data': {}
+        }
+
+    def adj_item_data(self, item_data):
+        item_data.update(unit_display_stats(item_data[ATTRIBUTE.ITEM_TYPE], item_data[ATTRIBUTE.LEVEL]))
+        item_data[ATTRIBUTE.ROLE] = ROLE.MINE
+        item_data[ACTION.REQUEST_NAME] = {
+            'name': 'waiting',
+            'data': {}
+        }
+        item_data[ATTRIBUTE.COORDINATES] = item_data[ATTRIBUTE.TILE_POSITION]
+
+        return item_data
+
+    def detonator_timer(self):
+        self.timer -= self._fight_handler.GAME_FRAME_TIME
+        if self.timer <= 0:
+            self.explode()
+
+    def explode():
+        self.is_dead = True
+        for item in self._fight_handler.fighters.values():
+            if item.is_dead:
+                continue
+
+            if item.player_id == self.item.player_id:
+                continue
+
+            if item.role != ROLE.UNIT:
+                continue
+
+            distance = euclidean_distance(item.coordinates, self.coordinates)
+            if distance > self.firing_range:
+                continue
+
+            damage = (self.firing_range - distance) * self.damage_per_shot / self.firing_range
+            item.get_shoted(damage)
+
 
 

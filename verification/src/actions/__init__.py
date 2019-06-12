@@ -1,6 +1,6 @@
 from .center import CenterActions
 from .defence import DefenceActions, DefenceRocketActions
-from .unit import UnitActions, CraftActions, FlagActions
+from .unit import UnitActions, CraftActions, FlagActions, MineActions
 from .building import BuildingActions
 from .obstacle import ObstacleActions
 from tools import ROLE, DEF_TYPE
@@ -17,6 +17,7 @@ ACTIONS = {
     ROLE.OBSTACLE: ObstacleActions,
     ROLE.CRAFT: CraftActions,
     ROLE.FLAGMAN: FlagActions,
+    ROLE.MINE: MineActions,
 }
 
 

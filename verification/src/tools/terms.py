@@ -18,6 +18,7 @@ class ROLE():
     OBSTACLE = 'obstacle'
     CRAFT = 'craft'
     FLAGMAN = 'flagman'
+    MINE = 'mine'
     ALL = (CENTER, TOWER, UNIT, BUILDING, OBSTACLE)
     STATIC = (BUILDING, CENTER, OBSTACLE, TOWER)
     PLAYER_STATIC = (BUILDING, CENTER, TOWER)

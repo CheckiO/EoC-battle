@@ -2,10 +2,45 @@ from .base import BaseItemActions, euclidean_distance
 from .exceptions import ActionValidateError
 from tools import find_route, straighten_route, is_coordinates
 from sub_items import VerticalRocketSubItem, HealSubItem
-from tools.terms import OPERATION
+from tools.terms import OPERATION, ROLE
 
 import logging
 logger = logging.getLogger()
+
+class MineActions(BaseItemActions):
+    def actions_init(self):
+        return {
+            'wait': self.action_wait,
+            'detonate': self.action_detonate,
+        }
+
+    def action_wait(self, data):
+        for enemy in self._fight_handler.fighters.values():
+            if enemy.is_dead:
+                return
+
+            if enemy.player_id == self._item.player_id:
+                continue
+
+            if enemy.role != ROLE.UNIT:
+                continue
+
+            distance_to_enemy = euclidean_distance(enemy.coordinates, self._item.coordinates)
+
+            if distance_to_enemy <= self._item.firing_range:
+                self._item.detonate()
+                break
+
+        return {
+            'action': 'idle'
+        }
+
+    def action_detonate(self, data):
+        self._item.detonator_timer()
+        return {
+            'action': 'detonate'
+        }
+        
 
 class FlagActions(BaseItemActions):
 
