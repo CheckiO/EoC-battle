@@ -405,6 +405,7 @@ class FlagItem(FightItem):
             ATTRIBUTE.SIZE: 0,
             ATTRIBUTE.PLAYER_ID: self.player_id,
             ATTRIBUTE.SUBITEMS: self.info_subitems,
+            ATTRIBUTE.ITEM_TYPE: self.item_type,
         }
 
     def adj_item_data(self, data):
@@ -453,8 +454,11 @@ class CraftItem(FightItem):
     def is_empty(self):
         return not self.amount_units_in
 
+    def generate_craft_place(self, craft_data):
+        return self._fight_handler.generate_craft_place()
+
     def adj_item_data(self, craft_data):
-        craft_coor = self._fight_handler.generate_craft_place()
+        craft_coor = self.generate_craft_place(craft_data)
         if not craft_coor[1]:
             return
         craft_data[ATTRIBUTE.HIT_POINTS] = 10*10
@@ -490,6 +494,11 @@ class CraftItem(FightItem):
             self._fight_handler.add_unit_from_craft(self)
             self.last_landing = current_frame
         return True
+
+class DefPlatformItem(CraftItem):
+    def generate_craft_place(self, craft_data):
+        return craft_data[ATTRIBUTE.TILE_POSITION]
+
 
 
 class UnitItem(FightItem):

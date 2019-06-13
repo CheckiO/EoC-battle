@@ -71,10 +71,9 @@ class FightHandler(BaseHandler):
                     print(''.join(item['std']['out']))
                 if item['std']['err']:
                     print(''.join(item['std']['err']), file=sys.stderr)
-            if item.get('role') in ('craft', 'flagman'):
+            if item.get('type') in ('craft', 'flagman'):
                 continue
             players_groups[item['player_id']].append(item)
-
             coordinates = item['coordinates']
             r_coordinates = (round(coordinates[0] * MAP_X), round(coordinates[1] * MAP_X))
             out_map[r_coordinates[0]][r_coordinates[1]] = item
@@ -136,10 +135,10 @@ class FightHandler(BaseHandler):
             for item in player:
                 print('  {sysid}{role}{extras} {hit_points} - {str_state}'.format(
                     sysid=item['id'],
-                    role=item['role'],
+                    role=item['type'],
                     hit_points=item.get('hit_points'),
                     str_state=self.str_state(item.get('state')),
-                    extras=str(item['extras']),
+                    extras=str(item.get('extras', '-')),
                 ))
                 if item.get('subitems'):
                     print('    ', item['subitems'])

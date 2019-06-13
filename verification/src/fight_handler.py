@@ -5,7 +5,8 @@ from random import choice
 
 from checkio_referee.handlers.base import BaseHandler
 
-from fight_item import FightItem, CraftItem, FlagItem, UnitItem, MineItem
+from fight_item import FightItem, CraftItem, FlagItem, UnitItem, MineItem, \
+    DefPlatformItem
 from tools import precalculated, fill_square, grid_to_graph
 from consts import COORDINATE_EDGE_CUT, PERCENT_CENTER_AUTO_DEMAGE
 from tools import ROLE, ATTRIBUTE, ACTION, DEFEAT_REASON, OUTPUT, STD,\
@@ -198,12 +199,15 @@ class FightHandler(BaseHandler):
                 cls_name = FlagItem
             elif item[ATTRIBUTE.ITEM_TYPE] == 'mine':
                 cls_name = MineItem
+            elif item[ATTRIBUTE.ITEM_TYPE] == 'defPlatform':
+                cls_name = DefPlatformItem
             else:
                 cls_name = FightItem
             fight_item = cls_name(item, player=player, fight_handler=self)
             self.fighters[fight_item.id] = fight_item
             fight_item.set_state_idle()
             fight_items.append(fight_item.start())
+
 
         self._log_initial_state()
 

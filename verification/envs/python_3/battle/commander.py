@@ -113,6 +113,8 @@ class Client(object):
         for item in self.env_map.values():
             if item['is_dead']:
                 continue
+            if 'coordinates' not in item:
+                continue
             if _filters_passed(item):
                 ret.append(item)
         return ret
