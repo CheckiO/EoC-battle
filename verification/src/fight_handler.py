@@ -258,6 +258,7 @@ class FightHandler(BaseHandler):
         player = self.players[craft_data.get(PLAYER.PLAYER_ID, -1)]
         fight_item = UnitItem(unit, player=player, fight_handler=self)
         self.fighters[fight_item.id] = fight_item
+        fight_item.set_parent_id(craft.id)
         fight_item.set_state_idle()
         self._log_initial_unit(fight_item)
         self._send_unit_landed(craft.craft_id, fight_item.id)

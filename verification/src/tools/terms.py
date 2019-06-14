@@ -69,6 +69,8 @@ class ATTRIBUTE():
     CHARGE = 'charge'
     SUBITEMS = 'subitems'
     EXTRAS = 'extras'
+    MODULES = 'modules'
+    CRAFT_FIGHT_ID = 'craft_fight_id'
  
 
 class ACTION():
@@ -166,3 +168,6 @@ class STD():
 class ENV():
     DATA = '__env_data'
     MY_DATA = '__my_data'
+
+class FEATURE():
+    TELEPORT = 'teleport'

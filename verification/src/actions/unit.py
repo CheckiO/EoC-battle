@@ -2,7 +2,7 @@ from .base import BaseItemActions, euclidean_distance
 from .exceptions import ActionValidateError
 from tools import find_route, straighten_route, is_coordinates
 from sub_items import VerticalRocketSubItem, HealSubItem
-from tools.terms import OPERATION, ROLE
+from tools.terms import OPERATION, ROLE, FEATURE
 
 import logging
 logger = logging.getLogger()
@@ -91,6 +91,7 @@ class CraftActions(BaseItemActions):
             'attack': self.forward_by('attack'),
             'move': self.forward_by('move'),
             'moves': self.forward_by('moves'),
+            'teleport': self.forward_command_by('teleport'),
         }
 
     def forward_by(self, command):
@@ -101,6 +102,16 @@ class CraftActions(BaseItemActions):
             # craft = self._item
 
             unit.method_set_action(command, data, from_self=False)  
+        return _forwarded
+
+    def forward_command_by(self, command):
+        def _forwarded(data):
+            unit = self._fight_handler.fighters[data['by']]
+
+            # TODO: check if unit from Craft
+            # craft = self._item
+
+            unit.method_command(command, data, from_self=False)  
         return _forwarded
 
     def forward_do_attack(self, data):
@@ -127,6 +138,18 @@ class UnitActions(BaseItemActions):
             'moves': self.action_moves
         })
         return actions
+
+    def commands_init(self):
+        return {
+            'teleport': self.do_teleport
+        }
+
+
+    def do_teleport(self, data):
+        if not self._item.has_feature(FEATURE.TELEPORT):
+            return
+        coordinates = data.get('coordinates')
+        self._item.set_coordinates(coordinates)
 
     def action_attack(self, data):
         enemy = self._fight_handler.fighters.get(data['id'])

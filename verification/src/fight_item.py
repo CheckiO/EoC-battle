@@ -12,6 +12,7 @@ from consts import CUT_FROM_BUILDING, IMMORTAL_TIME
 from tools import ROLE, ATTRIBUTE, ACTION, STD, PLAYER, STATUS
 from tools import precalculated
 from actions.exceptions import ActionValidateError, ActionSkip
+from modules import gen_features, map_features, has_feature
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,12 @@ class FightItem(Item):
         # {'action': 'idle'}
         # {'action': 'dead'}
         self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
+
+        self.features = gen_features(item_data.get(ATTRIBUTE.MODULES, []))
+        map_features(self.features, 'apply', self)
+
+    def has_feature(self, name):
+        return has_feature(self.features, name)
 
     def adj_item_data(self, item_data):
         item_data.update(building_display_stats(item_data[ATTRIBUTE.ITEM_TYPE], item_data[ATTRIBUTE.LEVEL]))
@@ -502,6 +509,21 @@ class DefPlatformItem(CraftItem):
 
 
 class UnitItem(FightItem):
+    parent_id = None
+
+    def set_parent_id(self, id):
+        self.parent_id = id
+
+        map_features(self.parent_item.features, 'apply', self)
+
+    def has_feature(self, name):
+        return has_feature(self.parent_item.features, name)
+
+    @property
+    def parent_item(self):
+        return self._fight_handler.fighters[self.parent_id]
+    
+
     def adj_item_data(self, item_data):
         item_data.update(unit_display_stats(item_data[ATTRIBUTE.ITEM_TYPE], item_data[ATTRIBUTE.LEVEL]))
         return item_data

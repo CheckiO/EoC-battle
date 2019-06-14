@@ -314,9 +314,17 @@ class UnitClient(Client):
     def do(self, action, data):
         if not self.is_alive:
             return
+        self.command(action, data)
+
+    def command(self, action, data):
         new_data = {'by': self._id}
         new_data.update(data)
-        self.command(action, new_data)
+        super().command(action, new_data)
+
+    def do_teleport(self, coordinates):
+        self.command('teleport', {
+            'coordinates': coordinates
+        })
 
     def when(self, event, callback, data=None, infinity=False):
         if not self.is_alive:

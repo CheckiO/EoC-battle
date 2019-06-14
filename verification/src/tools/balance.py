@@ -24,3 +24,6 @@ def operation_stats(action, level):
     if not level:
         return None
     return BALANCE['flagman'][action]['stats'][level-1]
+
+def module_stats(module):
+    return BALANCE['modules'][module]
