@@ -71,6 +71,7 @@ class FightItem(Item):
 
         # a current command that was send from code
         self.action = item_data.get(ACTION.REQUEST_NAME)
+        self.one_action = []
         self.charging = 0
 
         self.code = self._fight_handler.codes.get(item_data.get(ATTRIBUTE.OPERATING_CODE))
@@ -95,10 +96,39 @@ class FightItem(Item):
         self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
 
         self.features = gen_features(item_data.get(ATTRIBUTE.MODULES, []))
+        self._used_features = {}
         map_features(self.features, 'apply', self)
+
+    def add_one_action(self, name, data):
+        self.one_action.append({
+                'name': name,
+                'data': data
+            })
+
+    def pop_first_one_action(self):
+        try:
+            return self.one_action.pop(0)
+        except IndexError:
+            return None
+
+    def run_all_one_actions(self):
+        while True:
+            info = self.pop_first_one_action()
+            if info is None:
+                break
+            self._actions_handlers.parse_one_action_data(info['name'], info['data'])
 
     def has_feature(self, name):
         return has_feature(self.features, name)
+
+    def use_feature(self, name):
+        if name not in self._used_features:
+            self._used_features[name] = 0
+
+        self._used_features[name] += 1
+
+    def used_feature(self, name):
+        return name in self._used_features
 
     def adj_item_data(self, item_data):
         item_data.update(building_display_stats(item_data[ATTRIBUTE.ITEM_TYPE], item_data[ATTRIBUTE.LEVEL]))

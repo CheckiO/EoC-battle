@@ -9,6 +9,7 @@ class BaseItemActions(object):
         self._fight_handler = fight_handler
         self._actions = self.actions_init()
         self._commands = self.commands_init()
+        self._one_actions = self.one_actions_init()
 
     def actions_init(self):
         """
@@ -22,6 +23,14 @@ class BaseItemActions(object):
 
     def commands_init(self):
         return {}
+
+    def one_actions_init(self):
+        return {}
+
+    def trans_action(self, name):
+        def add_one_time(data):
+            return self._item.add_one_action(name, data)
+        return add_one_time
 
     def _idle(self):
         return {'action': 'idle'}
@@ -91,6 +100,9 @@ class BaseItemActions(object):
             raise ActionValidateError("Unknown command {}".format(action))
 
         self._commands[action](data)
+
+    def parse_one_action_data(self, action, data):
+        self._one_actions[action](data)
 
     def validate_attack(self, action, data):
         enemy = self._fight_handler.fighters.get(data['id'])

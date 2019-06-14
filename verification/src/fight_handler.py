@@ -311,6 +311,7 @@ class FightHandler(BaseHandler):
                 fighter.set_state_idle()
                 continue
 
+            fighter.run_all_one_actions()
             fighter.do_frame_action()
 
         self._send_time()

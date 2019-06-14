@@ -141,6 +141,11 @@ class UnitActions(BaseItemActions):
 
     def commands_init(self):
         return {
+            'teleport': self.trans_action('teleport')
+        }
+
+    def one_actions_init(self):
+        return {
             'teleport': self.do_teleport
         }
 
@@ -148,6 +153,9 @@ class UnitActions(BaseItemActions):
     def do_teleport(self, data):
         if not self._item.has_feature(FEATURE.TELEPORT):
             return
+        if self._item.used_feature(FEATURE.TELEPORT):
+            return
+        self._item.use_feature(FEATURE.TELEPORT)
         coordinates = data.get('coordinates')
         self._item.set_coordinates(coordinates)
 
