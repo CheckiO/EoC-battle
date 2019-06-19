@@ -58,6 +58,7 @@ class ATTRIBUTE():
     UNIT_QUANTITY = 'unit_quantity'
     IN_UNIT_DESCRIPTION = 'unit'
     OPERATING_CODE = 'code'
+    OPERATING_CODE_OPTS = 'code_opts'
     ACTION = 'action'
     INITIAL_UNITS_IN = 'initial_units_in'
     UNITS_IN = 'units_in'

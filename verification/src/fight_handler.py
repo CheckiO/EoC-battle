@@ -2,13 +2,15 @@ import logging
 from tornado import gen
 from tornado.ioloop import IOLoop
 from random import choice
+import os
+import shutil
 
 from checkio_referee.handlers.base import BaseHandler
 
 from fight_item import FightItem, CraftItem, FlagItem, UnitItem, MineItem, \
     DefPlatformItem
 from tools import precalculated, fill_square, grid_to_graph
-from consts import COORDINATE_EDGE_CUT, PERCENT_CENTER_AUTO_DEMAGE
+from consts import COORDINATE_EDGE_CUT, PERCENT_CENTER_AUTO_DEMAGE, FOLDER_CODES
 from tools import ROLE, ATTRIBUTE, ACTION, DEFEAT_REASON, OUTPUT, STD,\
     OBSTACLE, INITIAL, PLAYER
 from tools.terms import ENV
@@ -107,6 +109,24 @@ class FightHandler(BaseHandler):
         self.fi_center = None
 
         self._total_events_sent = 1
+
+        self.setup_usercodes(self.initial_data['codes'])
+
+    def setup_usercodes(self, codes):
+        for item in codes:
+            username = item['id'].split('/')[0]
+            filename = os.path.join(FOLDER_CODES, item['id'])
+            dirname = os.path.dirname(filename)
+            os.makedirs(dirname, mode=0o700, exist_ok=True)
+            shutil.chown(dirname, user=username)
+            
+            with open(filename, mode='w', encoding='utf-8') as fh:
+                fh.write(item['code'])
+
+            shutil.chown(filename, user=username)
+            os.chmod(filename, 0o700)
+
+
 
     def get_crafts(self):
         return filter(lambda a: a.is_craft, self.fighters.values())

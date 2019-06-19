@@ -3,3 +3,12 @@ RUN mkdir /opt/balance
 RUN wget https://raw.githubusercontent.com/CheckiO/eoc-balance/master/balance.json -O /opt/balance/balance.json
 
 RUN wget https://raw.githubusercontent.com/CheckiO/eoc-balance/master/private_balance.json -O /opt/balance/private_balance.json
+
+RUN adduser --no-create-home --disabled-password --gecos ""  --uid 2000    player0
+RUN adduser --no-create-home --disabled-password --gecos ""  --uid 2001    player1
+RUN mkdir /opt/usercode/
+RUN mkdir /opt/usercode/player0
+RUN mkdir /opt/usercode/player1
+RUN chown player0 /opt/usercode/player0
+RUN chown player1 /opt/usercode/player1
+RUN chmod 700 /opt/usercode/*

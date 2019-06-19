@@ -8,7 +8,7 @@ from functools import reduce
 from actions import ItemActions
 from tools.balance import unit_display_stats, building_display_stats, operation_stats
 from tools.distances import euclidean_distance
-from consts import CUT_FROM_BUILDING, IMMORTAL_TIME
+from consts import CUT_FROM_BUILDING, IMMORTAL_TIME, FOLDER_CODES
 from tools import ROLE, ATTRIBUTE, ACTION, STD, PLAYER, STATUS
 from tools import precalculated
 from actions.exceptions import ActionValidateError, ActionSkip
@@ -75,6 +75,7 @@ class FightItem(Item):
         self.charging = 0
 
         self.code = self._fight_handler.codes.get(item_data.get(ATTRIBUTE.OPERATING_CODE))
+        self.code_opts = item_data.get(ATTRIBUTE.OPERATING_CODE_OPTS, {})
         self._initial = item_data
         self._env = None  # ??
         self._state = None  # dict of current FightItem state
@@ -322,6 +323,11 @@ class FightItem(Item):
                                                                    self.player[PLAYER.ENV_NAME]),
                                                      on_stdout=self.stdout,
                                                      on_stderr=self.stderr)
+        self._env.ENV_CONFIG = {
+            'uid_user': 'player' + str(self.player_id),
+            'extra_modules': FOLDER_CODES + 'player' + str(self.player_id) + '/',
+            'code_opts': self.code_opts
+        }
         env_data = self._fight_handler.get_env_data()
         my_data = self._fight_handler.get_my_data(self.id)
         result = yield self._env.run_code(self.code["code"], env_data, my_data)

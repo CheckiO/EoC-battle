@@ -51,6 +51,7 @@ def check_str_type(data, name):
 
 class Client(object):
     CLIENT = None
+    OPTS = {}
 
     def __init__(self):
         assert Client.CLIENT
@@ -74,6 +75,13 @@ class Client(object):
     @classmethod
     def set_client(cls, client):
         Client.CLIENT = client
+
+    @classmethod
+    def set_opts(cls, opts):
+        Client.OPTS = opts
+
+    def get_opt(self, name, default=None):
+        return self.OPTS.get(name, default)
 
     def ids_my_craft(self):
         my_info = self.my_info

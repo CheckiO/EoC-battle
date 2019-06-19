@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+import pwd
 from queue import Queue
 
 from checkio_executor_python.client import ClientLoop, RefereeClient
@@ -33,6 +34,28 @@ class PlayerRefereeRunner(Runner):
 
     def subscribe(self, lookup_key, callback):
         self._events[lookup_key] = callback
+
+    def _config_env(self, data):
+
+        config = data.get('env_config')
+
+        if config is None:
+            return
+
+        super()._config_env(config)
+
+        if 'uid_user' in config:
+            running_uid = pwd.getpwnam(config['uid_user']).pw_uid
+            os.setgroups([])
+            os.setuid(running_uid)
+            os.umask(0o777)
+
+        if 'extra_modules' in config:
+            sys.path.append(config['extra_modules'])
+
+        if 'code_opts' in config:
+            commander.Client.set_opts(config['code_opts'])
+
 
 
 class PlayerRefereeClient(RefereeClient):
@@ -116,7 +139,7 @@ class PlayerClientLoop(ClientLoop):
         self.client.set_runner(self.runner)
 
     def start(self):
-        self.set_os_permissions()
+        #self.set_os_permissions()
         execution_data = self.client.request({
             'status': 'connected',
             'environment_id': self.environment_id,

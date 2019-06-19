@@ -17,7 +17,8 @@ class BattleEnvironmentClient(EnvironmentClient):
             'action': 'run_code',
             'code': code,
             ENV.DATA: env_data,
-            ENV.MY_DATA: my_data
+            ENV.MY_DATA: my_data,
+            'env_config': self.ENV_CONFIG
         })
         return result
 
