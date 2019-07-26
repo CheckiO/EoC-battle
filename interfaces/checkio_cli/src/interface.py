@@ -15,8 +15,11 @@ MAP_BUILDING = 1
 
 # TODO: out current lap
 
-LOG_DIRNAME = "/tmp/"
+LOG_DIRNAME = "/root/tmp/"
 ERR_LOG_FILE_OPEN = "Cann't open log file for writing - {}"
+
+if not os.path.exists(LOG_DIRNAME):
+    os.mkdir(LOG_DIRNAME)
 
 
 class FightHandler(BaseHandler):
@@ -32,7 +35,7 @@ class FightHandler(BaseHandler):
         self.ROUTING['battle'] = 'handler_battle'
         if not os.path.exists(LOG_DIRNAME):
             os.mkdir(LOG_DIRNAME)
-        log_filename = "battle_log_{}.json".format(str(datetime.now()))
+        log_filename = "battle_log.json"
         try:
             self.log_file = open(os.path.join(LOG_DIRNAME, log_filename), "w")
         except IOError:

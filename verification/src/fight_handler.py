@@ -19,6 +19,14 @@ from tools.distances import euclidean_distance
 
 logger = logging.getLogger(__name__)
 
+def gen_xy_pos(position):
+    if not position:
+        return position
+    return {
+        'x': position[0],
+        'y': position[1]
+    }
+
 
 class FightHandler(BaseHandler):
     """
@@ -68,15 +76,14 @@ class FightHandler(BaseHandler):
                 time - time is out
         """
         self.players = {}
-        self.codes = {}
         self.is_stream = True
         self.battle_log = {
             OUTPUT.INITIAL_CATEGORY: {
-                OUTPUT.BUILDINGS: [],
-                OUTPUT.OBSTACLES: [],
-                OUTPUT.UNITS: [],
-                OUTPUT.CRAFTS: [],
-                OUTPUT.PLAYERS: []
+                OUTPUT.BUILDINGS: {},
+                OUTPUT.OBSTACLES: {},
+                OUTPUT.UNITS: {},
+                OUTPUT.CRAFTS: {},
+                OUTPUT.PLAYERS: {}
             },
             OUTPUT.FRAME_CATEGORY: [],
             OUTPUT.RESULT_CATEGORY: {}
@@ -110,21 +117,23 @@ class FightHandler(BaseHandler):
 
         self._total_events_sent = 1
 
-        self.setup_usercodes(self.initial_data['codes'])
+        self.codes = self.initial_data[INITIAL.CODES]
+        self.setup_usercodes(self.initial_data[INITIAL.CODES])
 
-    def setup_usercodes(self, codes):
-        for item in codes:
-            username = item['id'].split('/')[0]
-            filename = os.path.join(FOLDER_CODES, item['id'])
-            dirname = os.path.dirname(filename)
-            os.makedirs(dirname, mode=0o700, exist_ok=True)
-            shutil.chown(dirname, user=username)
-            
-            with open(filename, mode='w', encoding='utf-8') as fh:
-                fh.write(item['code'])
+    def setup_usercodes(self, players):
+        for player_id, codes in players.items():
+            for name, source in codes.items():
+                username = 'player' + player_id
+                filename = os.path.join(FOLDER_CODES, username, name)
+                dirname = os.path.dirname(filename)
+                os.makedirs(dirname, mode=0o700, exist_ok=True)
+                shutil.chown(dirname, user=username)
+                
+                with open(filename, mode='w', encoding='utf-8') as fh:
+                    fh.write(source)
 
-            shutil.chown(filename, user=username)
-            os.chmod(filename, 0o700)
+                shutil.chown(filename, user=username)
+                os.chmod(filename, 0o700)
 
 
 
@@ -203,8 +212,7 @@ class FightHandler(BaseHandler):
         # in that case we can use it before start
         self.players = {p['id']: p for p in self.initial_data[PLAYER.KEY]}
         self.players[-1] = {"id": -1}
-        for code_data in self.initial_data[INITIAL.CODES]:
-            self.codes[code_data["id"]] = code_data
+
 
         self.map_size = self.initial_data[INITIAL.MAP_SIZE]
         self.rewards = self.initial_data.get(INITIAL.REWARDS, {})
@@ -271,6 +279,7 @@ class FightHandler(BaseHandler):
         unit[ATTRIBUTE.OPERATING_CODE] = craft_data[ATTRIBUTE.OPERATING_CODE]
         unit_position = craft.units_position.pop()
         unit[ATTRIBUTE.COORDINATES] = unit_position
+
         unit[ATTRIBUTE.TILE_POSITION] = unit_position[:]
         unit[ATTRIBUTE.ROLE] = ROLE.UNIT
         unit[ATTRIBUTE.CRAFT_ID] = craft.craft_id
@@ -453,19 +462,18 @@ class FightHandler(BaseHandler):
         }
 
     def _log_initial_unit(self, unit):
-        log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.UNITS]
-        log.append({
+        self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.UNITS][unit.id] = {
             OUTPUT.ITEM_ID: unit.id,
-            OUTPUT.TILE_POSITION: unit.tile_position,
+            OUTPUT.TILE_POSITION: gen_xy_pos(unit.tile_position),
             OUTPUT.ITEM_TYPE: unit.item_type,
             OUTPUT.PLAYER_ID: unit.player[PLAYER.ID],
             OUTPUT.PLAYER_ID_DEP: unit.player[PLAYER.ID]
-        })
+        }
 
     def _log_initial_building(self, building):
         log_record = {
             OUTPUT.ITEM_ID: building.id,
-            OUTPUT.TILE_POSITION: building.tile_position,
+            OUTPUT.TILE_POSITION: gen_xy_pos(building.tile_position),
             OUTPUT.ITEM_TYPE: building.item_type,
             OUTPUT.SIZE: building.base_size,
             OUTPUT.ITEM_STATUS: building.item_status,
@@ -473,8 +481,7 @@ class FightHandler(BaseHandler):
             OUTPUT.PLAYER_ID: building.player[PLAYER.ID],
             OUTPUT.PLAYER_ID_DEP: building.player[PLAYER.ID]
         }
-        log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.BUILDINGS]
-        log.append(log_record)
+        self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.BUILDINGS][building.id] = log_record
         return log_record
 
     def _log_initial_flag_stock(self, building):
@@ -482,30 +489,27 @@ class FightHandler(BaseHandler):
         log[OUTPUT.FLAG_SLUG] = building.player[PLAYER.ENV_NAME]
 
     def _log_initial_obstacle(self, obstacle):
-        log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.OBSTACLES]
-        log.append({
-            OUTPUT.TILE_POSITION: obstacle.tile_position,
+        self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.OBSTACLES][obstacle.id] = {
+            OUTPUT.TILE_POSITION: gen_xy_pos(obstacle.tile_position),
             OUTPUT.SIZE: obstacle.base_size,
             OUTPUT.ID: obstacle.id,
-        })
+        }
 
     def _log_initial_craft(self, craft):
-        log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.CRAFTS]
-        log.append({
+        self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.CRAFTS][craft.id] = {
             OUTPUT.ITEM_ID: craft.id,
-            OUTPUT.TILE_POSITION: craft.tile_position,
+            OUTPUT.TILE_POSITION: gen_xy_pos(craft.tile_position),
             OUTPUT.ITEM_TYPE: craft.item_type,
             OUTPUT.ITEM_LEVEL: craft.level,
             OUTPUT.PLAYER_ID: craft.player[PLAYER.ID],
             OUTPUT.PLAYER_ID_DEP: craft.player[PLAYER.ID]
-        })
+        }
 
     def _log_initial_player(self, player):
-        log = self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.PLAYERS]
-        log.append({
+        self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.PLAYERS][player[PLAYER.ID]] = {
             OUTPUT.ID: player[PLAYER.ID],
             OUTPUT.USERNAME: player.get(PLAYER.USERNAME, str(player[PLAYER.ID]))
-        })
+        }
 
     def _get_battle_snapshot(self):
         snapshot = []
@@ -514,7 +518,7 @@ class FightHandler(BaseHandler):
                 continue
             item_info = {
                 OUTPUT.ITEM_ID: item.id,
-                OUTPUT.TILE_POSITION: (item.coordinates if item.role == ROLE.UNIT
+                OUTPUT.TILE_POSITION: gen_xy_pos(item.coordinates if item.role == ROLE.UNIT
                                        else item.tile_position),
                 OUTPUT.HIT_POINTS_PERCENTAGE: item.get_percentage_hit_points(),
                 OUTPUT.ITEM_STATUS: item.get_action_status()

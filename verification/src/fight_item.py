@@ -74,8 +74,12 @@ class FightItem(Item):
         self.one_action = []
         self.charging = 0
 
-        self.code = self._fight_handler.codes.get(item_data.get(ATTRIBUTE.OPERATING_CODE))
-        self.code_opts = item_data.get(ATTRIBUTE.OPERATING_CODE_OPTS, {})
+        if ATTRIBUTE.OPERATING_CODE in item_data:
+            self.code = self._fight_handler.codes[str(self.player_id)][item_data[ATTRIBUTE.OPERATING_CODE]]
+            self.code_opts = item_data.get(ATTRIBUTE.OPERATING_CODE_OPTS, {})
+        else:
+            self.code_opts = self.code = None
+
         self._initial = item_data
         self._env = None  # ??
         self._state = None  # dict of current FightItem state
@@ -319,8 +323,7 @@ class FightItem(Item):
         if not self.is_executable:
             return
         controller = self._fight_handler._referee.environments_controller
-        self._env = yield controller.get_environment(self.code.get('env_name',
-                                                                   self.player[PLAYER.ENV_NAME]),
+        self._env = yield controller.get_environment(self.player[PLAYER.ENV_NAME],
                                                      on_stdout=self.stdout,
                                                      on_stderr=self.stderr)
         self._env.ENV_CONFIG = {
@@ -330,7 +333,7 @@ class FightItem(Item):
         }
         env_data = self._fight_handler.get_env_data()
         my_data = self._fight_handler.get_my_data(self.id)
-        result = yield self._env.run_code(self.code["code"], env_data, my_data)
+        result = yield self._env.run_code(self.code, env_data, my_data)
         while True:
             if result is not None:
                 status = result.pop('status')

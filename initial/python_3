@@ -1,38 +1,107 @@
-from battle_mocks import *
-from battle_missions.utils import example as mission
-
-# For example
-# from battle_missions.campaigns.starter import lvl1_easy_target as mission
-
-# Uncomment line bellow in case you want to use JS to attack
-# mission.MISSION_DATA['players'][1]['env_name'] = 'js_node'
-
 ATTACKER_CODE = """
 from battle import commander
-unit_client = commander.Client()
+craft_client = commander.CraftClient()
+craft_client.do_land_units()
+def unit_landed(data):
+    unit_client = commander.UnitClient(data['id'])
+    #unit_client.do_teleport([30, 24])
+    def search_and_destroy(data=None):
+        if data:
+            print('IM IDLE', data)
+        enemy = unit_client.ask_nearest_enemy()
+        unit_client.do_attack(enemy['id'])
+        unit_client.when_im_idle(search_and_destroy)
 
+    search_and_destroy()
 
-def search_and_destroy(data=None, *args, **kwargs):
-    enemy = unit_client.ask_nearest_enemy()
-    unit_client.do_attack(enemy['id'])
-    unit_client.when_item_destroyed(enemy['id'], search_and_destroy)
+craft_client.when_unit_landed(unit_landed)
 
-search_and_destroy()
 """
 
-ATTACKERS = [
-    # !!! craft_id should be unique
-    craft(level=1, unit=infantry_bot(level=1), unit_quantity=4,
-          player_id=1, code_id=0, craft_id=1),
-    craft(level=1, unit=heavy_bot(level=1), unit_quantity=1,
-          player_id=1, code_id=0, craft_id=2),
-    craft(level=1, unit=rocket_bot(level=1), unit_quantity=2,
-          player_id=1, code_id=0, craft_id=3)
-]
+DEF_CODE_01 = """
+from battle import commander
 
-PLAYERS = mission.MISSION_DATA
+tower_client = commander.Client()
 
-PLAYERS['map_elements'] += ATTACKERS
 
-# !!! code ids from 1000 to 10000 are bound for predefined codes from battle_mission
-PLAYERS['codes'].append({'code': ATTACKER_CODE, 'id': 0})
+def search_next_target(data, **kwargs):
+    enemies = tower_client.ask_enemy_items_in_my_firing_range()
+    if enemies:
+        unit_in_firing_range(enemies[0])
+    else:
+        tower_client.when_enemy_in_range(unit_in_firing_range)
+
+
+def unit_in_firing_range(data, **kwargs):
+    tower_client.attack_item(data['id'])
+    tower_client.when_im_idle(search_next_target)
+
+tower_client.when_enemy_in_range(unit_in_firing_range)
+"""
+
+PLAYERS = {'codes':{
+    '0': {
+      'def_code.py': DEF_CODE_01,
+      },
+    '1': {
+      'attacker.py':ATTACKER_CODE,
+      },
+  },
+ 'is_stream': True,
+ 'map_elements': [{'level': 1,
+                   'player_id': 0,
+                   'status': 'idle',
+                   'tile_position': [20, 18],
+                   'type': 'commandCenter'},
+                  {'code': 'def_code.py',
+                   'level': 5,
+                   'player_id': 0,
+                   'status': 'idle',
+                   'tile_position': [21, 23],
+                   'type': 'sentryGun'},
+                  {'code': 'def_code.py',
+                   'level': 5,
+                   'player_id': 0,
+                   'status': 'idle',
+                   'tile_position': [25, 23],
+                   'modules': [
+                      'u.rateOfFire.lvl1',
+                      'u.fireRange.lvl1'
+                   ],
+                   'type': 'sentryGun'},
+                  {'level': 2,
+                   'player_id': 0,
+                   'status': 'idle',
+                   'tile_position': [25, 19],
+                   'type': 'crystaliteFarm'},
+                  {'code': 'attacker.py',
+                   'craft_id': 1,
+                   'level': 1,
+                   'player_id': 1,
+                   'type': 'craft',
+                   'modules': [],
+                   'unit': {'level': 3,
+                            'type': 'infantryBot'},
+                   'unit_quantity': 3},
+                  {'code': 'attacker.py',
+                   'craft_id': 2,
+                   'level': 1,
+                   'player_id': 1,
+                   'type': 'craft',
+                   'unit': {'level': 1,
+                            'type': 'heavyBot'},
+                   'unit_quantity': 1},
+                  {'code': 'attacker.py',
+                   'craft_id': 3,
+                   'level': 1,
+                   'player_id': 1,
+                   'type': 'craft',
+                   'unit': {'level': 3,
+                            'type': 'rocketBot'},
+                   'unit_quantity': 2},
+                   ],
+ 'map_size': [40, 40],
+ 'players': [{'defeat': ['center'], 'env_name': 'python_3', 'id': 0},
+             {'defeat': ['units', 'time'], 'env_name': 'python_3', 'id': 1}],
+ 'rewards': {'adamantite': 400, 'crystalite': 150},
+ 'time_limit': 30}
