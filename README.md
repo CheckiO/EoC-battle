@@ -4,15 +4,15 @@ Battle is part of the project Empire of Code. The same code is using to run batt
 
 In order to run the buttle you should do the following steps
 
- - *Install* checkio-client
+ - **Install** checkio-client
 
     pip install checkio-client
 
- - *Configure* it for domain epy (In case you will be asked about "key" just put a random numer in it. It is not important at this stage)
+ - **Configure** it for domain epy (In case you will be asked about "key" just put a random numer in it. It is not important at this stage)
 
     checkio --domain epy config
 
- - The next step is to *build buttle* using checkio client. In order to do so you will need a docker installed.
+ - The next step is to **build buttle** using checkio client. In order to do so you will need a docker installed.
 
     checkio eoc-get-git /path/to/battle/folder battle
 
@@ -20,7 +20,7 @@ you can also use github path
 
     checkio eoc-get-git https://github.com/CheckiO/EoC-battle battle
 
-- The last step is actually *run the battle*. Running buttle requires configuration file for the battle (or battle setup). It describes what kind of troops and buildings are on the battle now and source code they are using to run the battle. The configuration file is .py file with dict PLAYERS in it.
+- The last step is actually **run the battle**. Running buttle requires configuration file for the battle (or battle setup). It describes what kind of troops and buildings are on the battle now and source code they are using to run the battle. The configuration file is .py file with dict PLAYERS in it.
 
     checkio eoc-battle battle /path/to/config/file/battle.py
 
@@ -60,8 +60,151 @@ But one more option here is to link a balance folder during the run process
  - *verification/src/modules.py* - describe modules that can be used by items.
  - *verification/src/actions/* - items that can be controlled by code are using actions module 
 
+## Step by step running a battle
+
+Let's take as an example the following config
+
+	ATTACKER_CODE = """
+	from battle import commander
+	craft_client = commander.CraftClient()
+	craft_client.do_land_units()
+	def unit_landed(data):
+	    unit_client = commander.UnitClient(data['id'])
+	    #unit_client.do_teleport([30, 24])
+	    def search_and_destroy(data=None):
+	        if data:
+	            print('IM IDLE', data)
+	        enemy = unit_client.ask_nearest_enemy()
+	        unit_client.do_attack(enemy['id'])
+	        unit_client.when_im_idle(search_and_destroy)
+	    search_and_destroy()
+	craft_client.when_unit_landed(unit_landed)
+	"""
+	DEF_CODE_01 = """
+	from battle import commander
+	tower_client = commander.Client()
+	def search_next_target(data, **kwargs):
+	    enemies = tower_client.ask_enemy_items_in_my_firing_range()
+	    if enemies:
+	        unit_in_firing_range(enemies[0])
+	    else:
+	        tower_client.when_enemy_in_range(unit_in_firing_range)
+	def unit_in_firing_range(data, **kwargs):
+	    tower_client.attack_item(data['id'])
+	    tower_client.when_im_idle(search_next_target)
+	tower_client.when_enemy_in_range(unit_in_firing_range)
+	"""
+	PLAYERS = {'codes':{
+	    '0': {
+	      'def_code.py': DEF_CODE_01,
+	      },
+	    '1': {
+	      'attacker.py':ATTACKER_CODE,
+	      },
+	  },
+	 'is_stream': True,
+	 'map_elements': [{'level': 1,
+	                   'player_id': 0,
+	                   'status': 'idle',
+	                   'tile_position': [20, 18],
+	                   'type': 'commandCenter'},
+	                  {'code': 'def_code.py',
+	                   'level': 5,
+	                   'player_id': 0,
+	                   'status': 'idle',
+	                   'tile_position': [21, 23],
+	                   'type': 'sentryGun'},
+	                  {'code': 'def_code.py',
+	                   'level': 5,
+	                   'player_id': 0,
+	                   'status': 'idle',
+	                   'tile_position': [25, 23],
+	                   'modules': [
+	                      'u.rateOfFire.lvl1',
+	                      'u.fireRange.lvl1'
+	                   ],
+	                   'type': 'sentryGun'},
+	                  {'level': 2,
+	                   'player_id': 0,
+	                   'status': 'idle',
+	                   'tile_position': [25, 19],
+	                   'type': 'crystaliteFarm'},
+	                  {'code': 'attacker.py',
+	                   'craft_id': 1,
+	                   'level': 1,
+	                   'player_id': 1,
+	                   'type': 'craft',
+	                   'modules': [],
+	                   'unit': {'level': 3,
+	                            'type': 'infantryBot'},
+	                   'unit_quantity': 3},
+	                  {'code': 'attacker.py',
+	                   'craft_id': 2,
+	                   'level': 1,
+	                   'player_id': 1,
+	                   'type': 'craft',
+	                   'unit': {'level': 1,
+	                            'type': 'heavyBot'},
+	                   'unit_quantity': 1},
+	                  {'code': 'attacker.py',
+	                   'craft_id': 3,
+	                   'level': 1,
+	                   'player_id': 1,
+	                   'type': 'craft',
+	                   'unit': {'level': 3,
+	                            'type': 'rocketBot'},
+	                   'unit_quantity': 2},
+	                   ],
+	 'map_size': [40, 40],
+	 'players': [{'defeat': ['center'], 'env_name': 'python_3', 'id': 0},
+	             {'defeat': ['units', 'time'], 'env_name': 'python_3', 'id': 1}],
+	 'rewards': {'adamantite': 400, 'crystalite': 150},
+	 'time_limit': 30}
+
+in this config file worth to point out on one key first, called "is_stream" - if it is True - then you will see the results in real time, if False - all the results will be saved in one file
+
+Running process of any missions for EoC (including Battle) starts with launching two containers. One is for referee and another one is for interface
+
+*interfaces/checkio_cli/src/interface.py FightHandler* receives a source code of your config file, extracts dicts PLAYERS from it and pass it to referee using API.
+
+*verification/src/referee.py Referee* is the main referee class, which also includes handlers. In our case we have only once handler battle.
+
+*verification/src/fight_handler.py FightHandler* is main handler for battle. In the handler you can find the whole information of the current battle. The battle starts with method *FightHandler.start*
+
+The main goal of method *start* is to generate dict *self.fighters* {object.id: FightItem} and starts all generated FightItems.
+
+*verification/src/fight_item.py FightItem.start* is for executable Items (It means Items that has code). It launches the code using *BattleEnvironmentsController* and store it in *self._env*
+
+*verification/src/environment.py BattleEnvironmentsController* is responsible for reading stdin and stdout from the clients code, sending commands to client and receiving commands from it.
+
+*verification/src/fight_item.py FightItem.handle_result* FightItem.starts starts endles loop the receives commands from clients code and use it in this function.
+
+*verification/src/fight_item.py FightItem.init_handlers* Client can send only 3 kinds of commands:
+
+ - set_action - set command to a unit. For Example 'attack' - a command, that will be set for unit, and unit will do everything for attacking. Action usually something that takes several frames to finish. 
+ - subscribe - subscribe to a specific event in the FightHandler. 
+ - command - send a specific command to a unit. Command is something that executes right away and on the current frame.
+
+ For actions and commands responsable object of ItemActions. When FightItem initiates it also creates object `self._actions_handlers` for different type of FightItem we create different ItemActions. All the available actions are listed in *verification/src/actions/*
+
+ Actions and commands are working in pretty much the same way. The only difference between action and command is that result of parsing action will be saved to attribute `self.action` for FightItem, and when the same object of ItemActions will be process data from `self.action` during frame calculation. The result of this processing will be stored in `self._state` of FightItem and later this data will be shown to user in order to animate unit (or building)
+
+ Subscription. Since we covered first two, let's describe subscriptions as well.
+
+*verification/src/fight_handler.py FightHandler.subscribe(event_name, item_id, lookup_key, data)* is responsable for subscription. lookup_key is a unique key for client. This key is needed to recognize event on the senrver side when it raise.
+
+Every new subscription will be added into dict EVENTS of object FightHandler. It is dict of list {event name : list of subscriptions}. That is pretty much it. Usually in the end on frame calculation we have list of function which starts with `_send` those functions are using function `_send_event_` in order to raise an event to the subscribers
+
+*verification/src/fight_handler.py FightHandler._send_event(event_name, check_function, data_function)* the function simply go through all the subscriptions for event name, if check_function returns True - data function generates data for the receiver and send it back. check_function and data_function receive two argumants - event (dict with data that was setted up during event setup) receiver (fight item for testing)
+
+One important thing. Every time when system sends event data it also send information about the map and units on the map. And detail information about reveiver.
+
 
 ## Golosary
 
- - *battle* - one execution of the referee.
- - *player* - group of units and buildings can be controled by player. Usualy two players can be in the battle
+ - **battle** - one execution of the referee.
+ - **player** - group of units and buildings can be controled by player. Usualy two players can be in the battle
+ - **interface** - scripts responcable for visualisation process of running referee.
+ - **referee** - the main script for controlling and verefication battle
+ - **executable item** - FightItem that has a code assigned to it
+ - **frame** - is like a move, but computed in a real time. 

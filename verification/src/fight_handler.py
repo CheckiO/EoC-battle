@@ -569,6 +569,8 @@ class FightHandler(BaseHandler):
         """
             unsubscribe item from all events
         """
+        # TODO: unsubscribe function can be used on cliet side, where it is just remove lookup_key
+        
         # WHY: don't we call this method unsubscribe_item or unsubscribe_all
         # because if we have subscribe method working in one way then
         # unsubscribe should work in opposite
@@ -577,17 +579,13 @@ class FightHandler(BaseHandler):
                 if event['receiver_id'] == item.id:
                     events.remove(event)
 
-    def _send_event(self, event_item_id, event_name, check_function, data_function):
+    def _send_event(self, event_name, check_function, data_function):
         # TODO: The function should be remove for overcompexity
-        if event_item_id:
-            event_item = self.fighters.get(event_item_id)
-        else:
-            event_item = None
         events = self.EVENTS.get(event_name, [])
         for event in events[:]:
             receiver = self.fighters[event['receiver_id']]
-            if check_function(event, event_item, receiver):
-                data_to_event = data_function(event, event_item, receiver)
+            if check_function(event, receiver):
+                data_to_event = data_function(event, receiver)
                 data_to_event.update({
                     ENV.DATA: self.get_env_data(),
                     ENV.MY_DATA: self.get_my_data(event['receiver_id'])
@@ -595,14 +593,6 @@ class FightHandler(BaseHandler):
                 receiver.send_event(lookup_key=event['lookup_key'],
                                     data=data_to_event)
                 events.remove(event)
-
-    @staticmethod
-    def _data_event_id(event, event_item, receiver):
-        return {'id': event_item.id}
-
-    @staticmethod
-    def _check_event_equal_receiver(event, event_item, receiver):
-        return receiver.id == event_item.id
 
     def battle_fighters(self):
         for item in self.fighters.values():
@@ -683,57 +673,57 @@ class FightHandler(BaseHandler):
             Send Time at specific time
         """
 
-        def check_function(event, event_item, receiver):
+        def check_function(event, receiver):
             return self.current_game_time >= event['data']['time']
 
-        def time_data(event, event_item, receiver):
+        def time_data(event, receiver):
             return {'time': event['data']['time']}
 
-        self._send_event(None, 'time', check_function, time_data)
+        self._send_event('time', check_function, time_data)
 
     def _send_message(self):
         '''
             Send message to a specific unit
         '''
-        def check_function(event, event_item, receiver):
+        def check_function(event, receiver):
             return receiver.messages
 
-        def message_data(event, event_item, receiver):
+        def message_data(event, receiver):
             mess = receiver.pop_last_message()
             return {'message': mess[0], 'from_id': mess[1]}
 
-        self._send_event(None, 'message', check_function, message_data)
+        self._send_event('message', check_function, message_data)
 
     def _send_idle(self):
-        def check_function(event, event_item, receiver):
+        def check_function(event, receiver):
             return (
                     event['data']['id'] in self.fighters and
                     self.fighters[event['data']['id']]._state.get('action') == 'idle'
             )
 
-        def message_data(event, event_item, receiver):
+        def message_data(event, receiver):
             return {'id': event['data']['id']}
 
-        self._send_event(None, 'idle', check_function, message_data)
+        self._send_event('idle', check_function, message_data)
 
     def _send_dead(self):
 
-        def check_function(event, event_item, receiver):
+        def check_function(event, receiver):
             fighter = receiver._fight_handler.fighters.get(event['data']['id'])
             return fighter is None or fighter.is_dead
 
-        def data_id(event, event_item, receiver):
+        def data_id(event, receiver):
             return {'id': event['data']['id']}
 
-        self._send_event(None, 'death', check_function, data_id)
+        self._send_event('death', check_function, data_id)
 
     def _send_unit_landed(self, craft_id, unit_id):
 
-        def check_function(event, event_item, receiver):
+        def check_function(event, receiver):
             return event['data']['craft_id'] == craft_id
 
-        def data_id(event, event_item, receiver):
+        def data_id(event, receiver):
             return self.fighters[unit_id].info
 
-        self._send_event(None, 'unit_landed', check_function, data_id)
+        self._send_event('unit_landed', check_function, data_id)
 
