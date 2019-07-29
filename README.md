@@ -31,11 +31,11 @@ or you can use a generated default battle file in your solutions folder
 
 ## Balance
 
-Battle configuration file contains information about units and buildings on the battle field. For example it says that we have a Sentry Gun level 5 on the battle field. But in order to run the battle we need to know what stats level 5 has, how many hit-points Sentry  Gun level 5 has etc..
+Battle configuration file contains information about units and buildings on the battle field. For example it says that we have a Sentry Gun level 5 on the battle field. But in order to run the battle we need to know what stats level 5 has, how many hit-points Sentry Gun level 5 has etc..
 
 Information about all stats of all buildings, units, modules atc we called *balace* and it includes into the battle docker image during your battle build. Building process using repository https://github.com/CheckiO/eoc-balance . The same repository is Empire of Code is using.
 
-If balance is changed you need to rebuild your battle using command `checkio eoc-get-git`
+If balance is changed you need to rebuild your battle using command `checkio eoc-get-git ...`
 
 But one more option here is to link a balance folder during the run process
 
@@ -48,14 +48,14 @@ But one more option here is to link a balance folder during the run process
  - *interfaces* - folder is responsable for showing battle result 
  - *interfaces/checkio_cli* - showing battle result for checkio-client
  - *verification* - running the battle
- - *envs* - every building has a source code. This folder is using for running this source code for different interpretators
+ - *envs* - some buildings have a source code. This folder is using for running this source code for different interpretators
  - *envs/python_3/main.py* - script that runs users code
- - *envs/python_3/battle* - battle module that can be improted from users source-code in order to send commands to verification server
+ - *envs/python_3/battle* - battle module that can be improted from users source-code in order to send commands to referee
  - *verification/src* - referee. All verefication process starts here.
  - *verification/src/referee.py* - verification proccess starts in this module
  - *verification/src/enviroment.py* - this file is using for network protocol
  - *verification/src/fight_handler.py* - the main handler which is using in referee for controlling battle
- - *verification/src/fight_item.py* - items are participatiung on the battle. Flagman, Unit, CoommandCenter those are Items on the battle
+ - *verification/src/fight_item.py* - items are participating on the battle. Flagman, Unit, CoommandCenter those are Items on the battle
  - *verification/src/fight_logger.py* - module that responsable for sending battle results to use
  - *verification/src/fight_events.py* - module that is sending events and subscribing on events
  - *verification/src/sub_items.py* - items, during the battle, can generate subitem. For example - rocket is an subitem of RocketTower.
@@ -64,7 +64,7 @@ But one more option here is to link a balance folder during the run process
 
 ## Step by step running a battle verification process (referee)
 
-Let's take as an example the following config
+Let's take as an example the following battle config
 
 	ATTACKER_CODE = """
 	from battle import commander
@@ -163,7 +163,7 @@ Let's take as an example the following config
 
 One important key I would like to point right away is "is_stream" key. If it is True - then you will see the results in real time, if False - all the results will be saved in one file
 
-Running process of any missions for EoC (including Battle) starts with launching two containers. One is for referee and another one is for interface
+(Running process of any missions for EoC (including Battle) starts with launching two containers. One is for referee and another one is for interface)
 
 *interfaces/checkio_cli/src/interface.py FightHandler* receives a source code of your config file, extracts dicts PLAYERS from it and pass it to referee using API.
 
@@ -182,10 +182,10 @@ The main goal of method *start* is to generate dict *self.fighters* {object.id: 
 *verification/src/fight_item.py FightItem.init_handlers* Client can send only 3 kinds of commands:
 
  - set_action - set command to a unit. For Example 'attack' - a command, that will be set for unit, and unit will do everything for attacking (moving to a target, charging and fire). Action is usually something that takes several frames to finish. 
- - subscribe - subscribe to a specific event in the FightHandler. 
  - command - send a specific command to a unit. Command is something that executes right away and on the current frame.
+ - subscribe - subscribe to a specific event in the FightHandler. 
 
-*verification/src/actions/* ItemActions is responsable for actions and commands. When FightItem initiates it also creates object `self._actions_handlers` for different type of FightItem we create different ItemActions. All the available actions are listed in *verification/src/actions/*
+*verification/src/actions/* ItemActions is responsable for actions and commands. When FightItem initiates it also creates object `self._actions_handlers` for different type of FightItem we create different classes bases ItemActions. All the available classes are listed in *verification/src/actions/*
 
 Actions and commands are working in pretty much the same way. The only difference between action and command is that result of parsing action will be saved to attribute `self.action` for FightItem, and when the same object of ItemActions will be process data from `self.action` during frame calculation. The result of this processing will be stored in `self._state` of FightItem and later this data will be shown to user in order to animate unit (or building)
 
@@ -193,11 +193,7 @@ Subscription. Since we covered first two, let's describe subscriptions as well.
 
 *verification/src/fight_handler.py FightHandler.subscribe(event_name, item_id, lookup_key, data)* is responsable for subscription. lookup_key is a unique key for client. This key is needed to recognize event on the client side when it raise.
 
-*verification/src/fight_events.py FightEvent* assigned to FightHandler through the attribute `self.event`. Function `setup` configures all the event types. Function `add_checker` has 3 arguments: event_name - unique name of the event, checker - function that checkes is the given FightItem is ready to receive a given event_data, and data - function that generates data for raised event. All the events are checking in the end of frame calculation.
-
-Every new subscription will be added into dict EVENTS of object FightHandler. It is dict of list {event name : list of subscriptions}. That is pretty much it. Usually in the end on frame calculation we have list of function which starts with `_send` those functions are using function `_send_event_` in order to raise an event to the subscribers
-
-*verification/src/fight_handler.py FightHandler._send_event(event_name, check_function, data_function)* the function simply go through all the subscriptions for event name, if check_function returns True - data function generates data for the receiver and send it back. check_function and data_function receive two argumants - event (dict with data that was setted up during event setup) receiver (fight item for testing)
+*verification/src/fight_events.py FightEvent* assigned to FightHandler through the attribute `self.event`. Function `setup` configures all the event types. Function `add_checker` has 3 arguments: event_name - unique name of the event, checker - function that checkes is the given FightItem is ready to receive event using given event_data, and data - function that generates data for raised event. All the events are checking in the end of frame calculation.
 
 One important thing. Every time when system sends event data it also send information about the map and units on the map. And detail information about reveiver.
 
