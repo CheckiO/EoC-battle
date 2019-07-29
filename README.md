@@ -56,6 +56,7 @@ But one more option here is to link a balance folder during the run process
  - *verification/src/enviroment.py* - this file is using for network protocol
  - *verification/src/fight_handler.py* - the main handler which is using in referee for controlling battle
  - *verification/src/fight_item.py* - items are participatiung on the battle. Flagman, Unit, CoommandCenter those are Items on the battle
+ - *verification/src/fight_logger.py* - module that responsable for sending battle results to use
  - *verification/src/sub_items.py* - items, during the battle, can generate subitem. For example - rocket is an subitem of RocketTower.
  - *verification/src/modules.py* - describe modules that can be used by items.
  - *verification/src/actions/* - items that can be controlled by code are using actions module 
