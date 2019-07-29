@@ -57,6 +57,7 @@ But one more option here is to link a balance folder during the run process
  - *verification/src/fight_handler.py* - the main handler which is using in referee for controlling battle
  - *verification/src/fight_item.py* - items are participatiung on the battle. Flagman, Unit, CoommandCenter those are Items on the battle
  - *verification/src/fight_logger.py* - module that responsable for sending battle results to use
+ - *verification/src/fight_events.py* - module that is sending events and subscribing on events
  - *verification/src/sub_items.py* - items, during the battle, can generate subitem. For example - rocket is an subitem of RocketTower.
  - *verification/src/modules.py* - describe modules that can be used by items.
  - *verification/src/actions/* - items that can be controlled by code are using actions module 
@@ -190,7 +191,9 @@ Actions and commands are working in pretty much the same way. The only differenc
 
 Subscription. Since we covered first two, let's describe subscriptions as well.
 
-*verification/src/fight_handler.py FightHandler.subscribe(event_name, item_id, lookup_key, data)* is responsable for subscription. lookup_key is a unique key for client. This key is needed to recognize event on the senrver side when it raise.
+*verification/src/fight_handler.py FightHandler.subscribe(event_name, item_id, lookup_key, data)* is responsable for subscription. lookup_key is a unique key for client. This key is needed to recognize event on the client side when it raise.
+
+*verification/src/fight_events.py FightEvent* assigned to FightHandler through the attribute `self.event`. Function `setup` configures all the event types. Function `add_checker` has 3 arguments: event_name - unique name of the event, checker - function that checkes is the given FightItem is ready to receive a given event_data, and data - function that generates data for raised event. All the events are checking in the end of frame calculation.
 
 Every new subscription will be added into dict EVENTS of object FightHandler. It is dict of list {event name : list of subscriptions}. That is pretty much it. Usually in the end on frame calculation we have list of function which starts with `_send` those functions are using function `_send_event_` in order to raise an event to the subscribers
 

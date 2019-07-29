@@ -145,9 +145,11 @@ class FightLogger:
                 item_info[OUTPUT.DEMAGED] = item._state[ACTION.DEMAGED]
 
             if item.has_std(STD.OUT):
-                item_info[OUTPUT.STDOUT] = item.pull_std(STD.OUT)
+                item_info[OUTPUT.STDOUT] = item.get_std(STD.OUT)
             if item.has_std(STD.ERR):
-                item_info[OUTPUT.STDERR] = item.pull_std(STD.ERR)
+                item_info[OUTPUT.STDERR] = item.get_std(STD.ERR)
+
+            item.reset_std()
 
             if item.sub_items:
                 item_info[OUTPUT.SUBITEMS] = item.output_sub_items()
@@ -191,6 +193,9 @@ class StreamFightLogger(FightLogger):
             'current_game_time': self._fight_handler.current_game_time,
             'flagman': flagman and flagman.info
         })
+
+        for fighter in self.get_all_fighters():
+            fighter.reset_std()
 
 
     def done_battle(self, winner):

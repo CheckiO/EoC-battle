@@ -10,6 +10,7 @@ from checkio_referee.handlers.base import BaseHandler
 from fight_item import FightItem, CraftItem, FlagItem, UnitItem, MineItem, \
     DefPlatformItem
 from fight_logger import FightLogger, StreamFightLogger
+from fight_events import FightEvent
 
 from tools import precalculated, fill_square, grid_to_graph
 from consts import COORDINATE_EDGE_CUT, PERCENT_CENTER_AUTO_DEMAGE, FOLDER_CODES
@@ -79,6 +80,7 @@ class FightHandler(BaseHandler):
         """
         self.players = {}
         self.is_stream = True
+        self.event = FightEvent(self)
         
         self.map_size = (0, 0)
         self.map_grid = [[]]
@@ -210,6 +212,9 @@ class FightHandler(BaseHandler):
         else:
             self.log = FightLogger(self)
 
+        self.event.setup() # there are no specific reasons for setting up 
+                           # on start and not on init
+
         # WHY: can't we move an initialisation of players in the __init__ function?
         # in that case we can use it before start
         self.players = {p['id']: p for p in self.initial_data[PLAYER.KEY]}
@@ -292,9 +297,10 @@ class FightHandler(BaseHandler):
         self.fighters[fight_item.id] = fight_item
         fight_item.set_parent_id(craft.id)
         fight_item.set_state_idle()
+        fight_item.set_fflag('landed')
         craft.add_child_id(fight_item.id)
         self.log.initial_state_unit(fight_item)
-        self._send_unit_landed(craft.craft_id, fight_item.id)
+
 
     def generate_craft_place(self):
         width = self.map_size[1]
@@ -326,6 +332,7 @@ class FightHandler(BaseHandler):
         # because fighters might be changed during iterations
         for key, fighter in list(self.fighters.items()):
             #print('COMPUTE', fighter.id, fighter.coordinates, fighter.item_type, fighter.action, fighter._state)
+            fighter.reset_fflags()
             for sub_item in list(fighter.get_sub_items()):
                 sub_item.do_frame_action()
                 if sub_item.is_dead:
@@ -352,11 +359,8 @@ class FightHandler(BaseHandler):
         # TODO: Can be united in order to optimize
         #print('EVENTS IDLE', self.EVENTS['idle'])
         #print('EVENTS unit_landed', self.EVENTS['unit_landed'])
-        self._send_time()
-        self._send_message()
-        self._send_position()
-        self._send_idle()
-        self._send_dead()
+
+        self.event.check()
 
         winner = self.get_winner()
 
@@ -414,51 +418,15 @@ class FightHandler(BaseHandler):
             subscribe an FightItem with ID "item_id" on event "event_name" with data "data"
             and on item side it registered as lookup_key
         """
-        if event_name == "unsubscribe_all":
-            event_item = self.fighters[item_id]
-            self.unsubscribe(event_item)
-            return
-        if event_name not in self.EVENTS:
-            return
+
         subscribe_data = {
             'receiver_id': item_id,
             'lookup_key': lookup_key,
             'data': data
         }
-        event = self.EVENTS[event_name]
-        if subscribe_data in event:
-            return False
-        event.append(subscribe_data)
-        return True
-
-    def unsubscribe(self, item):
-        """
-            unsubscribe item from all events
-        """
-        # TODO: unsubscribe function can be used on cliet side, where it is just remove lookup_key
         
-        # WHY: don't we call this method unsubscribe_item or unsubscribe_all
-        # because if we have subscribe method working in one way then
-        # unsubscribe should work in opposite
-        for events in self.EVENTS.values():
-            for event in events[:]:
-                if event['receiver_id'] == item.id:
-                    events.remove(event)
-
-    def _send_event(self, event_name, check_function, data_function):
-        # TODO: The function should be remove for overcompexity
-        events = self.EVENTS.get(event_name, [])
-        for event in events[:]:
-            receiver = self.fighters[event['receiver_id']]
-            if check_function(event, receiver):
-                data_to_event = data_function(event, receiver)
-                data_to_event.update({
-                    ENV.DATA: self.get_env_data(),
-                    ENV.MY_DATA: self.get_my_data(event['receiver_id'])
-                })
-                receiver.send_event(lookup_key=event['lookup_key'],
-                                    data=data_to_event)
-                events.remove(event)
+        self.event.add_subscriptions(event_name, subscribe_data)
+        return True
 
     def battle_fighters(self):
         for item in self.fighters.values():
@@ -467,129 +435,4 @@ class FightHandler(BaseHandler):
             if item.is_dead:
                 continue
             yield item
-
-    def _send_position(self):
-        """
-            Go through all events and check intersections
-        """
-
-        events = self.EVENTS['im_in_area']
-        for event in events[:]:
-            receiver = self.fighters[event['receiver_id']]
-            distance = euclidean_distance(receiver.coordinates, event["data"]["coordinates"])
-            if distance < event["data"]["radius"]:
-                data_to_event = {
-                    ENV.DATA: self.get_env_data(),
-                    ENV.MY_DATA: self.get_my_data(event['receiver_id']),
-                    ATTRIBUTE.ID: receiver.id,
-                    "distance": distance
-                }
-                receiver.send_event(lookup_key=event['lookup_key'],
-                                    data=data_to_event)
-                events.remove(event)
-
-        events = self.EVENTS['enemy_in_my_firing_range']
-        for event in events[:]:
-            receiver = self.fighters[event['receiver_id']]
-            for event_item in self.get_battle_fighters():
-                if event_item.is_dead:
-                    continue
-                if receiver == event_item:
-                    continue
-                if event_item.player == receiver.player:
-                    continue
-                if not event_item.coordinates:
-                    continue
-                distance = euclidean_distance(receiver.coordinates, event_item.coordinates)
-                if distance - event_item.size / 2 > receiver.firing_range:
-                    continue
-
-                data_to_event = {
-                    ENV.DATA: self.get_env_data(),
-                    ENV.MY_DATA: self.get_my_data(event['receiver_id']),
-                    'id': event_item.id
-                }
-                receiver.send_event(lookup_key=event['lookup_key'],
-                                    data=data_to_event)
-                events.remove(event)
-                break
-
-        events = self.EVENTS['any_item_in_area']
-        for event in events[:]:
-            receiver = self.fighters[event['receiver_id']]
-            for event_item in self.battle_fighters():
-                if event_item.is_dead:
-                    continue
-                distance = euclidean_distance(event['data']['coordinates'], event_item.coordinates)
-                if distance > event['data']['radius']:
-                    continue
-
-                data_to_event = {
-                    ENV.DATA: self.get_env_data(),
-                    ENV.MY_DATA: self.get_my_data(event['receiver_id']),
-                    'id': event_item.id
-                }
-                receiver.send_event(lookup_key=event['lookup_key'],
-                                    data=data_to_event)
-                events.remove(event)
-                break
-
-    def _send_time(self):
-        """
-            Send Time at specific time
-        """
-
-        def check_function(event, receiver):
-            return self.current_game_time >= event['data']['time']
-
-        def time_data(event, receiver):
-            return {'time': event['data']['time']}
-
-        self._send_event('time', check_function, time_data)
-
-    def _send_message(self):
-        '''
-            Send message to a specific unit
-        '''
-        def check_function(event, receiver):
-            return receiver.messages
-
-        def message_data(event, receiver):
-            mess = receiver.pop_last_message()
-            return {'message': mess[0], 'from_id': mess[1]}
-
-        self._send_event('message', check_function, message_data)
-
-    def _send_idle(self):
-        def check_function(event, receiver):
-            return (
-                    event['data']['id'] in self.fighters and
-                    self.fighters[event['data']['id']]._state.get('action') == 'idle'
-            )
-
-        def message_data(event, receiver):
-            return {'id': event['data']['id']}
-
-        self._send_event('idle', check_function, message_data)
-
-    def _send_dead(self):
-
-        def check_function(event, receiver):
-            fighter = receiver._fight_handler.fighters.get(event['data']['id'])
-            return fighter is None or fighter.is_dead
-
-        def data_id(event, receiver):
-            return {'id': event['data']['id']}
-
-        self._send_event('death', check_function, data_id)
-
-    def _send_unit_landed(self, craft_id, unit_id):
-        print('SEND _send_unit_landed', craft_id, unit_id)
-        def check_function(event, receiver):
-            return event['data']['craft_id'] == craft_id
-
-        def data_id(event, receiver):
-            return self.fighters[unit_id].info
-
-        self._send_event('unit_landed', check_function, data_id)
 

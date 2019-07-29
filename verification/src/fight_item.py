@@ -103,6 +103,17 @@ class FightItem(Item):
         self.features = gen_features(item_data.get(ATTRIBUTE.MODULES, []))
         self._used_features = {}
         map_features(self.features, 'apply', self)
+        self.reset_fflags()
+        self.reset_std()
+
+    def reset_fflags(self):
+        self._frame_flags = {}
+
+    def set_fflag(self, name, value=True):
+        self._frame_flags[name] = value
+
+    def fflag(self, name):
+        return self._frame_flags.get(name)
 
     def add_one_action(self, name, data):
         self.one_action.append({
@@ -345,6 +356,12 @@ class FightItem(Item):
                     traceback.print_exc(file=sys.stderr)
             result = yield self._env.read_message()
 
+    def reset_std(self):
+        self._std = {
+            "out": [],
+            "err": []
+        }
+
     def stdout(self, connection_id, out):
         self._std[STD.OUT].append(out)
 
@@ -357,7 +374,7 @@ class FightItem(Item):
     def has_std(self, std_name):
         return bool(self._std[std_name])
 
-    def pull_std(self, std_name):
+    def get_std(self, std_name):
         data = "".join(self._std[std_name])
         self._std[std_name] = []
         return data
