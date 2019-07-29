@@ -45,74 +45,43 @@ class FightHandler(BaseHandler):
     ACCURACY_RANGE = 0.1
     UNITS_LANDING_PERIOD = 0.2
 
-    """
-    Each item of an EVENT must have next structure:
-    {
-        'receiver_id': <item_id>,
-        'lookup_key': <lookup_function_key>,
-        'data': <data_for_check_event>
-    }
-    """
-    EVENTS = {
-        'death': [],
-        'im_in_area': [],
-        'any_item_in_area': [],
-        'idle': [],
-        'enemy_in_my_firing_range': [],
-        'time': [],
-        'message': [],
-        'unit_landed': [],
-    }
-
+    
     def __init__(self, editor_data, editor_client, referee):
-        """
-            self.players is a dict and will be defined at the start of the game
-            where key is player ID and value is a dict
-            {
-                'id': 0,
-                'env_name': 'python_3',
-                'defeat': 'center'
-            }
-            defeat shows the rules for defeating current player
-                center - to loose a command center
-                units - to loose all the units
-                time - time is out
-        """
-        self.players = {}
-        self.is_stream = True
+        self.editor_client = editor_client 
+        self.initial_data = editor_data['battle_info']
+        self._referee = referee #referee.Referee
+
         self.event = FightEvent(self)
+        self.log = FightLogger(self)
+
+
+        self.players = {p['id']: p for p in self.initial_data[PLAYER.KEY]}
+        self.players[-1] = {"id": -1} # im not sure yet, why are we doing this
+        self.fighters = {} # {id: FigherItem}
         
-        self.map_size = (0, 0)
+        self.map_size = self.initial_data[INITIAL.MAP_SIZE]
+        self.time_limit = self.initial_data.get(INITIAL.TIME_LIMIT, float("inf"))
+        self.codes = self.initial_data[INITIAL.CODES]
+
+        # generated to optimize path finding algo
         self.map_grid = [[]]
         self.map_graph = {}
-        self.time_limit = float("inf")
         self.map_hash = 0
-        """
-            self.fighters is a dict of all available fighters on the map.
-            where key is an id of the fighter and value is an object of FightItem
-        """
-        self.fighters = {}
-
+        
+        
         self.current_frame = 0
         self.current_game_time = 0
-        self.initial_data = editor_data['battle_info']
-        self.rewards = {}
         self.defeat_reason = None
-
-        self.editor_client = editor_client
-        self._referee = referee
-
-        self.environment = None
-        self._is_stopping = None
-        self._stop_callback = None
 
         # FightItem for CommandCenter
         self.fi_center = None
 
-        self._total_events_sent = 1
-
-        self.codes = self.initial_data[INITIAL.CODES]
         self.setup_usercodes(self.initial_data[INITIAL.CODES])
+
+        # is using by referee
+        self._is_stopping = None 
+        self._stop_callback = None
+        self.environment = None
 
     def setup_usercodes(self, players):
         for player_id, codes in players.items():
@@ -195,10 +164,6 @@ class FightHandler(BaseHandler):
             'time_limit': self.time_limit
         }
 
-    def add_messages_to(self, message, ids, from_id):
-        for item_id in ids:
-            self.fighters[item_id].add_message(message, from_id)
-
     @gen.coroutine
     def send_editor_current_frame(self):
         self.editor_client.send_process({'type': 'frame', 'current': self.current_frame})
@@ -217,14 +182,7 @@ class FightHandler(BaseHandler):
 
         # WHY: can't we move an initialisation of players in the __init__ function?
         # in that case we can use it before start
-        self.players = {p['id']: p for p in self.initial_data[PLAYER.KEY]}
-        self.players[-1] = {"id": -1}
-
-
-        self.map_size = self.initial_data[INITIAL.MAP_SIZE]
-        self.rewards = self.initial_data.get(INITIAL.REWARDS, {})
-        self.strat_rewards = self.initial_data.get(INITIAL.STRAT_REWARDS, {})
-        self.time_limit = self.initial_data.get(INITIAL.TIME_LIMIT, float("inf"))
+        
         fight_items = []
         for item in sorted(self.initial_data[INITIAL.MAP_ELEMENTS], key=lambda a: a.get(PLAYER.PLAYER_ID, -1), reverse=True):
             player = self.players[item.get(PLAYER.PLAYER_ID, -1)]
@@ -309,12 +267,6 @@ class FightHandler(BaseHandler):
                      if not any(pos - 2 <= y <= pos + 2 for pos in craft_positions)]
         return [self.map_size[0], choice(available) if available else 0]
 
-    def inc_total_events_sent(self):
-        self._total_events_sent += 1
-
-    def reset_total_events_sent(self):
-        self._total_events_sent = 1
-
     def get_frame_time(self):
         # frame time can be variated depends on factors
         return self.FIRST_STEP_FRAME_TIME
@@ -356,10 +308,6 @@ class FightHandler(BaseHandler):
             fighter.run_all_one_actions()
             fighter.do_frame_action()
 
-        # TODO: Can be united in order to optimize
-        #print('EVENTS IDLE', self.EVENTS['idle'])
-        #print('EVENTS unit_landed', self.EVENTS['unit_landed'])
-
         self.event.check()
 
         winner = self.get_winner()
@@ -369,7 +317,6 @@ class FightHandler(BaseHandler):
             IOLoop.current().call_later(3, self.stop)
         else:
             IOLoop.current().call_later(self.get_frame_time(), self.compute_frame)
-            self.reset_total_events_sent()
 
     def count_unit_casualties(self):
         result = {craft.craft_id: {
@@ -427,6 +374,8 @@ class FightHandler(BaseHandler):
         
         self.event.add_subscriptions(event_name, subscribe_data)
         return True
+    def unsubscribe(self, fight_item):
+        self.event.unsubscribe_all(fight_item.id)
 
     def battle_fighters(self):
         for item in self.fighters.values():

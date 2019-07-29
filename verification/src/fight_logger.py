@@ -160,8 +160,7 @@ class FightLogger:
     def battle_result(self, winner_id):
         self.data[OUTPUT.RESULT_CATEGORY] = {
             OUTPUT.WINNER: winner_id,
-            OUTPUT.REWARDS: self._fight_handler.rewards,
-            OUTPUT.STRAT_REWARDS: self._fight_handler.strat_rewards,
+            OUTPUT.REWARDS: self._fight_handler.initial_data.get(INITIAL.REWARDS, {}),
             OUTPUT.CASUALTIES: self._fight_handler.count_unit_casualties(),
             OUTPUT.DEFEAT_REASON: self._fight_handler.defeat_reason
         }

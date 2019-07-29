@@ -61,12 +61,20 @@ class FightEvent:
             lambda event, receiver, res: res.info)
 
     def check(self):
+        """
+        Each item of an EVENT must have next structure:
+        {
+            'receiver_id': <item_id>,
+            'lookup_key': <lookup_function_key>,
+            'data': <data_for_check_event>
+        }
+        """
         fight_handler = self._fight_handler
 
-        from pprint import pprint
-        pprint(self.subscriptions)
-        print('-'*10)
-        pprint(list(map(lambda item: [item.id, item.craft_id, item.fflag('landed')], fight_handler.fighters.values())))
+        # from pprint import pprint
+        # pprint(self.subscriptions)
+        # print('-'*10)
+        # pprint(list(map(lambda item: [item.id, item.craft_id, item.fflag('landed')], fight_handler.fighters.values())))
 
         for event_name, subscriptions in self.subscriptions.items():
             if not subscriptions:
@@ -86,6 +94,15 @@ class FightEvent:
                     receiver.send_event(lookup_key=event['lookup_key'],
                                         data=data_to_event)
                     subscriptions.remove(event)
+
+    def unsubscribe_all(self, receiver_id):
+        for event_name, subscriptions in self.subscriptions.items():
+            if not subscriptions:
+                continue
+            for event in subscriptions[:]:
+                if receiver_id == event['receiver_id']:
+                    subscriptions.remove(event)
+
 
 
 

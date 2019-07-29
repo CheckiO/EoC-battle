@@ -94,7 +94,6 @@ class FightItem(Item):
             "out": [],
             "err": []
         }
-        self.messages =[]
         # every state has a key "action"
         # {'action': 'idle'}
         # {'action': 'dead'}
@@ -227,14 +226,6 @@ class FightItem(Item):
             self._fight_handler.demage_center(self)
         # if self._env:
         #     self._env.stop()
-
-    def add_message(self, message, from_id):
-        self.messages.append([message, from_id])
-
-    def pop_last_message(self):
-        if not self.messages:
-            return
-        return self.messages.pop(0)
 
     @property
     def is_dead(self):
@@ -413,14 +404,6 @@ class FightItem(Item):
             if from_self:
                 self._env.confirm()
 
-    def subscribe_validation_time(self, data):
-        if self.level < 2:
-            raise ActionValidateError("Unit level should be at least 2 to use time commands")
-
-    def subscribe_validation_message(self, data):
-        if self.level < 4:
-            raise ActionValidateError("Unit level should be at least 4 to use message commands")
-
     def method_subscribe(self, event, lookup_key, data):
         if hasattr(self, 'subscribe_validation_'+event):
             try:
@@ -448,7 +431,6 @@ class FightItem(Item):
             self.set_state_idle()
 
     def send_event(self, lookup_key, data):
-        self._fight_handler.inc_total_events_sent()
         self._env.send_event(lookup_key, data)
 
 class FlagItem(FightItem):
