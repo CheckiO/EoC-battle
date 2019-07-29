@@ -78,12 +78,12 @@ class CraftActions(BaseItemActions):
 
     def action_land_units(self, data):
         if self._item.land_unit():
-            print('LAND', self._item.craft_id, self._item.amount_units_in)
+            #print('LAND', self._item.craft_id, self._item.amount_units_in)
             return {
                 'action': 'land_units'
             }
         else:
-            print('DONE LANDING', self._item.craft_id, self._item.amount_units_in)
+            #print('DONE LANDING', self._item.craft_id, self._item.amount_units_in)
             return self._idle()
 
     def commands_init(self):

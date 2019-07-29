@@ -426,8 +426,8 @@ class FightItem(Item):
         try:
             self._state = self._actions_handlers.do_action(self.action)
         except ActionValidateError as e:
-            print('!!!ActionValidateError!!!', self.id, e, self.action )
-            print(self.info)
+            #print('!!!ActionValidateError!!!', self.id, e, self.action )
+            #print(self.info)
             self.set_state_idle()
 
     def send_event(self, lookup_key, data):

@@ -9,6 +9,8 @@ from checkio_referee.handlers.base import BaseHandler
 
 from fight_item import FightItem, CraftItem, FlagItem, UnitItem, MineItem, \
     DefPlatformItem
+from fight_logger import FightLogger, StreamFightLogger
+
 from tools import precalculated, fill_square, grid_to_graph
 from consts import COORDINATE_EDGE_CUT, PERCENT_CENTER_AUTO_DEMAGE, FOLDER_CODES
 from tools import ROLE, ATTRIBUTE, ACTION, DEFEAT_REASON, OUTPUT, STD,\
@@ -77,17 +79,7 @@ class FightHandler(BaseHandler):
         """
         self.players = {}
         self.is_stream = True
-        self.battle_log = {
-            OUTPUT.INITIAL_CATEGORY: {
-                OUTPUT.BUILDINGS: {},
-                OUTPUT.OBSTACLES: {},
-                OUTPUT.UNITS: {},
-                OUTPUT.CRAFTS: {},
-                OUTPUT.PLAYERS: {}
-            },
-            OUTPUT.FRAME_CATEGORY: [],
-            OUTPUT.RESULT_CATEGORY: {}
-        }
+        
         self.map_size = (0, 0)
         self.map_grid = [[]]
         self.map_graph = {}
@@ -213,7 +205,11 @@ class FightHandler(BaseHandler):
     @gen.coroutine
     def start(self):
         self.send_editor_current_frame()
-        self.is_stream = self.initial_data.get(INITIAL.IS_STREAM, True)
+        if self.initial_data.get(INITIAL.IS_STREAM, True):
+            self.log = StreamFightLogger(self)
+        else:
+            self.log = FightLogger(self)
+
         # WHY: can't we move an initialisation of players in the __init__ function?
         # in that case we can use it before start
         self.players = {p['id']: p for p in self.initial_data[PLAYER.KEY]}
@@ -244,7 +240,7 @@ class FightHandler(BaseHandler):
             fight_items.append(fight_item.start())
 
 
-        self._log_initial_state()
+        self.log.initial_state()
 
         self.compute_frame()
         self.create_map()
@@ -297,7 +293,7 @@ class FightHandler(BaseHandler):
         fight_item.set_parent_id(craft.id)
         fight_item.set_state_idle()
         craft.add_child_id(fight_item.id)
-        self._log_initial_unit(fight_item)
+        self.log.initial_state_unit(fight_item)
         self._send_unit_landed(craft.craft_id, fight_item.id)
 
     def generate_craft_place(self):
@@ -322,14 +318,14 @@ class FightHandler(BaseHandler):
         """
             calculate every frame and action for every FightItem
         """
-        self.send_frame()
+        self.log.new_frame()
         self.current_frame += 1
         self.current_game_time += self.GAME_FRAME_TIME
 
         # list() - function is required here fot coping 
         # because fighters might be changed during iterations
         for key, fighter in list(self.fighters.items()):
-            print('COMPUTE', fighter.id, fighter.coordinates, fighter.item_type, fighter.action, fighter._state)
+            #print('COMPUTE', fighter.id, fighter.coordinates, fighter.item_type, fighter.action, fighter._state)
             for sub_item in list(fighter.get_sub_items()):
                 sub_item.do_frame_action()
                 if sub_item.is_dead:
@@ -343,7 +339,7 @@ class FightHandler(BaseHandler):
             # WHY: can't we move in the FightItem class?
             # When in can be None?
             if fighter.is_dead:
-                print('DEAD')
+                #print('DEAD')
                 continue
 
             if fighter.action is None:
@@ -355,7 +351,7 @@ class FightHandler(BaseHandler):
 
         # TODO: Can be united in order to optimize
         #print('EVENTS IDLE', self.EVENTS['idle'])
-        print('EVENTS unit_landed', self.EVENTS['unit_landed'])
+        #print('EVENTS unit_landed', self.EVENTS['unit_landed'])
         self._send_time()
         self._send_message()
         self._send_position()
@@ -364,8 +360,8 @@ class FightHandler(BaseHandler):
 
         winner = self.get_winner()
 
-        if winner is not None:
-            self.send_frame({'winner': winner}, True)
+        if winner is not None: 
+            self.log.done_battle(winner)
             IOLoop.current().call_later(3, self.stop)
         else:
             IOLoop.current().call_later(self.get_frame_time(), self.compute_frame)
@@ -387,13 +383,7 @@ class FightHandler(BaseHandler):
                 del self.players[player_id]
             real_players = [k for k in self.players if k >= 0]
             if len(real_players) == 1:
-                self.battle_log[OUTPUT.RESULT_CATEGORY] = {
-                    OUTPUT.WINNER: real_players[0],
-                    OUTPUT.REWARDS: self.rewards,
-                    OUTPUT.STRAT_REWARDS: self.strat_rewards,
-                    OUTPUT.CASUALTIES: self.count_unit_casualties(),
-                    OUTPUT.DEFEAT_REASON: self.defeat_reason
-                }
+                self.log.battle_result(real_players[0])
                 return self.players[real_players[0]]
         return None
 
@@ -418,143 +408,6 @@ class FightHandler(BaseHandler):
             if item.player['id'] == player['id'] and item.role == role and not item.is_dead:
                 return True
         return False
-
-    def send_frame(self, status=None, battle_finished=False):
-        """
-            prepare and send data to an interface for visualisation
-        """
-        if self.is_stream:
-            # TODO: DEPRECATED Change to single out format
-            if status is None:
-                status = {}
-
-            fight_items = [fighter.internal_info for fighter in self.fighters.values()]
-            craft_items = [craft.info for craft in self.get_crafts()]
-            flagman = self.get_flagman()
-
-            self.editor_client.send_battle({
-                "is_stream": True,
-                'status': status,
-                'fight_items': fight_items,
-                'craft_items': craft_items,
-                'map_size': self.map_size,
-                'map_grid': self.map_grid,
-                'current_frame': self.current_frame,
-                'current_game_time': self.current_game_time,
-                'flagman': flagman and flagman.info
-            })
-        self.battle_log["frames"].append(self._get_battle_snapshot())
-        if battle_finished and not self.is_stream:
-            self.editor_client.send_battle(self.battle_log)
-
-    def _log_initial_state(self):
-        for item in self.get_battle_fighters():
-            if item.role == ROLE.UNIT:
-                self._log_initial_unit(item)
-            elif item.role in ROLE.PLAYER_STATIC:
-                self._log_initial_building(item)
-            elif item.role == ROLE.OBSTACLE:
-                if item.item_type == OBSTACLE.ROCK:
-                    self._log_initial_obstacle(item)
-                elif item.item_type == OBSTACLE.FLAG_STOCK:
-                    self._log_initial_flag_stock(item)
-                else:
-                    self._log_initial_building(item)
-        for craft in self.get_crafts():
-            self._log_initial_craft(craft)
-        for player in self.initial_data[PLAYER.KEY]:
-            self._log_initial_player(player)
-        self._log_system()
-
-    def _log_system(self):
-        #  We should use cammel-case attributes while server issue
-        self.battle_log[OUTPUT.SYSTEM] = {
-            'mapSize': self.map_size,
-            'timeLimit': self.time_limit,
-            'timeAccuracy': self.GAME_FRAME_TIME
-        }
-
-    def _log_initial_unit(self, unit):
-        self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.UNITS][unit.id] = {
-            OUTPUT.ITEM_ID: unit.id,
-            OUTPUT.TILE_POSITION: gen_xy_pos(unit.tile_position),
-            OUTPUT.ITEM_TYPE: unit.item_type,
-            OUTPUT.PLAYER_ID: unit.player[PLAYER.ID],
-            OUTPUT.PLAYER_ID_DEP: unit.player[PLAYER.ID]
-        }
-
-    def _log_initial_building(self, building):
-        log_record = {
-            OUTPUT.ITEM_ID: building.id,
-            OUTPUT.TILE_POSITION: gen_xy_pos(building.tile_position),
-            OUTPUT.ITEM_TYPE: building.item_type,
-            OUTPUT.SIZE: building.base_size,
-            OUTPUT.ITEM_STATUS: building.item_status,
-            OUTPUT.ITEM_LEVEL: building.level,
-            OUTPUT.PLAYER_ID: building.player[PLAYER.ID],
-            OUTPUT.PLAYER_ID_DEP: building.player[PLAYER.ID]
-        }
-        self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.BUILDINGS][building.id] = log_record
-        return log_record
-
-    def _log_initial_flag_stock(self, building):
-        log = self._log_initial_building(building)
-        log[OUTPUT.FLAG_SLUG] = building.player[PLAYER.ENV_NAME]
-
-    def _log_initial_obstacle(self, obstacle):
-        self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.OBSTACLES][obstacle.id] = {
-            OUTPUT.TILE_POSITION: gen_xy_pos(obstacle.tile_position),
-            OUTPUT.SIZE: obstacle.base_size,
-            OUTPUT.ID: obstacle.id,
-        }
-
-    def _log_initial_craft(self, craft):
-        self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.CRAFTS][craft.id] = {
-            OUTPUT.ITEM_ID: craft.id,
-            OUTPUT.TILE_POSITION: gen_xy_pos(craft.tile_position),
-            OUTPUT.ITEM_TYPE: craft.item_type,
-            OUTPUT.ITEM_LEVEL: craft.level,
-            OUTPUT.PLAYER_ID: craft.player[PLAYER.ID],
-            OUTPUT.PLAYER_ID_DEP: craft.player[PLAYER.ID]
-        }
-
-    def _log_initial_player(self, player):
-        self.battle_log[OUTPUT.INITIAL_CATEGORY][OUTPUT.PLAYERS][player[PLAYER.ID]] = {
-            OUTPUT.ID: player[PLAYER.ID],
-            OUTPUT.USERNAME: player.get(PLAYER.USERNAME, str(player[PLAYER.ID]))
-        }
-
-    def _get_battle_snapshot(self):
-        snapshot = []
-        for item in self.fighters.values():
-            if item.is_obstacle:
-                continue
-            item_info = {
-                OUTPUT.ITEM_ID: item.id,
-                OUTPUT.TILE_POSITION: gen_xy_pos(item.coordinates if item.role == ROLE.UNIT
-                                       else item.tile_position),
-                OUTPUT.HIT_POINTS_PERCENTAGE: item.get_percentage_hit_points(),
-                OUTPUT.ITEM_STATUS: item.get_action_status()
-            }
-            if item_info[ACTION.STATUS] in (ACTION.ATTACK, ACTION.CHARGE):
-                item_info[OUTPUT.FIRING_POINT] = item._state[ACTION.FIRING_POINT]
-                item_info[OUTPUT.FIRING_ID] = item._state[ACTION.AID]
-                # TODO LEGACY DEPRECATED
-                item_info[OUTPUT.FIRING_POINT_LEGACY] = item_info[OUTPUT.FIRING_POINT]
-
-            if item_info[ACTION.STATUS] == ACTION.ATTACK:
-                item_info[OUTPUT.DEMAGED] = item._state[ACTION.DEMAGED]
-
-            if item.has_std(STD.OUT):
-                item_info[OUTPUT.STDOUT] = item.pull_std(STD.OUT)
-            if item.has_std(STD.ERR):
-                item_info[OUTPUT.STDERR] = item.pull_std(STD.ERR)
-
-            if item.sub_items:
-                item_info[OUTPUT.SUBITEMS] = item.output_sub_items()
-
-            snapshot.append(item_info)
-        return snapshot
 
     def subscribe(self, event_name, item_id, lookup_key, data):
         """
