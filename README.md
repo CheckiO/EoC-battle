@@ -1,4 +1,4 @@
-Battle is part of the project Empire of Code. This battle algorithm is using to tun a battle in the game.
+Battle is part of the project Empire of Code. The same code is using code battle calculation.
 
 ## How to run the battle?
 
