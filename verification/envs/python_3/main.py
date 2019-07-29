@@ -119,10 +119,6 @@ class PlayerRefereeClient(RefereeClient):
             return True
         return False
 
-    def select(self, fields):
-        response = self.actual_request({'method': 'select', 'fields': fields})
-        return response['data']
-
     def set_action(self, action, data):
         return self.actual_request({'method': 'set_action', 'action': action, 'data': data})
 

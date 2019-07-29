@@ -313,14 +313,13 @@ class UnitClient(Client):
         return str(self._id) in self.env_map
 
     @property
-    def my_info(self):
-        if self.is_alive:
-            return self.env_map[str(self._id)]
-        else:
-            return {}
+    def my_data(self):
+        return super().my_data['children'][str(self._id)]
+    
 
     def do(self, action, data):
         if not self.is_alive:
+            print('(DO) NOT ALIVE')
             return
         self.command(action, data)
 
@@ -336,6 +335,7 @@ class UnitClient(Client):
 
     def when(self, event, callback, data=None, infinity=False):
         if not self.is_alive:
+            print('(WHEN) NOT ALIVE')
             return
         def new_callback(*args, **kwargs):
             if not self.is_alive:

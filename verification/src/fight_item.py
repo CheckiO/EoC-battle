@@ -425,7 +425,9 @@ class FightItem(Item):
     def do_frame_action(self):
         try:
             self._state = self._actions_handlers.do_action(self.action)
-        except ActionValidateError:
+        except ActionValidateError as e:
+            print('!!!ActionValidateError!!!', self.id, e, self.action )
+            print(self.info)
             self.set_state_idle()
 
     def send_event(self, lookup_key, data):
@@ -497,6 +499,8 @@ class CraftItem(FightItem):
         self.player = player
         self.role = ROLE.CRAFT
 
+        self.children = set() #units
+
     def is_empty(self):
         return not self.amount_units_in
 
@@ -540,6 +544,9 @@ class CraftItem(FightItem):
             self._fight_handler.add_unit_from_craft(self)
             self.last_landing = current_frame
         return True
+
+    def add_child_id(self, id):
+        self.children.add(id)
 
 class DefPlatformItem(CraftItem):
     def generate_craft_place(self, craft_data):

@@ -164,11 +164,17 @@ class FightHandler(BaseHandler):
 
     def get_my_data(self, id):
         fighter = self.fighters[id]
+        children = {}
+        if hasattr(fighter, 'children'):
+            for child_id in fighter.children:
+                children[child_id] = self.get_my_data(child_id)
+
         return {
             'id': id,
             'level': fighter.level,
             'role': fighter.role,
-            'type': fighter.item_type
+            'type': fighter.item_type,
+            'children': children,
         }
 
     def get_env_data(self):
@@ -231,6 +237,7 @@ class FightHandler(BaseHandler):
                 cls_name = DefPlatformItem
             else:
                 cls_name = FightItem
+
             fight_item = cls_name(item, player=player, fight_handler=self)
             self.fighters[fight_item.id] = fight_item
             fight_item.set_state_idle()
@@ -289,6 +296,7 @@ class FightHandler(BaseHandler):
         self.fighters[fight_item.id] = fight_item
         fight_item.set_parent_id(craft.id)
         fight_item.set_state_idle()
+        craft.add_child_id(fight_item.id)
         self._log_initial_unit(fight_item)
         self._send_unit_landed(craft.craft_id, fight_item.id)
 
@@ -321,6 +329,7 @@ class FightHandler(BaseHandler):
         # list() - function is required here fot coping 
         # because fighters might be changed during iterations
         for key, fighter in list(self.fighters.items()):
+            print('COMPUTE', fighter.id, fighter.coordinates, fighter.item_type, fighter.action, fighter._state)
             for sub_item in list(fighter.get_sub_items()):
                 sub_item.do_frame_action()
                 if sub_item.is_dead:
@@ -334,6 +343,7 @@ class FightHandler(BaseHandler):
             # WHY: can't we move in the FightItem class?
             # When in can be None?
             if fighter.is_dead:
+                print('DEAD')
                 continue
 
             if fighter.action is None:
@@ -343,6 +353,9 @@ class FightHandler(BaseHandler):
             fighter.run_all_one_actions()
             fighter.do_frame_action()
 
+        # TODO: Can be united in order to optimize
+        #print('EVENTS IDLE', self.EVENTS['idle'])
+        print('EVENTS unit_landed', self.EVENTS['unit_landed'])
         self._send_time()
         self._send_message()
         self._send_position()
@@ -625,7 +638,7 @@ class FightHandler(BaseHandler):
         events = self.EVENTS['enemy_in_my_firing_range']
         for event in events[:]:
             receiver = self.fighters[event['receiver_id']]
-            for event_item in self.battle_fighters():
+            for event_item in self.get_battle_fighters():
                 if event_item.is_dead:
                     continue
                 if receiver == event_item:
@@ -718,7 +731,7 @@ class FightHandler(BaseHandler):
         self._send_event('death', check_function, data_id)
 
     def _send_unit_landed(self, craft_id, unit_id):
-
+        print('SEND _send_unit_landed', craft_id, unit_id)
         def check_function(event, receiver):
             return event['data']['craft_id'] == craft_id
 
