@@ -299,7 +299,6 @@ Let's check craft code.
 	craft_client.do_land_units()
 	def unit_landed(data):
 	    unit_client = commander.UnitClient(data['id'])
-	    #unit_client.do_teleport([30, 24])
 	    def search_and_destroy(data=None):
 	        enemy = unit_client.ask_nearest_enemy()
 	        unit_client.do_attack(enemy['id'])
