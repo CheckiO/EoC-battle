@@ -159,6 +159,10 @@ class OUTPUT():
     SYSTEM = 'system'
     FLAG_SLUG = 'flagSlug'
     SUBITEMS = 'subItems'
+    ACTION = 'action'
+    FLAGS = 'flags'
+    ONE_ACTION = 'one_action'
+    INTERNAL = 'internal'
 
 
 class STD():

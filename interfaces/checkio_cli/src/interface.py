@@ -55,9 +55,16 @@ class FightHandler(BaseHandler):
             self.log_file.write(json.dumps(data))
 
     def handler_battle(self, data, request_id, stream_r):
+        interface = {
+            'player_id': 1
+        }
+        if 'interface' in data:
+            interface.update(data.pop('interface'))
+
         if not data.get("is_stream"):
-            print('DONE!')
+            data['frames'] = data['frames'][str(interface['player_id'])]
             self.write_log(data)
+            print('DONE!')
             return
         out_map = []
         # temporarily spike (I know about "temporarily" (we have ticket for this))

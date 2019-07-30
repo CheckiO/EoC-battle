@@ -51,10 +51,6 @@ class FightHandler(BaseHandler):
         self.initial_data = editor_data['battle_info']
         self._referee = referee #referee.Referee
 
-        self.event = FightEvent(self)
-        self.log = FightLogger(self)
-
-
         self.players = {p['id']: p for p in self.initial_data[PLAYER.KEY]}
         self.players[-1] = {"id": -1} # im not sure yet, why are we doing this
         self.fighters = {} # {id: FigherItem}
@@ -82,6 +78,9 @@ class FightHandler(BaseHandler):
         self._is_stopping = None 
         self._stop_callback = None
         self.environment = None
+
+        self.event = FightEvent(self)
+        self.log = FightLogger(self)
 
     def setup_usercodes(self, players):
         for player_id, codes in players.items():

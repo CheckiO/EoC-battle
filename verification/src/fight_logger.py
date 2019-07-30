@@ -22,9 +22,16 @@ class FightLogger:
                 OUTPUT.CRAFTS: {},
                 OUTPUT.PLAYERS: {}
             },
-            OUTPUT.FRAME_CATEGORY: [],
+            OUTPUT.FRAME_CATEGORY: {},
             OUTPUT.RESULT_CATEGORY: {}
         }
+
+        
+        for player_id in fight_handler.players.keys():
+            if player_id == -1:
+                continue
+            self.data[OUTPUT.FRAME_CATEGORY][player_id] = []
+        
 
     def get_battle_fighters(self):
         return self._fight_handler.get_battle_fighters()
@@ -121,13 +128,17 @@ class FightLogger:
         }
 
     def new_frame(self):
-        self.data[OUTPUT.FRAME_CATEGORY].append(self.snapshot())
+        for player_id, frames in self.data[OUTPUT.FRAME_CATEGORY].items():
+            frames.append(self.snapshot(player_id))
 
-    def snapshot(self):
+    def snapshot(self, player_id):
         snapshot = []
         for item in self.get_all_fighters():
             if item.is_obstacle:
                 continue
+
+            is_cur_player = item.player_id == player_id
+
             item_info = {
                 OUTPUT.ITEM_ID: item.id,
                 OUTPUT.TILE_POSITION: gen_xy_pos(item.coordinates if item.role == ROLE.UNIT
@@ -138,21 +149,26 @@ class FightLogger:
             if item_info[ACTION.STATUS] in (ACTION.ATTACK, ACTION.CHARGE):
                 item_info[OUTPUT.FIRING_POINT] = item._state[ACTION.FIRING_POINT]
                 item_info[OUTPUT.FIRING_ID] = item._state[ACTION.AID]
-                # TODO LEGACY DEPRECATED
-                item_info[OUTPUT.FIRING_POINT_LEGACY] = item_info[OUTPUT.FIRING_POINT]
 
             if item_info[ACTION.STATUS] == ACTION.ATTACK:
                 item_info[OUTPUT.DEMAGED] = item._state[ACTION.DEMAGED]
 
-            if item.has_std(STD.OUT):
-                item_info[OUTPUT.STDOUT] = item.get_std(STD.OUT)
-            if item.has_std(STD.ERR):
-                item_info[OUTPUT.STDERR] = item.get_std(STD.ERR)
-
-            item.reset_std()
-
             if item.sub_items:
                 item_info[OUTPUT.SUBITEMS] = item.output_sub_items()
+
+            if is_cur_player:
+                internal = item_info[OUTPUT.INTERNAL] = {}
+                if item.has_std(STD.OUT):
+                    internal[OUTPUT.STDOUT] = item.get_std(STD.OUT)
+                if item.has_std(STD.ERR):
+                    internal[OUTPUT.STDERR] = item.get_std(STD.ERR)
+
+                internal[OUTPUT.ACTION] = item.action
+                internal[OUTPUT.FLAGS] = item._frame_flags
+                internal[OUTPUT.ONE_ACTION] = item.one_action
+
+                item.reset_std()
+
 
             snapshot.append(item_info)
         return snapshot
