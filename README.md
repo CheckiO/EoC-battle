@@ -1,43 +1,43 @@
-Battle is part of the project Empire of Code. The same code is using code battle calculation.
+The battle is part of the Empire of Code project. The same code is being used for battle calculations.
 
 ## How to run the battle?
 
-In order to run the buttle you should do the following steps
+In order to run the battle you should follow these steps:
 
  - **Install** checkio-client
 
     pip install checkio-client
 
- - **Configure** it for domain epy (In case you will be asked about "key" just put a random numer in it. It is not important at this stage)
+ - **Configure** it for the epy domain (In case you are asked about the "key", just put a random number. It’s not important at this stage.)
 
     checkio --domain epy config
 
- - The next step is to **build buttle** using checkio client. In order to do so you will need a docker installed.
+ - The next step is to **build the battle** using checkio client. In order for you to do so, you’ll need to have a docker installed.
 
     checkio eoc-get-git /path/to/battle/folder battle
 
-you can also use github path
+You can also use the github path.
 
     checkio eoc-get-git https://github.com/CheckiO/EoC-battle battle
 
-- The last step is actually **run the battle**. Running buttle requires battle configuration file. It describes what kind of troops and buildings are on the battle now and source code they are using to run the battle. The configuration file is .py file with dict PLAYERS in it.
+- The last step is to actually **run the battle**. Running it requires the battle configuration file. It describes what kinds of troops and buildings are there on the battlefield right now and the source code they are using to run the battle. The configuration file is .py file with dict PLAYERS in it.
 
     checkio eoc-battle battle /path/to/config/file/battle.py
 
-or you can use a generated default battle file in your solutions folder
+Or you can use a generated default battle file in your solutions folder.
 
     checkio eoc-battle battle
 
 
 ## Balance
 
-Battle configuration file contains information about units and buildings on the battle field. For example it says that we have a Sentry Gun level 5 on the battle field. But in order to run the battle we need to know what stats level 5 has, how many hit-points Sentry Gun level 5 has etc..
+The battle configuration file contains information about the units and buildings on the battlefield. For example, it says that we have a level 5 Sentry Gun on the battlefield. But in order to run the battle we need to know the stats of level 5, how many hit-points it has, and so on.
 
-Information about all stats of all buildings, units, modules atc we called *balace* and it includes into the battle docker image during your battle build. Building process using repository https://github.com/CheckiO/eoc-balance . The same repository is Empire of Code is using.
+Information about all the stats of all buildings, units, modules, etc. we call the *balance* and it’s being included into the battle docker image during your battle building process by using the repository - https://github.com/CheckiO/eoc-balance . The same repository is being used by the Empire of Code.
 
-If balance is changed you need to rebuild your battle using command `checkio eoc-get-git ...`
+If the balance changes, you need to rebuild your battle using the `checkio eoc-get-git ...`command.
 
-But one more option here is to link a balance folder during the run process
+But the other option here is to link the balance folder during the run process.
 
     checkio eoc-battle --balance /path/to/eoc-balance/ battle /path/to/battle.py
 
@@ -45,26 +45,26 @@ But one more option here is to link a balance folder during the run process
 
 ## Folder Structure
 
- - *interfaces* - folder is responsable for showing battle result 
- - *interfaces/checkio_cli* - showing battle result for checkio-client
- - *verification* - running the battle
- - *envs* - some buildings have a source code. This folder is using for running this source code for different interpretators
- - *envs/python_3/main.py* - script that runs users code
- - *envs/python_3/battle* - battle module that can be improted from users source-code in order to send commands to referee
- - *verification/src* - referee. All verefication process starts here.
- - *verification/src/referee.py* - verification proccess starts in this module
- - *verification/src/enviroment.py* - this file is using for network protocol
- - *verification/src/fight_handler.py* - the main handler which is using in referee for controlling battle
- - *verification/src/fight_item.py* - items are participating on the battle. Flagman, Unit, CoommandCenter those are Items on the battle
- - *verification/src/fight_logger.py* - module that responsable for sending battle results to use
- - *verification/src/fight_events.py* - module that is sending events and subscribing on events
- - *verification/src/sub_items.py* - items, during the battle, can generate subitem. For example - rocket is an subitem of RocketTower.
- - *verification/src/modules.py* - describe modules that can be used by items.
- - *verification/src/actions/* - items that can be controlled by code are using actions module 
+ - *interfaces* - this folder is responsible for showing the battle results.
+ - *interfaces/checkio_cli* - is showing the battle results for checkio-client.
+ - *verification* - is in charge of running the battle.
+ - *envs* - is being used to run that source code that some of the buildings have for different interpreters.
+ - *envs/python_3/main.py* - is the script that runs user’s code.
+ - *envs/python_3/battle* - is the battle module that can be imported into the user’s source-code in order to send commands to the referee.
+ - *verification/src* - is storing the referee and here occur all of the verification processes.
+ - *verification/src/referee.py* - is the module from which the verification process begins.
+ - *verification/src/enviroment.py* - is the file that’s used for the network protocol.
+ - *verification/src/fight_handler.py* - is the main handler which is being used by the referee to control the battle.
+ - *verification/src/fight_item.py* - are the items that are participating in the battle. The Flagman, Unit, CoommandCenter - those are the Items on the battlefield.
+ - *verification/src/fight_logger.py* - is the module that’s responsible for logging moves during the course of the battle and sending out the results.
+ - *verification/src/fight_events.py* - is the module that’s sending events and subscribing different items to them.
+ - *verification/src/sub_items.py* - is showing the subitems generated by the items during the battle. For example, the rocket is a subitem of RocketTower.
+ - *verification/src/modules.py* - is the folder with the descriptions of the modules that can be used by items.
+ - *verification/src/actions/* - is the folder that holds the actions module for the items that can be controlled by code.
 
-## Step by step running a battle verification process (referee)
+## A step-by-step on the verification process when running a battle (the referee)
 
-Let's take as an example the following battle config
+Let's take the following battle config as an example.
 
 	ATTACKER_CODE = """
 	from battle import commander
@@ -161,47 +161,47 @@ Let's take as an example the following battle config
 	 'rewards': {'adamantite': 400, 'crystalite': 150},
 	 'time_limit': 30}
 
-One important key I would like to point right away is "is_stream" key. If it is True - then you will see the results in real time, if False - all the results will be saved in one file
+One important key I’d like to point out right away is the "is_stream" key. Its being used for the checkio-client and if it’s True, then you’ll see the results in real time, if - False, all the results will be saved in one file.
 
-(Running process of any missions for EoC (including Battle) starts with launching two containers. One is for referee and another one is for interface)
+(The running process of any mission for EoC (including the Battle) starts with the launch of two containers. One of them is for the referee and the other is for the interface.)
 
-*interfaces/checkio_cli/src/interface.py FightHandler* receives a source code of your config file, extracts dicts PLAYERS from it and pass it to referee using API.
+*interfaces/checkio_cli/src/interface.py FightHandler* receives a source code of your config file, extracts dicts PLAYERS from it and passes it to the referee using its API.
 
-*verification/src/referee.py Referee* is the main referee class, which also includes handlers. In our case we have only once handler battle.
+*verification/src/referee.py Referee* is the main referee class, which also includes handlers. In our case we have only once handler - battle. But for the ordinary mission we have two handlers: run and check. 
 
-*verification/src/fight_handler.py FightHandler* is main handler for battle. In the handler you can find the whole information of the current battle. The battle starts with method *FightHandler.start*
+*verification/src/fight_handler.py FightHandler* is the main handler for the battle. Here you can find all of the information about the current battle. The battle starts with the *FightHandler.start* method.
 
-The main goal of method *start* is to generate dict *self.fighters* {object.id: FightItem} and starts all generated FightItems.
+The main goal of the *start* method is to generate dict *self.fighters* {object.id: FightItem} and launch all generated FightItems.
 
-*verification/src/fight_item.py FightItem.start* is for executable Items (It means Items that has code). It launches the code using *BattleEnvironmentsController* and store it in *self._env*
+*verification/src/fight_item.py FightItem.start* is for the executable Items (which simply means that those Items have code). It launches the code using *BattleEnvironmentsController* and is being stored in *self._env*
 
-*verification/src/environment.py BattleEnvironmentsController* is responsible for reading stdin and stdout from the clients code, sending commands to client and receiving commands from it.
+*verification/src/environment.py BattleEnvironmentsController* is responsible for reading stdin and stdout from the client’s code, sending commands to the client and receiving them from it.
 
-*verification/src/fight_item.py FightItem.handle_result* FightItem.starts starts endles loop the receives commands from clients code and use it in this function.
+*verification/src/fight_item.py FightItem.handle_result* FightItem.starts starts an endless loop of receiving commands from the client’s code and using it in this function.
 
 *verification/src/fight_item.py FightItem.init_handlers* Client can send only 3 kinds of commands:
 
- - set_action - set command to a unit. For Example 'attack' - a command, that will be set for unit, and unit will do everything for attacking (moving to a target, charging and fire). Action is usually something that takes several frames to finish. 
- - command - send a specific command to a unit. Command is something that executes right away and on the current frame.
- - subscribe - subscribe to a specific event in the FightHandler. 
+ - set_action - sets a command for a unit. For example, 'attack' - the command that will be set for a unit, and the unit will do everything to carry out the attack (move in the direction of a target, charge and fire). Action is usually something that takes several frames (the minimal estimated amounts of time) to finish. 
+ - command - sends a specific command to a unit. Command is something that’s being executed right away and in the current frame.
+ - subscribe - subscribes to a specific event in the FightHandler. 
 
-*verification/src/actions/* ItemActions is responsable for actions and commands. When FightItem initiates it also creates object `self._actions_handlers` for different type of FightItem we create different classes bases ItemActions. All the available classes are listed in *verification/src/actions/*
+*verification/src/actions/* ItemActions is responsible for actions and commands. When FightItem initiates it also creates an object `self._actions_handlers`, and for different types of FightItems we’re creating different classes based on the ItemActions. All the available classes are listed in *verification/src/actions/*
 
-Actions and commands are working in pretty much the same way. The only difference between action and command is that result of parsing action will be saved to attribute `self.action` for FightItem, and when the same object of ItemActions will be process data from `self.action` during frame calculation. The result of this processing will be stored in `self._state` of FightItem and later this data will be shown to user in order to animate unit (or building)
+The actions and commands are working in pretty much the same way. The only difference between the action and command is that the result of parsing the action will be saved to an attribute `self.action` for FightItem, and when the same object of ItemActions will be processing the data from `self.action` during the frame calculation, its result will be stored in `self._state` of FightItem and later shown to a user in order to animate a unit (or a building).
 
-Subscription. Since we covered first two, let's describe subscriptions as well.
+Subscription. Since we’ve covered the first two, let's describe subscriptions as well.
 
-*verification/src/fight_handler.py FightHandler.subscribe(event_name, item_id, lookup_key, data)* is responsable for subscription. lookup_key is a unique key for client. This key is needed to recognize event on the client side when it raise.
+*verification/src/fight_handler.py FightHandler.subscribe(event_name, item_id, lookup_key, data)* is responsible for subscription. lookup_key is a unique key for the client. This key is needed to recognize an event on the client side when it’s raised.
 
-*verification/src/fight_events.py FightEvent* assigned to FightHandler through the attribute `self.event`. Function `setup` configures all the event types. Function `add_checker` has 3 arguments: event_name - unique name of the event, checker - function that checkes is the given FightItem is ready to receive event using given event_data, and data - function that generates data for raised event. All the events are checking in the end of frame calculation.
+*verification/src/fight_events.py FightEvent* is assigned to FightHandler through the attribute `self.event`. Function `setup` configures all the available event types. Function `add_checker` has 3 arguments: event_name - is a unique name of the event, checker - is a function that checks whether the given FightItem is ready to receive an event using given event_data, and data - is a function that generates data for the raised event. All the events are being checked at the end of the frame calculation.
 
-One important thing. Every time when system sends event data it also send information about the map and units on the map. And detail information about reveiver.
+One important thing that you need to know is that very time when the system sends an event data it also sends the information about the map, units on it, and the detailed information about the receiver.
 
-*verification/src/fight_handler.py FightHandler.compute_frame* - when the battle started FightHandler starts calculating frames by perodically calling function compute_frame. It goes through all the available fighters and executes their current action, It also goes through the all waiting events. As the last step system tries to figure if we have a winner already.
+*verification/src/fight_handler.py FightHandler.compute_frame* - when the battle is started, FightHandler also starts the frames calculation by periodically calling the compute_frame function. It goes through all the available fighters and executes their current action. It also goes through all waiting events. As the last step system tries to figure out whether we already have a winner.
 
-## Step by step running a battle client-code.
+## Step-by-step on running a battle using client-code.
 
-As you can see in our example we have 2 defending building with the same code
+As you can see in our example we have 2 defence buildings with the same code.
 
 	{'code': 'def_code.py',
 	'level': 5,
@@ -223,7 +223,7 @@ and
 	],
 	'type': 'sentryGun'},
 
-They both have the same code `def_code.py`. And we have three crafts (attackers)
+Both of them have the same code `def_code.py`. And we have three crafts (attackers).
 
 	{'code': 'attacker.py',
 	'craft_id': 1,
@@ -251,11 +251,11 @@ They both have the same code `def_code.py`. And we have three crafts (attackers)
 	        'type': 'rocketBot'},
 	'unit_quantity': 2},
 
-all of the crafts has the same code `attacker.py`.
+All of the crafts has the same code `attacker.py`.
 
-The actual source code of thouse scrips can be found in key "codes". All the players strategies are listes in the dict "codes", because one strategy can import any other strategies.
+The actual source code of those scrips can be found in the key "codes". All the player’s strategies are listed in the dict "codes", and it doesn’t matter whether those strategies are being used at the moment or not, because one strategy can import any other strategies.
 
-Let's start with defence source code
+Let's start with a defence source code.
 
 	from battle import commander
 	tower_client = commander.Client()
@@ -270,29 +270,29 @@ Let's start with defence source code
 	    tower_client.when_im_idle(search_next_target)
 	tower_client.when_enemy_in_range(unit_in_firing_range)
 
-*verification/envs/python_3/main.py* script that is using to launch a Python client code. 
+*verification/envs/python_3/main.py* is a script used to launch a Python client code. 
 
-*verification/envs/python_3/battle/commander.py* module that is using in strategy.
+*verification/envs/python_3/battle/commander.py* is a module that is used in a strategy.
 
-*verification/envs/python_3/battle/commander.py Client* is a base class that is using in users code. It contains all of the commands that can be used 
+*verification/envs/python_3/battle/commander.py Client* is a base class that is used in the user’s code. It contains all of the commands that can be used.
 
-*verification/envs/python_3/battle/main.py PlayerRefereeClient* Client has an attribute self.CLIENT - it is an object of PlayerRefereeClient. This object is using for sending and receiving commands from referee.
+*verification/envs/python_3/battle/main.py PlayerRefereeClient* Client has an attribute self.CLIENT - it’s an object of PlayerRefereeClient. This object is used for sending and receiving commands from the referee.
 
-(One important point about dialog between client and referee - **Every request should have a response**.)
+(One important point about the dialog between the client and referee - **Every request should have a response**.)
 
-As you can see PlayerRefereeClient has all of the commands we have described in referee section set_action, send_command, subscribe. Those methods are translated into Client object with methods "do", "command" and "when" (why they were renamed? I don't know, but I'm sure it should be a reason for that).
+As you can see PlayerRefereeClient has all of the commands we’ve described in the section about the referee: set_action, send_command, and subscribe. Those methods are translated into the Client object with methods "do", "command" and "when". (Why have they been renamed? I don't know, but I'm sure there's a reason for that.)
 
-On top of that Client has a set of methods that starts with `ask_` . Those methods are using for extracting specific information from env_data and my_data (information that is passed to script with every event and run)
+On top of that Client has a set of methods that starts with `ask_` . Those methods are used for the extraction of specific information from env_data and my_data (the information that is passed to the script after every event and run).
 
-Client also has two methods set_opts and get_opt. When user assign a strategy to a craft or a building. Extra options can be added. That allows user to customize their strategies by simply using extra options.
+Client also has two methods: set_opts and get_opt. When a user assigns a strategy to a craft or a building, the extra options can be added. That allows users to customize their strategies by simply using the extra options.
 
-Now the defence source code looks pretty straight forward. At the very beginning we subscribe on "when_enemy_in_range" then attack enemy by it's ID, then subscribe on "idle" event.
+Now the defence source code looks pretty straight forward. At the very beginning we subscribe to "when_enemy_in_range", then attack the enemy by it's ID, and after that subscribe to an "idle" event.
 
 ### Crafts and defPlatform.
 
-Every building with code starts as a separate client *verification/envs/python_3/main.py* but some buildings can generate generate units and those units can have their own commands and their own events. System doesn't use indiviual script for each unit but use the same script. It allows you to control your units as a group.
+Every building with code starts as a separate client *verification/envs/python_3/main.py*, but some buildings can generate units and those units can have their own commands and events. The system doesn't use an individual script for each unit, it uses the same one. It allows you to control your units as a group.
 
-Let's check craft code.
+Let's check the craft code.
 
 	from battle import commander
 	craft_client = commander.CraftClient()
@@ -306,14 +306,15 @@ Let's check craft code.
 	    search_and_destroy()
 	craft_client.when_unit_landed(unit_landed)
 
-it uses two clients. CraftClient and UnitClient. Snce they have one script they will share one `self.CLIENT`.
+It uses two clients: CraftClient and UnitClient. Since both of them have one script, they will share one `self.CLIENT`.
 
 ## Golosary
 
  - **battle** - one execution of the referee.
- - **player** - group of units and buildings can be controled by player. Usualy two players can be in the battle
- - **interface** - scripts responcable for visualisation process of running referee.
- - **referee** - the main script for controlling and verefication battle
- - **executable item** - FightItem that has a code assigned to it
- - **frame** - is like a move, but computed in a real time. 
- - **battle configuration file** - .py file with PLAYERS dict in it. The dict contains all the information about battle. This script is using by interface in order to launch a ballte
+ - **player** - a group of units and buildings can be controlled by a player. Usually two players can be in the battle
+ - **interface** - the scripts responsible for a visualisation process of running the referee.
+ - **referee** - the main script for controlling the battle and its verification.
+ - **executable item** - a FightItem that has a code assigned to it.
+ - **frame** - is the minimal estimated amount of time, just like a move, but computed in real time. 
+ - **battle configuration file** -a .py file with PLAYERS dict in it. The dict contains all the information about the battle. This script is used by the interface in order to launch a battle.
+
