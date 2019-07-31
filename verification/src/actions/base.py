@@ -33,7 +33,7 @@ class BaseItemActions(object):
         return add_one_time
 
     def _idle(self):
-        return {'action': 'idle'}
+        return {'name': 'idle'}
 
     def action_attack(self, data):
         enemy = self._fight_handler.fighters.get(data['id'])
@@ -48,7 +48,7 @@ class BaseItemActions(object):
         attacker.charging += self._fight_handler.GAME_FRAME_TIME * attacker.rate_of_fire
         if attacker.charging < 1:
             return {
-                'action': 'charge',
+                'name': 'charge',
                 'firing_point': coordinates,
                 'aid': enemy_id
             }
@@ -77,7 +77,7 @@ class BaseItemActions(object):
         demaged_ids = enemy.get_shoted(attacker.total_damage)
 
         return {
-            'action': 'attack',
+            'name': 'attack',
             'firing_point': enemy.coordinates,
             'aid': enemy.id,
             'damaged': demaged_ids,  # TODO:

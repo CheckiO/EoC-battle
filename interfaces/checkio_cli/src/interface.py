@@ -74,13 +74,13 @@ class FightHandler(BaseHandler):
 
         players_groups = defaultdict(list)
         for item in data['fight_items']:
-            if 'std' in item and any(item['std'].values()):
+            if 'std' in item and item['std']:
                 print('{:<10}'.format(item['id']), end='')
                 print('-' * 20)
-                if item['std']['out']:
-                    print(''.join(item['std']['out']))
-                if item['std']['err']:
-                    print(''.join(item['std']['err']), file=sys.stderr)
+                for t_std, line in item['std']:
+                    print(line, end='')
+                print()
+
             if item.get('type') in ('craft', 'flagman'):
                 continue
             players_groups[item['player_id']].append(item)
@@ -164,16 +164,16 @@ class FightHandler(BaseHandler):
     def str_state(self, state):
         if state is None:
             return 'NONE'
-        if state['action'] in ('idle', 'charge', 'dead'):
-            return state['action']
-        if state['action'] == 'attack':
+        if state['name'] in ('idle', 'charge', 'dead'):
+            return state['name']
+        if state['name'] == 'attack':
             str_action = 'fire to ' + str(state['aid'])
             if 'damaged' in state:
                 str_action += ' and damaged ' + ','.join(map(str, state['damaged']))
             if 'killed' in state:
                 str_action += ' and killed ' + ','.join(map(str, state['killed']))
             return str_action
-        if state['action'] == 'move':
+        if state['name'] == 'move':
             return 'move from {:.4f}, {:.4f} to {:.4f}, {:.4f}'.format(
                 *(state['from'] + state['to'])
             )

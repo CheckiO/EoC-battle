@@ -13,7 +13,7 @@ class DefenceRocketActions(BaseItemActions):
         attacker = self._item
         attacker.add_sub_item(RocketSubItem(attacker, attacker.coordinates, enemy.coordinates))
         return {
-            'action': 'attack',
+            'name': 'attack',
             'firing_point': enemy.coordinates,
             'aid': enemy.id,
             'damaged': []
@@ -40,7 +40,7 @@ class DefenceRocketActions(BaseItemActions):
         distance_to_enemy = euclidean_distance(coordinates, self._item.coordinates)
         item_firing_range = self._item.firing_range
         if distance_to_enemy > item_firing_range:
-            return {'action': 'idle'}
+            return {'name': 'idle'}
         return self._actual_coor_shot(coordinates)
 
     def _actual_coor_shot(self, coordinates):
@@ -48,7 +48,7 @@ class DefenceRocketActions(BaseItemActions):
         attacker.add_sub_item(RocketSubItem(attacker, attacker.coordinates, coordinates))
 
         return {
-            'action': 'attack',
+            'name': 'attack',
             'firing_point': coordinates,
             'aid': None,
             'damaged': []  # TODO:

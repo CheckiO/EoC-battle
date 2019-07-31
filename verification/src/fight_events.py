@@ -40,7 +40,7 @@ class FightEvent:
 
         self.add_checker('idle',
             lambda event, receiver: (event['data']['id'] in fighters and
-                fighters[event['data']['id']]._state.get('action') == 'idle'),
+                fighters[event['data']['id']].get_action_status() == 'idle'),
             lambda event, receiver, res: {'id': event['data']['id']})
 
         self.add_checker('enemy_in_my_firing_range', 

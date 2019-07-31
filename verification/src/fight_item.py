@@ -299,15 +299,15 @@ class FightItem(Item):
         return max(0, round(100 * self.hit_points / self.start_hit_points))
 
     def get_action_status(self):
-        return self._state["action"]
+        return self._state and self._state["name"] or 'idle'
 
     def set_state_idle(self):
-        self._state = {'action': 'idle'}
+        self._state = {'name': 'idle'}
 
     def set_state_dead(self):
         if self.size:
             self._fight_handler.clear_from_map(self)
-        self._state = {'action': 'dead'}
+        self._state = {'name': 'dead'}
 
     def set_coordinates(self, coordinates):
         self.coordinates = coordinates
@@ -348,27 +348,22 @@ class FightItem(Item):
             result = yield self._env.read_message()
 
     def reset_std(self):
-        self._std = {
-            "out": [],
-            "err": []
-        }
+        self._std = []
 
     def stdout(self, connection_id, out):
-        self._std[STD.OUT].append(out)
+        self._std.append([STD.OUT, out])
 
     def stderr(self, connection_id, err):
-        self._std[STD.ERR].append(err)
+        self._std.append([STD.ERR, err])
 
     def show_error(self, error_msg):
         self.stderr(None, error_msg)
 
-    def has_std(self, std_name):
-        return bool(self._std[std_name])
+    def has_std(self):
+        return bool(self._std)
 
-    def get_std(self, std_name):
-        data = "".join(self._std[std_name])
-        self._std[std_name] = []
-        return data
+    def get_std(self):
+        return self._std
 
     def handle_result(self, data):
         handler_name = data.pop('method', None)

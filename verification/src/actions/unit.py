@@ -32,13 +32,13 @@ class MineActions(BaseItemActions):
                 break
 
         return {
-            'action': 'idle'
+            'name': 'idle'
         }
 
     def action_detonate(self, data):
         self._item.detonator_timer()
         return {
-            'action': 'detonate'
+            'name': 'detonate'
         }
         
 
@@ -80,7 +80,7 @@ class CraftActions(BaseItemActions):
         if self._item.land_unit():
             #print('LAND', self._item.craft_id, self._item.amount_units_in)
             return {
-                'action': 'land_units'
+                'name': 'land_units'
             }
         else:
             #print('DONE LANDING', self._item.craft_id, self._item.amount_units_in)
@@ -221,7 +221,7 @@ class UnitActions(BaseItemActions):
             self._item.set_coordinates(current_point)
             # without it we will not stop
             self._route.append(current_point)
-            return {'action': 'move',
+            return {'name': 'move',
                     'from': start_point,
                     'to': current_point}
         distance = euclidean_distance(current_point, next_point)
@@ -230,7 +230,7 @@ class UnitActions(BaseItemActions):
             current_point[1] + (frame_distance / distance) * (next_point[1] - current_point[1]))
 
         self._item.set_coordinates(new_point)
-        return {'action': 'move',
+        return {'name': 'move',
                 'from': start_point,
                 'to': new_point}
 

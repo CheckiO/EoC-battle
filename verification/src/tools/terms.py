@@ -153,8 +153,6 @@ class OUTPUT():
     CASUALTIES = "casualties"
     CRAFT_ID = "craft_id"
     COUNT = "count"
-    STDOUT = "stdout"
-    STDERR = "stderr"
     DEMAGED = 'demaged'
     SYSTEM = 'system'
     FLAG_SLUG = 'flagSlug'
@@ -163,6 +161,9 @@ class OUTPUT():
     FLAGS = 'flags'
     ONE_ACTION = 'one_action'
     INTERNAL = 'internal'
+    INITIAL_UNITS_IN = 'initial_units_in'
+    UNITS_IN = 'units_in'
+    STD = 'std'
 
 
 class STD():

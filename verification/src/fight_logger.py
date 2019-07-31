@@ -76,7 +76,8 @@ class FightLogger:
             OUTPUT.TILE_POSITION: gen_xy_pos(unit.tile_position),
             OUTPUT.ITEM_TYPE: unit.item_type,
             OUTPUT.PLAYER_ID: unit.player[PLAYER.ID],
-            OUTPUT.PLAYER_ID_DEP: unit.player[PLAYER.ID]
+            OUTPUT.PLAYER_ID_DEP: unit.player[PLAYER.ID],
+            OUTPUT.ITEM_LEVEL: unit.level,
         }
 
     def initial_state_building(self, building):
@@ -111,7 +112,8 @@ class FightLogger:
             OUTPUT.ITEM_TYPE: craft.item_type,
             OUTPUT.ITEM_LEVEL: craft.level,
             OUTPUT.PLAYER_ID: craft.player[PLAYER.ID],
-            OUTPUT.PLAYER_ID_DEP: craft.player[PLAYER.ID]
+            OUTPUT.PLAYER_ID_DEP: craft.player[PLAYER.ID],
+            OUTPUT.INITIAL_UNITS_IN: craft.initial_amount_units_in,
         }
 
     def initial_state_player(self, player):
@@ -146,22 +148,20 @@ class FightLogger:
                 OUTPUT.HIT_POINTS_PERCENTAGE: item.get_percentage_hit_points(),
                 OUTPUT.ITEM_STATUS: item.get_action_status()
             }
-            if item_info[ACTION.STATUS] in (ACTION.ATTACK, ACTION.CHARGE):
-                item_info[OUTPUT.FIRING_POINT] = item._state[ACTION.FIRING_POINT]
-                item_info[OUTPUT.FIRING_ID] = item._state[ACTION.AID]
 
-            if item_info[ACTION.STATUS] == ACTION.ATTACK:
-                item_info[OUTPUT.DEMAGED] = item._state[ACTION.DEMAGED]
+            if item._state:
+                item_info[ACTION.STATUS] = item._state
 
             if item.sub_items:
                 item_info[OUTPUT.SUBITEMS] = item.output_sub_items()
 
+            if item.role == ROLE.CRAFT:
+                item_info[OUTPUT.UNITS_IN] = item.amount_units_in
+
             if is_cur_player:
                 internal = item_info[OUTPUT.INTERNAL] = {}
-                if item.has_std(STD.OUT):
-                    internal[OUTPUT.STDOUT] = item.get_std(STD.OUT)
-                if item.has_std(STD.ERR):
-                    internal[OUTPUT.STDERR] = item.get_std(STD.ERR)
+                if item.has_std():
+                    internal[OUTPUT.STD] = item.get_std()
 
                 internal[OUTPUT.ACTION] = item.action
                 internal[OUTPUT.FLAGS] = item._frame_flags
