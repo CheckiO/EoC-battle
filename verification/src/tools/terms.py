@@ -135,14 +135,13 @@ class OUTPUT():
     SIZE = 'size'
     PLAYERS = "players"
     PLAYER_ID = "playerId"
-    PLAYER_ID_DEP = "player_id"
     USERNAME = "username"
     ITEM_ID = 'id'
     TILE_POSITION = 'tilePosition'
     ITEM_TYPE = 'type'
     ITEM_STATUS = 'status'
     ITEM_LEVEL = 'level'
-    HIT_POINTS_PERCENTAGE = 'hitPointPercentage'
+    HIT_POINTS_PERCENTAGE = 'hitPointsPer'
     FIRING_POINT = "firingPoint"
     FIRING_ID = "firingId"
     FIRING_POINT_LEGACY = "firing_point"
@@ -161,9 +160,11 @@ class OUTPUT():
     FLAGS = 'flags'
     ONE_ACTION = 'one_action'
     INTERNAL = 'internal'
-    INITIAL_UNITS_IN = 'initial_units_in'
-    UNITS_IN = 'units_in'
+    INITIAL_UNITS_IN = 'inUnitsIn'
+    UNITS_IN = 'unitsIn'
     STD = 'std'
+    STATUS = 'status'
+    STATE = 'state'
 
 
 class STD():

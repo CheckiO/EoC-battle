@@ -1,6 +1,8 @@
 from tools import ROLE, ATTRIBUTE, ACTION, DEFEAT_REASON, OUTPUT, STD,\
     OBSTACLE, INITIAL, PLAYER
 
+from copy import deepcopy
+
 
 def gen_xy_pos(position):
     if not position:
@@ -9,6 +11,17 @@ def gen_xy_pos(position):
         'x': position[0],
         'y': position[1]
     }
+
+
+def name_to_js(name):
+    return name[0].lower() + name.title().replace('_', '')[1:]
+
+
+def dict_to_js(data):
+    data = deepcopy(data)
+    for name in list(data.keys()):
+        data[name_to_js(name)] = data.pop(name)
+    return data
 
 
 class FightLogger:
@@ -76,7 +89,6 @@ class FightLogger:
             OUTPUT.TILE_POSITION: gen_xy_pos(unit.tile_position),
             OUTPUT.ITEM_TYPE: unit.item_type,
             OUTPUT.PLAYER_ID: unit.player[PLAYER.ID],
-            OUTPUT.PLAYER_ID_DEP: unit.player[PLAYER.ID],
             OUTPUT.ITEM_LEVEL: unit.level,
         }
 
@@ -89,7 +101,6 @@ class FightLogger:
             OUTPUT.ITEM_STATUS: building.item_status,
             OUTPUT.ITEM_LEVEL: building.level,
             OUTPUT.PLAYER_ID: building.player[PLAYER.ID],
-            OUTPUT.PLAYER_ID_DEP: building.player[PLAYER.ID]
         }
         self.data[OUTPUT.INITIAL_CATEGORY][OUTPUT.BUILDINGS][building.id] = log_record
         return log_record
@@ -112,7 +123,6 @@ class FightLogger:
             OUTPUT.ITEM_TYPE: craft.item_type,
             OUTPUT.ITEM_LEVEL: craft.level,
             OUTPUT.PLAYER_ID: craft.player[PLAYER.ID],
-            OUTPUT.PLAYER_ID_DEP: craft.player[PLAYER.ID],
             OUTPUT.INITIAL_UNITS_IN: craft.initial_amount_units_in,
         }
 
@@ -148,9 +158,9 @@ class FightLogger:
                 OUTPUT.HIT_POINTS_PERCENTAGE: item.get_percentage_hit_points(),
                 OUTPUT.ITEM_STATUS: item.get_action_status()
             }
-
-            if item._state:
-                item_info[ACTION.STATUS] = item._state
+            
+            item_info[OUTPUT.STATUS] = item.get_action_status()
+            item_info[OUTPUT.STATE] = dict_to_js(item._state)
 
             if item.sub_items:
                 item_info[OUTPUT.SUBITEMS] = item.output_sub_items()

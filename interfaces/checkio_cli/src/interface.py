@@ -29,6 +29,14 @@ class FightHandler(BaseHandler):
         gg = {}
         exec(self.user_data['code'], gg)
         self.user_data['battle_info'] = gg['PLAYERS']
+
+        self.interface = {
+            'player_id': 1
+        }
+
+        if 'interface' in gg['PLAYERS']:
+            self.interface.update(gg['PLAYERS'].pop('interface'))
+
         if 'MAP_X' in gg:
             global MAP_X
             MAP_X = gg['MAP_X']
@@ -55,14 +63,10 @@ class FightHandler(BaseHandler):
             self.log_file.write(json.dumps(data))
 
     def handler_battle(self, data, request_id, stream_r):
-        interface = {
-            'player_id': 1
-        }
-        if 'interface' in data:
-            interface.update(data.pop('interface'))
+        
 
         if not data.get("is_stream"):
-            data['frames'] = data['frames'][str(interface['player_id'])]
+            data['frames'] = data['frames'][str(self.interface['player_id'])]
             self.write_log(data)
             print('DONE!')
             return

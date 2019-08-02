@@ -6,7 +6,8 @@ In order to run the battle you should follow these steps:
 
  - **Install** checkio-client
 
-    pip install checkio-client
+    pip3 install checkio-client GitPython aiohttp docker
+    pip3 install git+https://github.com/CheckiO/checkio-docker/
 
  - **Configure** it for the epy domain (In case you are asked about the "key", just put a random number. It’s not important at this stage.)
 
