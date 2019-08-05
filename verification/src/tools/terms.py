@@ -165,6 +165,9 @@ class OUTPUT():
     STD = 'std'
     STATUS = 'status'
     STATE = 'state'
+    OPERATIONS = 'operations'
+    FLAGMAN = 'flagman'
+    CHARGE = 'charge'
 
 
 class STD():

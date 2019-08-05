@@ -48,6 +48,8 @@ class FightItem(Item):
         if self.role == ROLE.CENTER:
             fight_handler.set_center(self)
 
+        # TODO: Why do we need tile position and coordinates
+
         self.land_time = fight_handler.current_game_time
 
         self.item_type = item_data.get(ATTRIBUTE.ITEM_TYPE)
@@ -454,8 +456,15 @@ class FlagItem(FightItem):
         data.update(building_display_stats(data[ATTRIBUTE.ITEM_TYPE], data[ATTRIBUTE.LEVEL]))
         for action, level in data[ATTRIBUTE.OPERATIONS].items():
             data[ATTRIBUTE.OPERATIONS][action] = operation_stats(action, level)
+
+        # from pprint import pprint
+        # print('OPERATIONS')
+        # pprint(data[ATTRIBUTE.OPERATIONS])
+
         if data[ATTRIBUTE.IS_FLYING]:
             data[ATTRIBUTE.ROLE] = ROLE.FLAGMAN
+            data[ATTRIBUTE.TILE_POSITION] = data[ATTRIBUTE.COORDINATES] = [40, 20] # if flagman is flying. It should be right in the middle
+
         return data
 
     def get_operation(self, operation):
@@ -504,7 +513,7 @@ class CraftItem(FightItem):
     def adj_item_data(self, craft_data):
         craft_coor = self.generate_craft_place(craft_data)
         if not craft_coor[1]:
-            return
+            raise ValueError('NO COOR')
         craft_data[ATTRIBUTE.HIT_POINTS] = 10*10
         craft_data[ATTRIBUTE.COORDINATES] = craft_coor
         in_unit_description = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION]

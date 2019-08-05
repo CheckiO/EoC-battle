@@ -77,10 +77,16 @@ class FightLogger:
                     self.initial_state_flag_stock(item)
                 else:
                     self.initial_state_building(item)
+
         for craft in self.get_crafts():
             self.initial_state_craft(craft)
+
         for player in self.get_players():
             self.initial_state_player(player)
+
+        flagman = self.get_flagman()
+        self.initial_state_flagman(flagman)
+
         self.initial_state_system()
 
     def initial_state_unit(self, unit):
@@ -126,6 +132,15 @@ class FightLogger:
             OUTPUT.INITIAL_UNITS_IN: craft.initial_amount_units_in,
         }
 
+    def initial_state_flagman(self, flagman):
+        self.data[OUTPUT.INITIAL_CATEGORY][OUTPUT.FLAGMAN] = {
+            OUTPUT.ITEM_ID: flagman.id,
+            OUTPUT.TILE_POSITION: gen_xy_pos(flagman.tile_position),
+            OUTPUT.OPERATIONS: {name: value['level'] for name, value in flagman.operations.items()},
+            OUTPUT.ITEM_LEVEL: flagman.level,
+            OUTPUT.PLAYER_ID: flagman.player[PLAYER.ID],
+        }
+
     def initial_state_player(self, player):
         self.data[OUTPUT.INITIAL_CATEGORY][OUTPUT.PLAYERS][player[PLAYER.ID]] = {
             OUTPUT.ID: player[PLAYER.ID],
@@ -136,7 +151,10 @@ class FightLogger:
         self.data[OUTPUT.SYSTEM] = {
             'mapSize': self._fight_handler.map_size,
             'timeLimit': self._fight_handler.time_limit,
-            'timeAccuracy': self._fight_handler.GAME_FRAME_TIME
+            'timeAccuracy': self._fight_handler.GAME_FRAME_TIME,
+            'userIds': {
+                player_id: data['user_id'] for player_id, data in self._fight_handler.players.items() if player_id >= 0
+            }
         }
 
     def new_frame(self):
@@ -167,6 +185,9 @@ class FightLogger:
 
             if item.role == ROLE.CRAFT:
                 item_info[OUTPUT.UNITS_IN] = item.amount_units_in
+
+            if item.is_flagman:
+                item_info[OUTPUT.CHARGE] = item.charge
 
             if is_cur_player:
                 internal = item_info[OUTPUT.INTERNAL] = {}
