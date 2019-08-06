@@ -72,6 +72,7 @@ class ATTRIBUTE():
     EXTRAS = 'extras'
     MODULES = 'modules'
     CRAFT_FIGHT_ID = 'craft_fight_id'
+    IS_IMMORTAL = 'is_immortal'
  
 
 class ACTION():
@@ -168,6 +169,7 @@ class OUTPUT():
     OPERATIONS = 'operations'
     FLAGMAN = 'flagman'
     CHARGE = 'charge'
+    IS_IMMORTAL = 'is_immortal'
 
 
 class STD():

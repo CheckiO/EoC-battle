@@ -67,6 +67,7 @@ class FightHandler(BaseHandler):
 
         if not data.get("is_stream"):
             data['frames'] = data['frames'][str(self.interface['player_id'])]
+            data['system']['curPlayerId'] = self.interface['player_id']
             self.write_log(data)
             print('DONE!')
             return

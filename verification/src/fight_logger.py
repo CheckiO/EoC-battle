@@ -85,7 +85,8 @@ class FightLogger:
             self.initial_state_player(player)
 
         flagman = self.get_flagman()
-        self.initial_state_flagman(flagman)
+        if flagman:
+            self.initial_state_flagman(flagman)
 
         self.initial_state_system()
 
@@ -174,7 +175,8 @@ class FightLogger:
                 OUTPUT.TILE_POSITION: gen_xy_pos(item.coordinates if item.role == ROLE.UNIT
                                        else item.tile_position),
                 OUTPUT.HIT_POINTS_PERCENTAGE: item.get_percentage_hit_points(),
-                OUTPUT.ITEM_STATUS: item.get_action_status()
+                OUTPUT.ITEM_STATUS: item.get_action_status(),
+                OUTPUT.IS_IMMORTAL: item.is_immortal,
             }
             
             item_info[OUTPUT.STATUS] = item.get_action_status()

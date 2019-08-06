@@ -98,7 +98,6 @@ class PlayerRefereeClient(RefereeClient):
     def wait_actual_response(self, response):
         if response.get('action') != 'event':
             return response
-
         self.events_call.put(response)
         return self.wait_actual_response(self._get_response_json())
 

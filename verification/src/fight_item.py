@@ -265,6 +265,7 @@ class FightItem(Item):
             ATTRIBUTE.STATE: self._state,
             ATTRIBUTE.SUBITEMS: self.info_subitems,
             ATTRIBUTE.EXTRAS: self.info_extras,
+            ATTRIBUTE.IS_IMMORTAL: self.is_immortal,
         }
 
     @property
@@ -432,6 +433,7 @@ class FightItem(Item):
 
 class FlagItem(FightItem):
     is_flagman = True
+    is_immortal = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -450,6 +452,7 @@ class FlagItem(FightItem):
             ATTRIBUTE.PLAYER_ID: self.player_id,
             ATTRIBUTE.SUBITEMS: self.info_subitems,
             ATTRIBUTE.ITEM_TYPE: self.item_type,
+            ATTRIBUTE.IS_IMMORTAL: self.is_immortal,
         }
 
     def adj_item_data(self, data):
@@ -484,6 +487,8 @@ class CraftItem(FightItem):
     is_craft = True
     landing_duration = 3
     last_landing = -landing_duration
+    is_immortal = True
+
     def __init__(self, item_data, player, fight_handler):
         super().__init__(item_data, player, fight_handler)
         self.craft_id = item_data.get(ATTRIBUTE.CRAFT_ID)
@@ -503,6 +508,7 @@ class CraftItem(FightItem):
         self.role = ROLE.CRAFT
 
         self.children = set() #units
+
 
     def is_empty(self):
         return not self.amount_units_in
@@ -537,6 +543,7 @@ class CraftItem(FightItem):
             ATTRIBUTE.CRAFT_ID: self.craft_id,
             ATTRIBUTE.IS_DEAD: False,
             ATTRIBUTE.SIZE: 0,
+            ATTRIBUTE.IS_IMMORTAL: self.is_immortal,
         }
 
     def land_unit(self):
