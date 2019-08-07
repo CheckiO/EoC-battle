@@ -101,7 +101,12 @@ PLAYERS = {'codes':{
                    'unit_quantity': 2},
                    ],
  'map_size': [40, 40],
- 'players': [{'defeat': ['center'], 'env_name': 'python_3', 'id': 0},
-             {'defeat': ['units', 'time'], 'env_name': 'python_3', 'id': 1}],
- 'rewards': {'adamantite': 400, 'crystalite': 150},
+ 'players': [{'defeat': ['center'], 'env_name': 'python_3', 'id': 0, 'user_id': -1},
+             {'defeat': ['units', 'time'], 'env_name': 'python_3', 'id': 1, 'user_id': -2}],
+ 'rewards': {
+      'resources': {
+          'adamantite':  400,
+          'crystalite': 150,
+      }
+  },
  'time_limit': 30}
