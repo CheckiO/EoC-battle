@@ -323,6 +323,10 @@ Client.prototype.whenEnemyInRange = function () {
     return this.when('enemy_in_my_firing_range', {});
 };
 
+Client.prototype.whenEnemyInRangeAlwaysHit = function () {
+    return this.when('enemy_in_my_firing_range_always_hit', {});
+};
+
 Client.prototype.whenEnemyOutRange = function () {
     console.warn("'whenEnemyOutRange' is deprecated");
     return new Promise(function(resolve){});

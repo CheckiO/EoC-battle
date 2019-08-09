@@ -51,6 +51,14 @@ class FightEvent:
                 ),
             lambda event, receiver, res: {'id': res.id})
 
+        self.add_checker('enemy_in_my_firing_range_always_hit',
+            self.gen_fighters_checker(
+                lambda event_item, event, receiver: (
+                    euclidean_distance(receiver.coordinates, event_item.coordinates)  - event_item.size / 2 <= receiver.firing_range_always_hit)
+                    and receiver.player_id != event_item.player_id
+                ),
+            lambda event, receiver, res: {'id': res.id})
+
         self.add_checker('death',
             lambda event, receiver: fighters.get(event['data']['id']) and fighters.get(event['data']['id']).is_dead,
             lambda event, receiver, res: {'id': event['data']['id']})

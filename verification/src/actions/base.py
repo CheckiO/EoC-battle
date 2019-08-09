@@ -74,13 +74,13 @@ class BaseItemActions(object):
     def _actual_shot(self, enemy):
         attacker = self._item
 
-        demaged_ids = enemy.get_shoted(attacker.total_damage)
+        damaged_ids = enemy.get_shoted(attacker.total_damage)
 
         return {
             'name': 'attack',
             'firing_point': enemy.coordinates,
             'aid': enemy.id,
-            'damaged': demaged_ids,  # TODO:
+            'damaged': damaged_ids,  # TODO:
         }
 
     def parse_action_data(self, action, data):

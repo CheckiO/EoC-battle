@@ -267,6 +267,9 @@ class Client(object):
     def when_enemy_in_range(self, callback):
         return self.when('enemy_in_my_firing_range', callback)
 
+    def when_enemy_in_range_always_hit(self, callback):
+        return self.when('enemy_in_my_firing_range_always_hit', callback)
+
     def when_item_destroyed(self, item_id, callback):
         check_item_id(item_id)
         return self.when('death', callback, {'id': item_id})

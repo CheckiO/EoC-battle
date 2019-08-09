@@ -1,5 +1,5 @@
 from .center import CenterActions
-from .defence import DefenceActions, DefenceRocketActions
+from .defence import DefenceActions, DefenceRocketActions, DefenceSentryActions
 from .unit import UnitActions, CraftActions, FlagActions, MineActions
 from .building import BuildingActions
 from .obstacle import ObstacleActions
@@ -8,7 +8,7 @@ from tools import ROLE, DEF_TYPE
 ACTIONS = {
     ROLE.UNIT: UnitActions,
     ROLE.TOWER: {
-        DEF_TYPE.SENTRY: DefenceActions,
+        DEF_TYPE.SENTRY: DefenceSentryActions,
         DEF_TYPE.MACHINE: DefenceActions,
         DEF_TYPE.ROCKET: DefenceRocketActions
     },

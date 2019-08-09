@@ -45,6 +45,7 @@ class ATTRIBUTE():
     SPEED = 'speed'
     RATE_OF_FIRE = 'rate_of_fire'
     FIRING_RANGE = 'firing_range'
+    FIRING_RANGE_NEVER_MISS = 'firing_range_100'
     AREA_DAMAGE_PER_SHOT = 'area_damage_per_shot'
     DAMAGE_PER_SHOT = 'damage_per_shot'
     AREA_DAMAGE_RADIUS = 'area_damage_radius'
