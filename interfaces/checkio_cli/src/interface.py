@@ -102,7 +102,7 @@ class FightHandler(BaseHandler):
             print('DONE!')
 
             print('---SYSTEM---')
-            print(data)
+            print(json.dumps(data))
             print('---END-SYSTEM---')
             return
         out_map = []
