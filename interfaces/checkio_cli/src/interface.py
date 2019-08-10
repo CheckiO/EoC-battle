@@ -3,6 +3,7 @@ import sys
 from datetime import datetime
 import json
 import atexit
+import time
 
 from handlers.base import BaseHandler
 from server import TCPConsoleServer
@@ -78,6 +79,13 @@ class FightHandler(BaseHandler):
             data['system']['curPlayerId'] = self.interface['player_id']
             self.write_log(data)
             print('DONE!')
+
+            time.sleep(0.5) # wait for half a sec
+                            # in case reffery is not dead yet
+
+            print('---SYSTEM---')
+            print(data)
+            print('---END-SYSTEM---')
             return
         out_map = []
         # temporarily spike (I know about "temporarily" (we have ticket for this))
