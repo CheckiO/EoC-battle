@@ -42,6 +42,32 @@ class FightHandler(BaseHandler):
             gg['PLAYERS']['send_progress'] = True
 
 
+        codes = gg['PLAYERS'].setdefault('codes', {})
+        for player in gg['PLAYERS']['players']:
+            codes.setdefault(str(player['id']), {})
+
+        strat_folder = '/root/solutions/strategies/'
+        try:
+            for name in os.listdir(strat_folder):
+                abs_name = strat_folder + name
+
+                if not os.path.isfile(abs_name):
+                    continue
+
+                for code in codes.values():
+                    if name in code:
+                        continue
+
+                    with open(abs_name) as fh:
+                        code[name] = fh.read()
+
+        except FileNotFoundError:
+            pass
+
+
+        print('CODES', gg['PLAYERS']['codes'])
+
+
         if 'MAP_X' in gg:
             global MAP_X
             MAP_X = gg['MAP_X']
