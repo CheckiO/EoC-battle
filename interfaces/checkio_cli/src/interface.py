@@ -80,9 +80,6 @@ class FightHandler(BaseHandler):
             self.write_log(data)
             print('DONE!')
 
-            time.sleep(0.5) # wait for half a sec
-                            # in case reffery is not dead yet
-
             print('---SYSTEM---')
             print(data)
             print('---END-SYSTEM---')
