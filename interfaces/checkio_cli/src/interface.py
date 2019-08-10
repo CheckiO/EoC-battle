@@ -41,7 +41,6 @@ class FightHandler(BaseHandler):
         if not gg['PLAYERS']['is_stream']:
             gg['PLAYERS']['send_progress'] = True
 
-
         codes = gg['PLAYERS'].setdefault('codes', {})
         for player in gg['PLAYERS']['players']:
             codes.setdefault(str(player['id']), {})
@@ -63,10 +62,6 @@ class FightHandler(BaseHandler):
 
         except FileNotFoundError:
             pass
-
-
-        print('CODES', gg['PLAYERS']['codes'])
-
 
         if 'MAP_X' in gg:
             global MAP_X
