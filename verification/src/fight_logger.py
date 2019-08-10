@@ -64,6 +64,16 @@ class FightLogger:
     def send_battle(self, data):
         self._fight_handler.editor_client.send_battle(data)
 
+    def send_progress(self, data):
+        self._fight_handler.editor_client.send_process(data)
+
+    def send_frame_progress(self):
+        fight_handler = self._fight_handler
+        self.send_progress({
+                'frame': fight_handler.current_frame,
+                'game_time': fight_handler.current_game_time,
+            })
+
     def initial_state(self):
         for item in self.get_battle_fighters():
             if item.role == ROLE.UNIT:

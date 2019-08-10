@@ -37,10 +37,15 @@ class FightHandler(BaseHandler):
         if 'interface' in gg['PLAYERS']:
             self.interface.update(gg['PLAYERS'].pop('interface'))
 
+        if not gg['PLAYERS']['is_stream']:
+            gg['PLAYERS']['send_progress'] = True
+
+
         if 'MAP_X' in gg:
             global MAP_X
             MAP_X = gg['MAP_X']
         self.ROUTING['battle'] = 'handler_battle'
+        self.ROUTING['process'] = 'handler_battle_progress'
         if not os.path.exists(LOG_DIRNAME):
             os.mkdir(LOG_DIRNAME)
         log_filename = "battle_log.json"
@@ -61,6 +66,9 @@ class FightHandler(BaseHandler):
     def write_log(self, data):
         if self.log_file:
             self.log_file.write(json.dumps(data))
+
+    def handler_battle_progress(self, data, request_id, stream_r):
+        print('PROGRESS', data['frame'], data['game_time'])
 
     def handler_battle(self, data, request_id, stream_r):
         
