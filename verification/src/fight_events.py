@@ -1,6 +1,6 @@
 from tools.terms import ENV
 from tools.distances import euclidean_distance
-from tools.distances import in_correct
+from tools.distances import in_firing_range
 
 
 class FightEvent:
@@ -48,7 +48,7 @@ class FightEvent:
         self.add_checker('enemy_in_my_firing_range', 
             self.gen_fighters_checker(
                 lambda event_item, event, receiver: (
-                    in_correct(event_item, receiver, event['data'])
+                    in_firing_range(event_item, receiver, event['data'])
                 )),
             lambda event, receiver, res: {'id': res.id, 'percentage': event['data']['percentage'], 'distance': event['data']['distance']})
 
