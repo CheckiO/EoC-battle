@@ -3,6 +3,7 @@ import sys
 from datetime import datetime
 import json
 import atexit
+import time
 
 from handlers.base import BaseHandler
 from server import TCPConsoleServer
@@ -37,10 +38,36 @@ class FightHandler(BaseHandler):
         if 'interface' in gg['PLAYERS']:
             self.interface.update(gg['PLAYERS'].pop('interface'))
 
+        if not gg['PLAYERS']['is_stream']:
+            gg['PLAYERS']['send_progress'] = True
+
+        codes = gg['PLAYERS'].setdefault('codes', {})
+        for player in gg['PLAYERS']['players']:
+            codes.setdefault(str(player['id']), {})
+
+        strat_folder = '/root/solutions/strategies/'
+        try:
+            for name in os.listdir(strat_folder):
+                abs_name = strat_folder + name
+
+                if not os.path.isfile(abs_name):
+                    continue
+
+                for code in codes.values():
+                    if name in code:
+                        continue
+
+                    with open(abs_name) as fh:
+                        code[name] = fh.read()
+
+        except FileNotFoundError:
+            pass
+
         if 'MAP_X' in gg:
             global MAP_X
             MAP_X = gg['MAP_X']
         self.ROUTING['battle'] = 'handler_battle'
+        self.ROUTING['process'] = 'handler_battle_progress'
         if not os.path.exists(LOG_DIRNAME):
             os.mkdir(LOG_DIRNAME)
         log_filename = "battle_log.json"
@@ -62,6 +89,9 @@ class FightHandler(BaseHandler):
         if self.log_file:
             self.log_file.write(json.dumps(data))
 
+    def handler_battle_progress(self, data, request_id, stream_r):
+        print('PROGRESS', data['frame'], data['game_time'])
+
     def handler_battle(self, data, request_id, stream_r):
         
 
@@ -70,6 +100,10 @@ class FightHandler(BaseHandler):
             data['system']['curPlayerId'] = self.interface['player_id']
             self.write_log(data)
             print('DONE!')
+
+            print('---SYSTEM---')
+            print(json.dumps(data))
+            print('---END-SYSTEM---')
             return
         out_map = []
         # temporarily spike (I know about "temporarily" (we have ticket for this))

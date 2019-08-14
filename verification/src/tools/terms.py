@@ -103,6 +103,7 @@ class INITIAL():
     REWARDS = 'rewards'
     STRAT_REWARDS = 'strategies'
     CODES = 'codes'
+    SEND_PROGRESS = 'send_progress'
 
 
 class RESOURCE():

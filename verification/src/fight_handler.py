@@ -164,17 +164,9 @@ class FightHandler(BaseHandler):
         }
 
     @gen.coroutine
-    def send_editor_current_frame(self):
-        self.editor_client.send_process({'type': 'frame', 'current': self.current_frame})
-        IOLoop.current().call_later(1, self.send_editor_current_frame)
-
-    @gen.coroutine
     def start(self):
-        self.send_editor_current_frame()
         if self.initial_data.get(INITIAL.IS_STREAM, True):
             self.log = StreamFightLogger(self)
-        else:
-            self.log = FightLogger(self)
 
         self.event.setup() # there are no specific reasons for setting up 
                            # on start and not on init
@@ -310,6 +302,9 @@ class FightHandler(BaseHandler):
         self.event.check()
 
         winner = self.get_winner()
+
+        if self.initial_data.get(INITIAL.SEND_PROGRESS):
+            self.log.send_frame_progress()
 
         if winner is not None: 
             self.log.done_battle(winner)
