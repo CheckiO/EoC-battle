@@ -68,7 +68,8 @@ class FightItem(Item):
         self.rate_of_fire = item_data.get(ATTRIBUTE.RATE_OF_FIRE)
         self.damage_per_shot = item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT)
         self.firing_range = item_data.get(ATTRIBUTE.FIRING_RANGE)
-        self.firing_range_always_hit = item_data.get(ATTRIBUTE.FIRING_RANGE_ALWAYS_HIT, item_data.get(ATTRIBUTE.FIRING_RANGE))
+        self.firing_range_always_hit = item_data.get(ATTRIBUTE.FIRING_RANGE_ALWAYS_HIT)
+        self.start_chance = item_data.get(ATTRIBUTE.START_CHANCE)
         self.area_damage_per_shot = item_data.get(ATTRIBUTE.AREA_DAMAGE_PER_SHOT, 0)
         self.area_damage_radius = item_data.get(ATTRIBUTE.AREA_DAMAGE_RADIUS, 0)
 
@@ -261,6 +262,7 @@ class FightItem(Item):
             ATTRIBUTE.AREA_DAMAGE_RADIUS: self.area_damage_radius,
             ATTRIBUTE.FIRING_RANGE: self.firing_range,
             ATTRIBUTE.FIRING_RANGE_ALWAYS_HIT: self.firing_range_always_hit,
+            ATTRIBUTE.START_CHANCE: self.start_chance,
             ATTRIBUTE.LEVEL: self.level,
             # TODO State should be reworked
             ATTRIBUTE.IS_DEAD: self.is_dead,

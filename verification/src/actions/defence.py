@@ -12,43 +12,25 @@ class DefenceActions(BaseItemActions):
 
 class DefenceSentryActions(BaseItemActions):
 
-    def _actual_shot(self, enemy):
-        attacker = self._item
-
-        damaged_ids = []
-        if self._actual_hit(enemy):
-            damaged_ids = enemy.get_shoted(attacker.total_damage)
-
-        return {
-            'name': 'attack',
-            'firing_point': enemy.coordinates,
-            'aid': enemy.id,
-            'damaged': damaged_ids,  # TODO:
-        }
-
     def _actual_hit(self, enemy):
         attacker = self._item
-        enemy_range = (euclidean_distance(enemy.coordinates, attacker.coordinates) - enemy.size / 2)
+        distance_to_enemy = (euclidean_distance(enemy.coordinates, attacker.coordinates) - enemy.size / 2)
 
-        if enemy_range <= attacker.firing_range_always_hit:
+        if distance_to_enemy <= attacker.firing_range_always_hit:
             return True
 
-        if enemy_range <= attacker.firing_range:
-            relative_full_distance = attacker.firing_range - attacker.firing_range_always_hit
-            relative_enemy_distance = enemy_range - attacker.firing_range_always_hit
-            hit_success_percentage = 100 - int((relative_enemy_distance * 100) / relative_full_distance)
-
-            if hit_success_percentage < 5:
-                hit_success_percentage = 5
-            elif hit_success_percentage > 95:
-                hit_success_percentage = 95
-                
+        if distance_to_enemy <= attacker.firing_range:
+            normalized_full_distance = attacker.firing_range - attacker.firing_range_always_hit
+            normalized_enemy_distance = distance_to_enemy - attacker.firing_range_always_hit
+            hit_success_percentage = 100 - int(
+                normalized_enemy_distance * (100 - attacker.start_chance) / normalized_full_distance)
             return randint(0, 100) < hit_success_percentage
 
         return False
 
 
 class DefenceRocketActions(BaseItemActions):
+
     def _actual_shot(self, enemy):
         attacker = self._item
         attacker.add_sub_item(RocketSubItem(attacker, attacker.coordinates, enemy.coordinates))
