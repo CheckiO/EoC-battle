@@ -71,16 +71,21 @@ class BaseItemActions(object):
 
         return self._idle()
 
+    def _actual_hit(self, enemy):
+        return True
+
     def _actual_shot(self, enemy):
         attacker = self._item
 
-        demaged_ids = enemy.get_shoted(attacker.total_damage)
+        damaged_ids = []
+        if self._actual_hit(enemy):
+            damaged_ids = enemy.get_shoted(attacker.total_damage)
 
         return {
             'name': 'attack',
             'firing_point': enemy.coordinates,
             'aid': enemy.id,
-            'damaged': demaged_ids,  # TODO:
+            'damaged': damaged_ids,  # TODO:
         }
 
     def parse_action_data(self, action, data):
@@ -111,9 +116,9 @@ class BaseItemActions(object):
         if enemy.player['id'] == self._item.player['id']:
             raise ActionValidateError("Can not attack own item")
 
-        distance_to_enemy = euclidean_distance(enemy.coordinates, self._item.coordinates)
+        distance_to_enemy = euclidean_distance(enemy.coordinates, self._item.coordinates) - enemy.size / 2
         item_firing_range = self._item.firing_range
-        if distance_to_enemy - enemy.size / 2 > item_firing_range:
+        if distance_to_enemy > item_firing_range:
             raise ActionValidateError("Can not attack item, it's big distance")
 
     def validate_move(self, action, data):

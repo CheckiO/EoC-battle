@@ -3,7 +3,6 @@ import sys
 from datetime import datetime
 import json
 import atexit
-import time
 
 from handlers.base import BaseHandler
 from server import TCPConsoleServer
@@ -93,8 +92,6 @@ class FightHandler(BaseHandler):
         print('PROGRESS', data['frame'], data['game_time'])
 
     def handler_battle(self, data, request_id, stream_r):
-        
-
         if not data.get("is_stream"):
             data['frames'] = data['frames'][str(self.interface['player_id'])]
             data['system']['curPlayerId'] = self.interface['player_id']

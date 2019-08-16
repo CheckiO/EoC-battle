@@ -1,3 +1,5 @@
+from random import randint
+
 from .base import BaseItemActions, euclidean_distance
 from sub_items import RocketSubItem
 from .exceptions import ActionValidateError
@@ -8,7 +10,27 @@ class DefenceActions(BaseItemActions):
     pass
 
 
+class DefenceSentryActions(BaseItemActions):
+
+    def _actual_hit(self, enemy):
+        attacker = self._item
+        distance_to_enemy = (euclidean_distance(enemy.coordinates, attacker.coordinates) - enemy.size / 2)
+
+        if distance_to_enemy <= attacker.firing_range_always_hit:
+            return True
+
+        if distance_to_enemy <= attacker.firing_range:
+            normalized_full_distance = attacker.firing_range - attacker.firing_range_always_hit
+            normalized_enemy_distance = distance_to_enemy - attacker.firing_range_always_hit
+            hit_success_percentage = 100 - int(
+                normalized_enemy_distance * (100 - attacker.start_chance) / normalized_full_distance)
+            return randint(0, 100) < hit_success_percentage
+
+        return False
+
+
 class DefenceRocketActions(BaseItemActions):
+
     def _actual_shot(self, enemy):
         attacker = self._item
         attacker.add_sub_item(RocketSubItem(attacker, attacker.coordinates, enemy.coordinates))

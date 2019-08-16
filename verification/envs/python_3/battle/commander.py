@@ -10,6 +10,7 @@ ERR_CALLABLE_TYPE = "{name} must be callable (function)"
 ERR_STR_TYPE = "{name} must be a string"
 ERR_NUMBER_TYPE = "{name} must be a number."
 ERR_NUMBER_POSITIVE_VALUE = "{name} must be a positive."
+ERR_NUMBER_PERCENTAGE_VALUE = "{name} must be a percentage."
 ERR_ARRAY_VALUE = "{name} must contains only correct values"
 
 
@@ -37,6 +38,26 @@ def check_radius(number):
         raise TypeError(ERR_NUMBER_TYPE.format(name="Radius"))
     if number <= 0:
         raise ValueError(ERR_NUMBER_POSITIVE_VALUE.format(name="Radius"))
+
+
+def check_distance(number):
+    if number is None:
+        return
+    if not isinstance(number, (int, float)):
+        raise TypeError(ERR_NUMBER_TYPE.format(name="Distance"))
+    if number <= 0:
+        raise ValueError(ERR_NUMBER_POSITIVE_VALUE.format(name="Distance"))
+
+
+def check_percentage(number):
+    if number is None:
+        return
+    if not isinstance(number, (int, float)):
+        raise TypeError(ERR_NUMBER_TYPE.format(name="Percentage"))
+    if number < 0:
+        raise ValueError(ERR_NUMBER_PERCENTAGE_VALUE.format(name="Percentage"))
+    if number > 100:
+        raise ValueError(ERR_NUMBER_PERCENTAGE_VALUE.format(name="Percentage"))
 
 
 def check_callable(func, name):
@@ -264,8 +285,13 @@ class Client(object):
             'id': item_id
         })
 
-    def when_enemy_in_range(self, callback):
-        return self.when('enemy_in_my_firing_range', callback)
+    def when_enemy_in_range(self, callback, distance=None, percentage=None):
+        check_distance(distance)
+        check_percentage(percentage)
+        return self.when('enemy_in_my_firing_range', callback, {
+            'distance': distance,
+            'percentage': percentage,
+        })
 
     def when_item_destroyed(self, item_id, callback):
         check_item_id(item_id)

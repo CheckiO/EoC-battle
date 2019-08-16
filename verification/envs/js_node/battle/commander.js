@@ -16,6 +16,7 @@ var ERR_ID_TYPE = "%s ID must be an integer",
     ERR_STR_TYPE = "%s must be a string",
     ERR_NUMBER_TYPE = "%s must be a number.",
     ERR_NUMBER_POSITIVE_VALUE = "%s must be a positive.",
+    ERR_NUMBER_PERCENTAGE_VALUE = "%s must be a percentage.",
     ERR_ARRAY_VALUE = "%s must contains only correct values",
     ERR_CALLBACK_DEPRECATED = "[WARNING][DEPRECATED] " +
         "Callbacks for 'do' (action) commands are deprecated. " +
@@ -62,6 +63,33 @@ function checkRadius(number) {
     }
     if (number <= 0) {
         throw new Error(util.format(ERR_NUMBER_POSITIVE_VALUE, "Radius"));
+    }
+}
+
+function checkDistance(number) {
+    if (number is undefined) {
+        return
+    }
+    if (isNaN(number)) {
+        throw new TypeError(util.format(ERR_NUMBER_TYPE, "Distance"));
+    }
+    if (number <= 0) {
+        throw new Error(util.format(ERR_NUMBER_POSITIVE_VALUE, "Distance"));
+    }
+}
+
+function checkPercentage(number) {
+    if (number is undefined) {
+        return
+    }
+    if (isNaN(number)) {
+        throw new TypeError(util.format(ERR_NUMBER_TYPE, "Percentage"));
+    }
+    if (number < 0) {
+        throw new Error(util.format(ERR_NUMBER_PERCENTAGE_VALUE, "Percentage"));
+    }
+    if (number > 100) {
+        throw new Error(util.format(ERR_NUMBER_PERCENTAGE_VALUE, "Percentage"));
     }
 }
 
@@ -319,8 +347,13 @@ Client.prototype.whenIdle = function () {
     return this.when('im_idle', {});
 };
 
-Client.prototype.whenEnemyInRange = function () {
-    return this.when('enemy_in_my_firing_range', {});
+Client.prototype.whenEnemyInRange = function (distance, percentage) {
+    checkDistance(distance);
+    checkPercentage(percentage);
+    return this.when('enemy_in_my_firing_range', {
+        'distance': distance,
+        'percentage': percentage
+    });
 };
 
 Client.prototype.whenEnemyOutRange = function () {
