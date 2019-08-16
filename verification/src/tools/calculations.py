@@ -29,15 +29,11 @@ def in_firing_range_by_percentage(event_item, receiver, desired_percentage):
             normalized_enemy_distance = distance_to_enemy - receiver.firing_range_always_hit
             hit_success_percentage = 100 - int(
                 (normalized_enemy_distance * (100 - receiver.start_chance)) / normalized_full_distance)
-            print(hit_success_percentage)
 
     return hit_success_percentage >= desired_percentage
 
 
 def in_firing_range(event_item, receiver, event_data):
-    if receiver.firing_range is None:
-        return False
-
     if receiver.player_id == event_item.player_id:
         return False
 

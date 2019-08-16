@@ -1,6 +1,5 @@
 from tools.terms import ENV
-from tools.distances import euclidean_distance
-from tools.distances import in_firing_range
+from tools.calculations import in_firing_range
 
 
 class FightEvent:
