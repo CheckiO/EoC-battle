@@ -65,6 +65,11 @@ class FightItem(Item):
 
         self.coordinates = item_data.get(ATTRIBUTE.COORDINATES)  # list of two
 
+        self.damage_per_second = item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)  # TODO: dev-118 balance update
+        self.firing_time_limit = item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 2)  # TODO: dev-118 balance update
+        self.field_of_view = item_data.get(ATTRIBUTE.FIELD_OF_VIEW, 120)  # TODO: dev-118 balance update
+        self.rate_of_turn = item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)  # TODO: dev-118 balance update
+
         self.rate_of_fire = item_data.get(ATTRIBUTE.RATE_OF_FIRE)
         self.damage_per_shot = item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT)
         self.firing_range = item_data.get(ATTRIBUTE.FIRING_RANGE)
@@ -75,8 +80,11 @@ class FightItem(Item):
 
         # a current command that was send from code
         self.action = item_data.get(ACTION.REQUEST_NAME)
+        self.angle = item_data.get(ATTRIBUTE.ANGLE, 0)
         self.one_action = []
         self.charging = 0
+        self.firing_time = 0
+        self.on_firing_cooldown = False
 
         if ATTRIBUTE.OPERATING_CODE in item_data:
             self.code = self._fight_handler.codes[str(self.player_id)][item_data[ATTRIBUTE.OPERATING_CODE]]
@@ -202,11 +210,19 @@ class FightItem(Item):
 
     @property
     def total_damage(self):
+        if self.damage_per_second:
+            base_frame_damage = self.damage_per_second * self._fight_handler.GAME_FRAME_TIME
+            return base_frame_damage
+        elif self.damage_per_shot:
+            base_frame_damage = self.damage_per_shot
+        else:
+            return 0
+        # TODO: dev-184 why is 100 again
         return reduce(
             lambda total, item: (100 + item.extra_damage) * total / 100,
-            self.get_extras(), self.damage_per_shot);
+            self.get_extras(), base_frame_damage)
 
-    def get_shoted(self, damage):
+    def get_shot(self, damage):
         if self.is_dead:
             return []
 
@@ -216,7 +232,8 @@ class FightItem(Item):
         if self.hit_points <= 0:
             self._dead()
 
-        return [self.id]
+        #return [self.id]
+        return [damage]
 
     def restore_health(self, power):
         self.hit_points += power
@@ -258,12 +275,17 @@ class FightItem(Item):
             ATTRIBUTE.COORDINATES: self.coordinates,
             ATTRIBUTE.RATE_OF_FIRE: self.rate_of_fire,
             ATTRIBUTE.DAMAGE_PER_SHOT: self.damage_per_shot,
+            ATTRIBUTE.DAMAGE_PER_SECOND: self.damage_per_second,
             ATTRIBUTE.AREA_DAMAGE_PER_SHOT: self.area_damage_per_shot,
             ATTRIBUTE.AREA_DAMAGE_RADIUS: self.area_damage_radius,
             ATTRIBUTE.FIRING_RANGE: self.firing_range,
             ATTRIBUTE.FIRING_RANGE_ALWAYS_HIT: self.firing_range_always_hit,
+            ATTRIBUTE.FIRING_TIME_LIMIT: self.firing_time_limit,
+            ATTRIBUTE.FIRING_TIME: self.firing_time,
             ATTRIBUTE.START_CHANCE: self.start_chance,
+            ATTRIBUTE.RATE_OF_TURN: self.rate_of_turn,
             ATTRIBUTE.LEVEL: self.level,
+            ATTRIBUTE.ANGLE: self.angle,
             # TODO State should be reworked
             ATTRIBUTE.IS_DEAD: self.is_dead,
             ATTRIBUTE.STATE: self._state,
@@ -620,7 +642,7 @@ class MineItem(FightItem):
         if self.timer <= 0:
             self.explode()
 
-    def explode():
+    def explode(self):
         self.is_dead = True
         for item in self._fight_handler.fighters.values():
             if item.is_dead:
@@ -637,7 +659,4 @@ class MineItem(FightItem):
                 continue
 
             damage = (self.firing_range - distance) * self.damage_per_shot / self.firing_range
-            item.get_shoted(damage)
-
-
-
+            item.get_shot(damage)

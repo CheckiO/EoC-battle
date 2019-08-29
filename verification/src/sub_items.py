@@ -29,7 +29,7 @@ class RocketSubItem(BaseSubItem):
                 continue
 
             damage = (self.explode_radius - distance) * self.damage_per_shot / self.explode_radius
-            item.get_shoted(damage)
+            item.get_shot(damage)
 
     def do_frame_action(self):
         distance = euclidean_distance(self.cur_coor, self.target_coor)

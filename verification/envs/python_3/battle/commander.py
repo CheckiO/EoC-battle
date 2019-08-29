@@ -21,6 +21,14 @@ def check_coordinates(coordinates, name):
         raise TypeError(ERR_COORDINATES_TYPE.format(name=name))
 
 
+def check_angle(angle, name):
+    if not isinstance(angle, (int, float)):
+        raise TypeError(ERR_COORDINATES_TYPE.format(name=name))
+
+    if angle < 0 or angle > 360:
+        raise ValueError(ERR_NUMBER_POSITIVE_VALUE.format(name=name))
+
+
 def check_item_id(item_id):
     if not isinstance(item_id, int):
         raise TypeError(ERR_ID_TYPE.format(name="Item"))
@@ -231,6 +239,18 @@ class Client(object):
         for coordinates in steps:
             check_coordinates(coordinates, "Coordinates")
         return self.do('moves', {'steps': steps})
+
+    def do_turn(self, angle):
+        check_angle(angle, 'Angle')
+        return self.do('turn', {'angle': angle})
+
+    turn_to_angle = do_turn
+
+    def do_turn_to_fire(self, item_id):
+        check_item_id(item_id)
+        return self.do('turn_to_fire', {'id': item_id})
+
+    turn_to_fire = do_turn_to_fire
 
     def do_message(self, message, ids):
         self.do('message', {'message': message, 'ids': ids})

@@ -9,7 +9,7 @@ from server import TCPConsoleServer
 from collections import defaultdict
 
 MAP_X = 2
-SHOW_MAP = False
+SHOW_MAP = True
 
 MAP_BUILDING = 1
 
@@ -188,6 +188,10 @@ class FightHandler(BaseHandler):
                 ))
                 if item.get('subitems'):
                     print('    ', item['subitems'])
+                # TODO: dev-118 remove testing utils
+                if item['id'] == 6:
+                    print('Angle: {}'.format(round(item.get('angle') * 1.0, 4)))
+                    print('Firing: {}'.format(round(item.get('firing_time') * 1.0, 4)))
 
         if data.get('flagman'):
             print('FLAGMAN:', data['flagman']['charge'])
@@ -200,7 +204,7 @@ class FightHandler(BaseHandler):
     def str_state(self, state):
         if state is None:
             return 'NONE'
-        if state['name'] in ('idle', 'charge', 'dead'):
+        if state['name'] in ('idle', 'charge', 'dead', 'turn', 'cooldown'):
             return state['name']
         if state['name'] == 'attack':
             str_action = 'fire to ' + str(state['aid'])

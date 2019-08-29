@@ -17,6 +17,7 @@ class FightEvent:
 
     def gen_fighters_checker(self, la_checker):
         fight_handler = self._fight_handler
+
         def _checker(event, receiver):
             for event_item in fight_handler.get_battle_fighters():
                 if event_item.is_dead:

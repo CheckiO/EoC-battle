@@ -79,7 +79,7 @@ class BaseItemActions(object):
 
         damaged_ids = []
         if self._actual_hit(enemy):
-            damaged_ids = enemy.get_shoted(attacker.total_damage)
+            damaged_ids = enemy.get_shot(attacker.total_damage)
 
         return {
             'name': 'attack',

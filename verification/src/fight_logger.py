@@ -191,6 +191,8 @@ class FightLogger:
             
             item_info[OUTPUT.STATUS] = item.get_action_status()
             item_info[OUTPUT.STATE] = dict_to_js(item._state)
+            item_info[OUTPUT.ANGLE] = item.angle
+            item_info[OUTPUT.FIRING_TIME] = item.firing_time
 
             if item.sub_items:
                 item_info[OUTPUT.SUBITEMS] = item.output_sub_items()

@@ -122,7 +122,7 @@ class FightHandler(BaseHandler):
     def demage_center(self, building):
         auto_health_part = self.fi_center.start_hit_points * PERCENT_CENTER_AUTO_DEMAGE
         total_buildings = len(list(filter(lambda a: a.role == ROLE.BUILDING, self.fighters.values())))
-        self.fi_center.get_shoted(auto_health_part/total_buildings)
+        self.fi_center.get_shot(auto_health_part/total_buildings)
 
     def get_my_data(self, id):
         fighter = self.fighters[id]
