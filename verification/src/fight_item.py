@@ -65,10 +65,14 @@ class FightItem(Item):
 
         self.coordinates = item_data.get(ATTRIBUTE.COORDINATES)  # list of two
 
-        self.damage_per_second = item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)  # TODO: dev-118 balance update
-        self.firing_time_limit = item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 2)  # TODO: dev-118 balance update
+        self.charging_time = item_data.get(ATTRIBUTE.CHARGING_TIME, 1)  # TODO: dev-119 balance update
         self.field_of_view = item_data.get(ATTRIBUTE.FIELD_OF_VIEW, 120)  # TODO: dev-118 balance update
         self.rate_of_turn = item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)  # TODO: dev-118 balance update
+
+        self.damage_per_second = item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)  # TODO: dev-118 balance update
+        self.firing_time_limit = item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)  # TODO: dev-118 balance update
+        self.full_cooldown_time = item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)  # TODO: dev-118 balance update
+        self.min_percentage_after_overheat = item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)  # TODO: dev-118 balance update
 
         self.rate_of_fire = item_data.get(ATTRIBUTE.RATE_OF_FIRE)
         self.damage_per_shot = item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT)
@@ -83,8 +87,9 @@ class FightItem(Item):
         self.angle = item_data.get(ATTRIBUTE.ANGLE, 0)
         self.one_action = []
         self.charging = 0
+
         self.firing_time = 0
-        self.on_firing_cooldown = False
+        self.overheated = False
 
         if ATTRIBUTE.OPERATING_CODE in item_data:
             self.code = self._fight_handler.codes[str(self.player_id)][item_data[ATTRIBUTE.OPERATING_CODE]]

@@ -48,7 +48,10 @@ class ATTRIBUTE():
     FIRING_RANGE = 'firing_range'
     FIRING_RANGE_ALWAYS_HIT = 'firing_range_100'
     FIRING_TIME_LIMIT = 'firing_time_limit'
+    FULL_COOLDOWN_TIME = 'full_cooldown_time'
+    MIN_PERCENTAGE_AFTER_OVERHEAT = 'min_percentage_after_overheat'
     FIRING_TIME = 'firing_time'
+    CHARGING_TIME = 'charging_time'
     FIELD_OF_VIEW = 'field_of_view'
     START_CHANCE = 'start_chance'
     AREA_DAMAGE_PER_SHOT = 'area_damage_per_shot'
@@ -153,6 +156,7 @@ class OUTPUT():
     ITEM_LEVEL = 'level'
     HIT_POINTS_PERCENTAGE = 'hitPointsPer'
     FIRING_POINT = "firingPoint"
+    CHARGING_TIME = 'chargingTime'
     FIRING_ID = "firingId"
     FIRING_POINT_LEGACY = "firing_point"
     DEFEAT_REASON = 'reason'

@@ -26,17 +26,123 @@ class DefenceSentryActions(BaseItemActions):
 
         return False
 
+    def _charging(self):
+        self._item.charging -= self._fight_handler.GAME_FRAME_TIME
+        if self._item.charging <= 0:
+            self._item.charging = 0
+        return {'name': 'charge'}
+
+    def _get_prepared_to_shoot(self):
+        if self._item.charging:
+            return self._charging()
+
+    def _actual_shot(self, enemy):
+        damaged_ids = []
+        if self._actual_hit(enemy):
+            damaged_ids.extend(enemy.get_shot(self._item.total_damage))
+
+        self._item.charging = self._item.charging_time
+        return {
+            'name': 'attack',
+            'firing_point': enemy.coordinates,
+            'aid': enemy.id,
+            'damaged': damaged_ids,
+        }
+
+    def is_shot_possible(self, enemy_coordinates):
+        distance_to_enemy = euclidean_distance(enemy_coordinates, self._item.coordinates)
+        if distance_to_enemy > self._item.firing_range:
+            return False
+        return True
+
+    def _shot(self, enemy):
+        prepared_to_shoot = self._get_prepared_to_shoot()
+        if prepared_to_shoot:
+            return prepared_to_shoot
+
+        if self.is_shot_possible(enemy.coordinates):
+            return self._actual_shot(enemy)
+
+        return self._idle()
+
 
 class DefenceMachineActions(BaseItemActions):
 
-    def actions_init(self):
-        actions = super().actions_init()
-        actions.update({
-            'turn': self.action_turn,
-            'turn_to_fire': self.action_turn_to_fire,
-            'turn_aggressive': self.action_turn_aggressive,
-        })
-        return actions
+    def _actual_hit(self, enemy):
+        return True
+
+    def _shot(self, enemy):
+        prepared_to_shoot = self._get_prepared_to_shoot()
+        if prepared_to_shoot:
+            return prepared_to_shoot
+
+        if self.is_shot_possible(enemy.coordinates):
+            return self._actual_shot(enemy)
+
+        if self._item.firing_time > 0:
+            return self._cooldown()
+
+        return self._idle()
+
+    def _cooldown(self):
+        cooldown_time = (self._item.firing_time_limit * self._fight_handler.GAME_FRAME_TIME /
+                         self._item.full_cooldown_time)
+        self._item.firing_time -= cooldown_time
+
+        if self._item.firing_time <= 0:
+            self._item.firing_time = 0
+
+        firing_percentage = (self._item.firing_time / self._item.firing_time_limit) * 100
+        if firing_percentage <= self._item.min_percentage_after_overheat:
+            self._item.overheated = False
+        return {'name': 'cooldown'}
+
+    def _get_prepared_to_shoot(self):
+        if self._item.overheated:
+            return self._cooldown()
+
+        if self._item.firing_time > self._item.firing_time_limit:
+            self._item.overheated = True
+            return self._cooldown()
+
+    def _actual_shot(self, enemy):
+        targets = [enemy]
+
+        for event_item in self._fight_handler.get_battle_fighters():
+            if event_item.is_dead:
+                continue
+            if self._item == event_item:
+                continue
+            if enemy == event_item:
+                continue
+            if not event_item.coordinates:
+                continue
+            if self.is_shot_possible(event_item.coordinates):
+                targets.append(event_item)
+
+        damaged_ids = []
+        for target in targets:
+            if self._actual_hit(target):
+                damaged_ids.extend(target.get_shot(self._item.total_damage))
+        self._item.firing_time += self._fight_handler.GAME_FRAME_TIME
+
+        return {
+            'name': 'attack',
+            'firing_point': enemy.coordinates,
+            'aid': enemy.id,
+            'damaged': damaged_ids,
+        }
+
+    def is_shot_possible(self, enemy_coordinates):
+        distance_to_enemy = euclidean_distance(enemy_coordinates, self._item.coordinates)
+        if distance_to_enemy > self._item.firing_range:
+            return False
+
+        angle = angle_between_center_vision_and_enemy(self._item.coordinates, self._item.angle, enemy_coordinates)
+        if angle > self._item.field_of_view / 2:
+            return False
+
+        return True
 
     def _get_turned(self, desired_angle):
         angle_difference = shortest_distance_between_angles(desired_angle, self._item.angle)
@@ -60,6 +166,15 @@ class DefenceMachineActions(BaseItemActions):
             self._item.angle = 360 + self._item.angle
 
         return {'name': 'turn'}
+
+    def actions_init(self):
+        actions = super().actions_init()
+        actions.update({
+            'turn': self.action_turn,
+            'turn_to_fire': self.action_turn_to_fire,
+            'turn_aggressive': self.action_turn_aggressive,
+        })
+        return actions
 
     def validate_turn(self, action, data):
         if not is_angle(data.get('angle')):
@@ -95,72 +210,6 @@ class DefenceMachineActions(BaseItemActions):
     # TODO dev-118 aggresive-turn
     def action_turn_aggressive(self, data):
         angle = data.get('angle')
-
-    def is_shot_possible(self, enemy_coordinates):
-        distance_to_enemy = euclidean_distance(enemy_coordinates, self._item.coordinates)
-        if distance_to_enemy > self._item.firing_range:
-            return False
-
-        angle = angle_between_center_vision_and_enemy(self._item.coordinates, self._item.angle, enemy_coordinates)
-        if angle > self._item.field_of_view / 2:
-            return False
-
-        return True
-
-    def _cooldown(self):
-        self._item.firing_time -= self._fight_handler.GAME_FRAME_TIME
-        if self._item.firing_time <= 0:
-            self._item.firing_time = 0
-            self._item.on_firing_cooldown = False
-        return {'name': 'cooldown'}
-
-    def _get_prepared_to_shoot(self):
-        if self._item.on_firing_cooldown:
-            return self._cooldown()
-        if self._item.firing_time > self._item.firing_time_limit:
-            self._item.on_firing_cooldown = True
-            return self._cooldown()
-
-    def _actual_shot(self, enemy):
-        targets = [enemy]
-
-        for event_item in self._fight_handler.get_battle_fighters():
-            if event_item.is_dead:
-                continue
-            if self._item == event_item:
-                continue
-            if enemy == event_item:
-                continue
-            if not event_item.coordinates:
-                continue
-            if self.is_shot_possible(event_item.coordinates):
-                targets.append(event_item)
-
-        damaged_ids = []
-        for target in targets:
-            if self._actual_hit(target):
-                damaged_ids.extend(target.get_shot(self._item.total_damage))
-        self._item.firing_time += self._fight_handler.GAME_FRAME_TIME
-
-        return {
-            'name': 'attack',
-            'firing_point': enemy.coordinates,
-            'aid': enemy.id,
-            'damaged': damaged_ids,
-        }
-
-    def _shot(self, enemy):
-        prepared_to_shoot = self._get_prepared_to_shoot()
-        if prepared_to_shoot:
-            return prepared_to_shoot
-
-        if self.is_shot_possible(enemy.coordinates):
-            return self._actual_shot(enemy)
-
-        if self._item.firing_time > 0:
-            return self._cooldown()
-
-        return self._idle()
 
 
 class DefenceRocketActions(BaseItemActions):
