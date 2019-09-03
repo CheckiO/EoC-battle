@@ -1,5 +1,5 @@
 __all__ = ['ROLE', 'PARTY', 'ATTRIBUTE', 'ACTION', 'STATUS',
-           'INITIAL', 'PLAYER', 'DEFEAT_REASON', 'OUTPUT', "STD", 'OBSTACLE', 'DEF_TYPE']
+           'INITIAL', 'PLAYER', 'DEFEAT_REASON', 'OUTPUT', "STD", 'OBSTACLE', 'DEF_TYPE', 'ATTACK_TYPE']
 
 
 class PARTY():
@@ -29,6 +29,12 @@ class DEF_TYPE():
     SENTRY = 'sentryGun'
     MACHINE = 'machineGun'
     ROCKET = 'rocketGun'
+
+
+class ATTACK_TYPE():
+    INFANTRY = 'infantryBot'
+    HEAVY = 'heavyBot'
+    ROCKET = 'rocketBot'
 
 
 class OBSTACLE():

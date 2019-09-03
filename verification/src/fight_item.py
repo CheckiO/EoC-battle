@@ -9,7 +9,7 @@ from actions import ItemActions
 from tools.balance import unit_display_stats, building_display_stats, operation_stats
 from tools.distances import euclidean_distance
 from consts import CUT_FROM_BUILDING, IMMORTAL_TIME, FOLDER_CODES
-from tools import ROLE, ATTRIBUTE, ACTION, DEF_TYPE, STD, PLAYER, STATUS
+from tools import ROLE, ATTRIBUTE, ACTION, DEF_TYPE, ATTACK_TYPE, STD, PLAYER, STATUS
 from tools import precalculated
 from actions.exceptions import ActionValidateError, ActionSkip
 from modules import gen_features, map_features, has_feature
@@ -78,7 +78,6 @@ class FightItem(Item):
 
         # a current command that was send from code
         self.action = item_data.get(ACTION.REQUEST_NAME)
-        self.angle = item_data.get(ATTRIBUTE.ANGLE, 0)
         self.one_action = []
         self.charging = 0
 
@@ -265,7 +264,6 @@ class FightItem(Item):
             ATTRIBUTE.AREA_DAMAGE_RADIUS: self.area_damage_radius,
             ATTRIBUTE.FIRING_RANGE: self.firing_range,
             ATTRIBUTE.LEVEL: self.level,
-            ATTRIBUTE.ANGLE: self.angle,
             # TODO State should be reworked
             ATTRIBUTE.IS_DEAD: self.is_dead,
             ATTRIBUTE.STATE: self._state,
@@ -481,6 +479,7 @@ class MachineGunTowerItem(FightItem):
         self.full_cooldown_time = self.item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)  # TODO: dev-118 balance update
         self.min_percentage_after_overheat = self.item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)  # TODO: dev-118 balance update
 
+        self.angle = 0
         self.firing_time = 0
         self.overheated = False
 
@@ -494,6 +493,7 @@ class MachineGunTowerItem(FightItem):
             ATTRIBUTE.FIRING_TIME_LIMIT: self.firing_time_limit,
             ATTRIBUTE.FULL_COOLDOWN_TIME: self.full_cooldown_time,
             ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT: self.min_percentage_after_overheat,
+            ATTRIBUTE.ANGLE: self.angle,
             ATTRIBUTE.FIRING_TIME: self.firing_time,
             ATTRIBUTE.OVERHEATED: self.overheated,
         })
@@ -603,7 +603,6 @@ class CraftItem(FightItem):
         craft_data[ATTRIBUTE.ROLE] = 'craft'
         return craft_data
 
-
     @property
     def info(self):
         return {
@@ -661,6 +660,37 @@ class UnitItem(FightItem):
     def adj_item_data(self, item_data):
         item_data.update(unit_display_stats(item_data[ATTRIBUTE.ITEM_TYPE], item_data[ATTRIBUTE.LEVEL]))
         return item_data
+
+
+class HeavyBotUnit(UnitItem):
+    ROLE_TYPE = ATTACK_TYPE.HEAVY
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.rate_of_turn = self.item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)  # TODO: dev-118 balance update
+        self.damage_per_second = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)  # TODO: dev-118 balance update
+        self.firing_time_limit = self.item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)  # TODO: dev-118 balance update
+        self.full_cooldown_time = self.item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)  # TODO: dev-118 balance update
+        self.min_percentage_after_overheat = self.item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)  # TODO: dev-118 balance update
+
+        self.angle = 0
+        self.firing_time = 0
+        self.overheated = False
+
+    @property
+    def info(self):
+        info = super(HeavyBotUnit, self).info
+        info.update({
+            ATTRIBUTE.RATE_OF_TURN: self.rate_of_turn,
+            ATTRIBUTE.DAMAGE_PER_SECOND: self.damage_per_second,
+            ATTRIBUTE.FIRING_TIME_LIMIT: self.firing_time_limit,
+            ATTRIBUTE.FULL_COOLDOWN_TIME: self.full_cooldown_time,
+            ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT: self.min_percentage_after_overheat,
+            ATTRIBUTE.ANGLE: self.angle,
+            ATTRIBUTE.FIRING_TIME: self.firing_time,
+            ATTRIBUTE.OVERHEATED: self.overheated,
+        })
+        return info
 
 
 class MineItem(FightItem):

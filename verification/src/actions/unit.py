@@ -1,6 +1,6 @@
 from .base import BaseItemActions, euclidean_distance
 from .exceptions import ActionValidateError
-from tools import find_route, straighten_route, is_coordinates
+from tools import find_route, straighten_route, is_coordinates, shortest_distance_between_angles, angle_to_enemy
 from sub_items import VerticalRocketSubItem, HealSubItem
 from tools.terms import OPERATION, ROLE, FEATURE
 
@@ -124,6 +124,7 @@ class CraftActions(BaseItemActions):
 
 
 class UnitActions(BaseItemActions):
+
     def __init__(self, *args, **kwargs):
         self._route = []
         self._last_map_hash = 0
@@ -149,7 +150,6 @@ class UnitActions(BaseItemActions):
             'teleport': self.do_teleport
         }
 
-
     def do_teleport(self, data):
         if not self._item.has_feature(FEATURE.TELEPORT):
             return
@@ -159,13 +159,17 @@ class UnitActions(BaseItemActions):
         coordinates = data.get('coordinates')
         self._item.set_coordinates(coordinates)
 
+    def _distance_to_enemy(self, enemy):
+        return euclidean_distance(enemy.coordinates, self._item.coordinates) - enemy.size / 2
+
     def action_attack(self, data):
         enemy = self._fight_handler.fighters.get(data['id'])
         if enemy is None:
             return  # WTF
-        distance_to_enemy = euclidean_distance(enemy.coordinates, self._item.coordinates)
+        distance_to_enemy = self._distance_to_enemy(enemy)
         item_firing_range = self._item.firing_range
-        if (distance_to_enemy - enemy.size / 2) > item_firing_range:
+
+        if distance_to_enemy > item_firing_range:
             return self._move(enemy.coordinates)
         return self._shot(enemy)
 
@@ -211,11 +215,13 @@ class UnitActions(BaseItemActions):
         self.check_or_create_route(destination_point)
         if not self._route:
             return stop_then and self._stop()
-        frame_distance = self._item.speed * self._fight_handler.GAME_FRAME_TIME
+
         start_point = tuple(self._item.coordinates)
         # We on the end
         if len(self._route) == 1 and start_point == self._route[0]:
             return stop_then and self._stop()
+
+        frame_distance = self._item.speed * self._fight_handler.GAME_FRAME_TIME
         next_point, current_point = self.process_near_turns(frame_distance)
         if not self._route:
             self._item.set_coordinates(current_point)
@@ -224,6 +230,7 @@ class UnitActions(BaseItemActions):
             return {'name': 'move',
                     'from': start_point,
                     'to': current_point}
+
         distance = euclidean_distance(current_point, next_point)
         new_point = (
             current_point[0] + (frame_distance / distance) * (next_point[0] - current_point[0]),
@@ -265,3 +272,135 @@ class UnitActions(BaseItemActions):
             raise ActionValidateError("The enemy is dead")
         if enemy.player['id'] == self._item.player['id']:
             raise ActionValidateError("Can not attack own item")
+
+
+class HeavyBotActions(UnitActions):
+
+    def _actual_hit(self, enemy):
+        return True
+
+    def _shot(self, enemy):
+        prepared_to_shoot = self._get_prepared_to_shoot()
+        if prepared_to_shoot:
+            return prepared_to_shoot
+
+        if self.is_shot_possible(enemy):
+            return self._actual_shot(enemy)
+
+        if self._item.firing_time > 0:
+            return self._cooldown()
+        return self._idle()
+
+    def _cooldown(self):
+        cooldown_time = (self._item.firing_time_limit * self._fight_handler.GAME_FRAME_TIME /
+                         self._item.full_cooldown_time)
+        self._item.firing_time -= cooldown_time
+
+        if self._item.firing_time <= 0:
+            self._item.firing_time = 0
+
+        firing_percentage = (self._item.firing_time / self._item.firing_time_limit) * 100
+        if firing_percentage <= self._item.min_percentage_after_overheat:
+            self._item.overheated = False
+        return {'name': 'cooldown'}
+
+    def _get_prepared_to_shoot(self):
+        if self._item.overheated:
+            return self._cooldown()
+
+        if self._item.firing_time > self._item.firing_time_limit:
+            self._item.overheated = True
+            return self._cooldown()
+
+    def _actual_shot(self, enemy):
+        targets = [enemy]
+        damaged_ids = []
+        for target in targets:
+            if self._actual_hit(target):
+                damaged_ids.extend(target.get_shot(self._item.total_damage))
+        self._item.firing_time += self._fight_handler.GAME_FRAME_TIME
+
+        return {
+            'name': 'attack',
+            'firing_point': enemy.coordinates,
+            'aid': enemy.id,
+            'damaged': damaged_ids,
+        }
+
+    def is_shot_possible(self, enemy):
+        distance_to_enemy = self._distance_to_enemy(enemy)
+        if distance_to_enemy > self._item.firing_range:
+            return False
+        return True
+
+    def _get_turned(self, desired_angle):
+        angle_difference = shortest_distance_between_angles(desired_angle, self._item.angle)
+
+        if angle_difference < 1:
+            return
+
+        if abs(angle_difference) < self._item.rate_of_turn:
+            turn = abs(angle_difference)
+        else:
+            turn = self._item.rate_of_turn
+
+        if angle_difference > 0:
+            self._item.angle += turn
+        else:
+            self._item.angle -= turn
+
+        if self._item.angle > 360:
+            self._item.angle = self._item.angle - 360
+        elif self._item.angle < 0:
+            self._item.angle = 360 + self._item.angle
+
+        return {'name': 'turn'}
+
+    def _move(self, destination_point, stop_then=True):
+        self.check_or_create_route(destination_point)
+        if not self._route:
+            return stop_then and self._stop()
+
+        start_point = tuple(self._item.coordinates)
+        # We on the end
+        if len(self._route) == 1 and start_point == self._route[0]:
+            return stop_then and self._stop()
+
+        frame_distance = self._item.speed * self._fight_handler.GAME_FRAME_TIME
+        next_point, current_point = self.process_near_turns(frame_distance)
+
+        if not self._route:
+            self._item.set_coordinates(current_point)
+            # without it we will not stop
+            self._route.append(current_point)
+            return {'name': 'move',
+                    'from': start_point,
+                    'to': current_point}
+
+        angle = angle_to_enemy(current_point, next_point)
+        turned = self._get_turned(angle)
+        if turned:
+            return turned
+
+        distance = euclidean_distance(current_point, next_point)
+        new_point = (
+            current_point[0] + (frame_distance / distance) * (next_point[0] - current_point[0]),
+            current_point[1] + (frame_distance / distance) * (next_point[1] - current_point[1]))
+
+        self._item.set_coordinates(new_point)
+        return {'name': 'move',
+                'from': start_point,
+                'to': new_point}
+
+    def validate_attack(self, action, data):
+        enemy = self._fight_handler.fighters.get(data['id'])
+        if enemy.is_dead:
+            raise ActionValidateError("The enemy is dead")
+        if enemy.player['id'] == self._item.player['id']:
+            raise ActionValidateError("Can not attack own item")
+
+    def action_attack(self, data):
+        enemy = self._fight_handler.fighters.get(data['id'])
+        if self.is_shot_possible(enemy):
+            return self._shot(enemy)
+        return self._move(enemy.coordinates)

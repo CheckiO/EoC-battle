@@ -1,13 +1,17 @@
 from .center import CenterActions
 from .defence import DefenceSentryActions, DefenceMachineActions, DefenceRocketActions
-from .unit import UnitActions, CraftActions, FlagActions, MineActions
+from .unit import UnitActions, CraftActions, FlagActions, MineActions, HeavyBotActions
 from .building import BuildingActions
 from .obstacle import ObstacleActions
-from tools import ROLE, DEF_TYPE
+from tools import ROLE, DEF_TYPE, ATTACK_TYPE
 
 
 ACTIONS = {
-    ROLE.UNIT: UnitActions,
+    ROLE.UNIT: {
+        ATTACK_TYPE.INFANTRY: UnitActions,
+        ATTACK_TYPE.HEAVY: HeavyBotActions,
+        ATTACK_TYPE.ROCKET: UnitActions
+    },
     ROLE.TOWER: {
         DEF_TYPE.SENTRY: DefenceSentryActions,
         DEF_TYPE.MACHINE: DefenceMachineActions,

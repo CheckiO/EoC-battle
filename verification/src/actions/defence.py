@@ -8,11 +8,18 @@ from tools import (is_angle, is_coordinates, shortest_distance_between_angles,
 from sub_items import RocketSubItem
 
 
-class DefenceSentryActions(BaseItemActions):
+class DefenceTowerActions(BaseItemActions):
+
+    def _distance_to_enemy(self, enemy):
+        return euclidean_distance(enemy.coordinates, self._item.coordinates) - enemy.size / 2
+
+
+class DefenceSentryActions(DefenceTowerActions):
 
     def _actual_hit(self, enemy):
         attacker = self._item
-        distance_to_enemy = (euclidean_distance(enemy.coordinates, attacker.coordinates) - enemy.size / 2)
+
+        distance_to_enemy = self._distance_to_enemy(enemy)
 
         if distance_to_enemy <= attacker.firing_range_always_hit:
             return True
@@ -49,8 +56,8 @@ class DefenceSentryActions(BaseItemActions):
             'damaged': damaged_ids,
         }
 
-    def is_shot_possible(self, enemy_coordinates):
-        distance_to_enemy = euclidean_distance(enemy_coordinates, self._item.coordinates)
+    def is_shot_possible(self, enemy):
+        distance_to_enemy = self._distance_to_enemy(enemy)
         if distance_to_enemy > self._item.firing_range:
             return False
         return True
@@ -60,13 +67,13 @@ class DefenceSentryActions(BaseItemActions):
         if prepared_to_shoot:
             return prepared_to_shoot
 
-        if self.is_shot_possible(enemy.coordinates):
+        if self.is_shot_possible(enemy):
             return self._actual_shot(enemy)
 
         return self._idle()
 
 
-class DefenceMachineActions(BaseItemActions):
+class DefenceMachineActions(DefenceTowerActions):
 
     def _actual_hit(self, enemy):
         return True
@@ -77,7 +84,7 @@ class DefenceMachineActions(BaseItemActions):
             return prepared_to_shoot
 
         if enemy is not None:
-            if self.is_shot_possible(enemy.coordinates):
+            if self.is_shot_possible(enemy):
                 return self._actual_shot(enemy)
         else:
             return self._actual_shot()
@@ -121,7 +128,7 @@ class DefenceMachineActions(BaseItemActions):
                 continue
             if event_item in excluded_targets:
                 continue
-            if self.is_shot_possible(event_item.coordinates):
+            if self.is_shot_possible(event_item):
                 targets.append(event_item)
 
         return targets
@@ -150,12 +157,12 @@ class DefenceMachineActions(BaseItemActions):
             'damaged': damaged_ids,
         }
 
-    def is_shot_possible(self, enemy_coordinates):
-        distance_to_enemy = euclidean_distance(enemy_coordinates, self._item.coordinates)
+    def is_shot_possible(self, enemy):
+        distance_to_enemy = self._distance_to_enemy(enemy)
         if distance_to_enemy > self._item.firing_range:
             return False
 
-        angle = angle_between_center_vision_and_enemy(self._item.coordinates, self._item.angle, enemy_coordinates)
+        angle = angle_between_center_vision_and_enemy(self._item.coordinates, self._item.angle, enemy.coordinates)
         if angle > self._item.field_of_view / 2:
             return False
 
@@ -211,7 +218,7 @@ class DefenceMachineActions(BaseItemActions):
 
     def action_turn_to_fire(self, data):
         enemy = self._fight_handler.fighters.get(data['id'])
-        if self.is_shot_possible(enemy.coordinates):
+        if self.is_shot_possible(enemy):
             return self._shot(enemy)
 
         angle = angle_to_enemy(self._item.coordinates, enemy.coordinates)
@@ -228,6 +235,9 @@ class DefenceMachineActions(BaseItemActions):
 
 
 class DefenceRocketActions(BaseItemActions):
+
+    def _distance_to_coordinates(self, coordinates):
+        return euclidean_distance(coordinates, self._item)
 
     def _actual_shot(self, enemy):
         attacker = self._item
@@ -257,9 +267,9 @@ class DefenceRocketActions(BaseItemActions):
         if charged:
             return charged
 
-        distance_to_enemy = euclidean_distance(coordinates, self._item.coordinates)
         item_firing_range = self._item.firing_range
-        if distance_to_enemy > item_firing_range:
+        distance_to_coordinates = self._distance_to_coordinates(coordinates)
+        if distance_to_coordinates > item_firing_range:
             return {'name': 'idle'}
         return self._actual_coor_shot(coordinates)
 
