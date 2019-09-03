@@ -240,6 +240,13 @@ class Client(object):
             check_coordinates(coordinates, "Coordinates")
         return self.do('moves', {'steps': steps})
 
+    # TODO: dev-118 methods only for towers?
+
+    def do_fire(self):
+        return self.do('fire', {})
+
+    fire = do_fire
+
     def do_turn(self, angle):
         check_angle(angle, 'Angle')
         return self.do('turn', {'angle': angle})

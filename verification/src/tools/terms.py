@@ -19,6 +19,7 @@ class ROLE():
     CRAFT = 'craft'
     FLAGMAN = 'flagman'
     MINE = 'mine'
+    DEF_PLATFORM = 'defPlatform'
     ALL = (CENTER, TOWER, UNIT, BUILDING, OBSTACLE)
     STATIC = (BUILDING, CENTER, OBSTACLE, TOWER)
     PLAYER_STATIC = (BUILDING, CENTER, TOWER)
@@ -43,20 +44,10 @@ class ATTRIBUTE():
     LEVEL = 'level'
     TILE_POSITION = 'tile_position'
     SPEED = 'speed'
-    RATE_OF_TURN = 'rate_of_turn'
     RATE_OF_FIRE = 'rate_of_fire'
-    FIRING_RANGE = 'firing_range'
-    FIRING_RANGE_ALWAYS_HIT = 'firing_range_100'
-    FIRING_TIME_LIMIT = 'firing_time_limit'
-    FULL_COOLDOWN_TIME = 'full_cooldown_time'
-    MIN_PERCENTAGE_AFTER_OVERHEAT = 'min_percentage_after_overheat'
-    FIRING_TIME = 'firing_time'
-    CHARGING_TIME = 'charging_time'
-    FIELD_OF_VIEW = 'field_of_view'
-    START_CHANCE = 'start_chance'
+
     AREA_DAMAGE_PER_SHOT = 'area_damage_per_shot'
-    DAMAGE_PER_SHOT = 'damage_per_shot'
-    DAMAGE_PER_SECOND = 'damage_per_second'
+
     AREA_DAMAGE_RADIUS = 'area_damage_radius'
     ITEM_TYPE = 'type'
     UNIT_TYPE = 'unit_type'
@@ -84,7 +75,22 @@ class ATTRIBUTE():
     MODULES = 'modules'
     CRAFT_FIGHT_ID = 'craft_fight_id'
     IS_IMMORTAL = 'is_immortal'
- 
+    # MachineGun Attributes
+    FIELD_OF_VIEW = 'field_of_view'
+    RATE_OF_TURN = 'rate_of_turn'
+    DAMAGE_PER_SECOND = 'damage_per_second'
+    FIRING_TIME_LIMIT = 'firing_time_limit'
+    FULL_COOLDOWN_TIME = 'full_cooldown_time'
+    MIN_PERCENTAGE_AFTER_OVERHEAT = 'min_percentage_after_overheat'
+    FIRING_TIME = 'firing_time'
+    OVERHEATED = 'overheated'
+    # SentryGun Attributes
+    CHARGING_TIME = 'charging_time'
+    DAMAGE_PER_SHOT = 'damage_per_shot'
+    FIRING_RANGE = 'firing_range'
+    FIRING_RANGE_ALWAYS_HIT = 'firing_range_100'
+    START_CHANCE = 'start_chance'
+
 
 class ACTION():
     REQUEST_NAME = 'action'

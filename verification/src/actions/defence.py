@@ -71,13 +71,16 @@ class DefenceMachineActions(BaseItemActions):
     def _actual_hit(self, enemy):
         return True
 
-    def _shot(self, enemy):
+    def _shot(self, enemy=None):
         prepared_to_shoot = self._get_prepared_to_shoot()
         if prepared_to_shoot:
             return prepared_to_shoot
 
-        if self.is_shot_possible(enemy.coordinates):
-            return self._actual_shot(enemy)
+        if enemy is not None:
+            if self.is_shot_possible(enemy.coordinates):
+                return self._actual_shot(enemy)
+        else:
+            return self._actual_shot()
 
         if self._item.firing_time > 0:
             return self._cooldown()
@@ -105,20 +108,34 @@ class DefenceMachineActions(BaseItemActions):
             self._item.overheated = True
             return self._cooldown()
 
-    def _actual_shot(self, enemy):
-        targets = [enemy]
-
+    def _find_targets(self, excluded_targets=None):
+        targets = []
+        if excluded_targets is None:
+            excluded_targets = []
         for event_item in self._fight_handler.get_battle_fighters():
             if event_item.is_dead:
                 continue
             if self._item == event_item:
                 continue
-            if enemy == event_item:
-                continue
             if not event_item.coordinates:
+                continue
+            if event_item in excluded_targets:
                 continue
             if self.is_shot_possible(event_item.coordinates):
                 targets.append(event_item)
+
+        return targets
+
+    def _actual_shot(self, enemy=None):
+        if enemy is None:
+            aid = None
+            firing_point = None
+            targets = self._find_targets()
+        else:
+            aid = enemy.id
+            firing_point = enemy.coordinates
+            targets = [enemy]
+            targets.extend(self._find_targets(excluded_targets=[enemy]))
 
         damaged_ids = []
         for target in targets:
@@ -128,8 +145,8 @@ class DefenceMachineActions(BaseItemActions):
 
         return {
             'name': 'attack',
-            'firing_point': enemy.coordinates,
-            'aid': enemy.id,
+            'firing_point': firing_point,
+            'aid': aid,
             'damaged': damaged_ids,
         }
 
@@ -170,9 +187,9 @@ class DefenceMachineActions(BaseItemActions):
     def actions_init(self):
         actions = super().actions_init()
         actions.update({
+            'fire': self.action_fire,
             'turn': self.action_turn,
             'turn_to_fire': self.action_turn_to_fire,
-            'turn_aggressive': self.action_turn_aggressive,
         })
         return actions
 
@@ -203,13 +220,11 @@ class DefenceMachineActions(BaseItemActions):
             return turned
         return {'name': 'idle'}
 
-    def validate_turn_aggressive(self, action, data):
-        if not is_angle(data.get('angle')):
-            raise ActionValidateError('Wrong angle')
+    def validate_fire(self, action, data):
+        pass
 
-    # TODO dev-118 aggresive-turn
-    def action_turn_aggressive(self, data):
-        angle = data.get('angle')
+    def action_fire(self, data):
+        return self._shot()
 
 
 class DefenceRocketActions(BaseItemActions):

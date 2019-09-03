@@ -207,7 +207,9 @@ class FightHandler(BaseHandler):
         if state['name'] in ('idle', 'charge', 'dead', 'turn', 'cooldown'):
             return state['name']
         if state['name'] == 'attack':
-            str_action = 'fire to ' + str(state['aid'])
+            str_action = 'fired'
+            if 'aid' in state and state['aid'] is not None:
+                str_action += ' to ' + str(state['aid'])
             if 'damaged' in state:
                 str_action += ' and damaged ' + ','.join(map(str, state['damaged']))
             if 'killed' in state:

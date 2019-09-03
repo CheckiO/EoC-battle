@@ -9,14 +9,17 @@ from actions import ItemActions
 from tools.balance import unit_display_stats, building_display_stats, operation_stats
 from tools.distances import euclidean_distance
 from consts import CUT_FROM_BUILDING, IMMORTAL_TIME, FOLDER_CODES
-from tools import ROLE, ATTRIBUTE, ACTION, STD, PLAYER, STATUS
+from tools import ROLE, ATTRIBUTE, ACTION, DEF_TYPE, STD, PLAYER, STATUS
 from tools import precalculated
 from actions.exceptions import ActionValidateError, ActionSkip
 from modules import gen_features, map_features, has_feature
 
 logger = logging.getLogger(__name__)
 
+
 class Item(object):
+    ROLE_TYPE = None
+
     ITEMS_COUNT = 0
     is_craft = False
     is_flagman = False
@@ -40,7 +43,8 @@ class FightItem(Item):
         self._fight_handler = fight_handler  # object of FightHandler
         self.init_handlers()
         self.id = self.generate_id()
-        item_data = self.adj_item_data(item_data);
+        item_data = self.adj_item_data(item_data)
+        self.item_data = item_data
         self.craft_id = item_data.get(ATTRIBUTE.CRAFT_ID)
         self.player = player  # dict, data about the player who owns this Item
         # available types: center, unit, tower, building, obstacle
@@ -65,19 +69,9 @@ class FightItem(Item):
 
         self.coordinates = item_data.get(ATTRIBUTE.COORDINATES)  # list of two
 
-        self.charging_time = item_data.get(ATTRIBUTE.CHARGING_TIME, 1)  # TODO: dev-119 balance update
-        self.field_of_view = item_data.get(ATTRIBUTE.FIELD_OF_VIEW, 120)  # TODO: dev-118 balance update
-        self.rate_of_turn = item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)  # TODO: dev-118 balance update
-
-        self.damage_per_second = item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)  # TODO: dev-118 balance update
-        self.firing_time_limit = item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)  # TODO: dev-118 balance update
-        self.full_cooldown_time = item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)  # TODO: dev-118 balance update
-        self.min_percentage_after_overheat = item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)  # TODO: dev-118 balance update
-
         self.rate_of_fire = item_data.get(ATTRIBUTE.RATE_OF_FIRE)
         self.damage_per_shot = item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT)
         self.firing_range = item_data.get(ATTRIBUTE.FIRING_RANGE)
-        self.firing_range_always_hit = item_data.get(ATTRIBUTE.FIRING_RANGE_ALWAYS_HIT)
         self.start_chance = item_data.get(ATTRIBUTE.START_CHANCE)
         self.area_damage_per_shot = item_data.get(ATTRIBUTE.AREA_DAMAGE_PER_SHOT, 0)
         self.area_damage_radius = item_data.get(ATTRIBUTE.AREA_DAMAGE_RADIUS, 0)
@@ -87,9 +81,6 @@ class FightItem(Item):
         self.angle = item_data.get(ATTRIBUTE.ANGLE, 0)
         self.one_action = []
         self.charging = 0
-
-        self.firing_time = 0
-        self.overheated = False
 
         if ATTRIBUTE.OPERATING_CODE in item_data:
             self.code = self._fight_handler.codes[str(self.player_id)][item_data[ATTRIBUTE.OPERATING_CODE]]
@@ -215,17 +206,9 @@ class FightItem(Item):
 
     @property
     def total_damage(self):
-        if self.damage_per_second:
-            base_frame_damage = self.damage_per_second * self._fight_handler.GAME_FRAME_TIME
-            return base_frame_damage
-        elif self.damage_per_shot:
-            base_frame_damage = self.damage_per_shot
-        else:
-            return 0
-        # TODO: dev-184 why is 100 again
         return reduce(
             lambda total, item: (100 + item.extra_damage) * total / 100,
-            self.get_extras(), base_frame_damage)
+            self.get_extras(), self.damage_per_shot)
 
     def get_shot(self, damage):
         if self.is_dead:
@@ -237,8 +220,7 @@ class FightItem(Item):
         if self.hit_points <= 0:
             self._dead()
 
-        #return [self.id]
-        return [damage]
+        return [self.id]
 
     def restore_health(self, power):
         self.hit_points += power
@@ -264,7 +246,6 @@ class FightItem(Item):
     @property
     def player_id(self):
         return self.player["id"]
-    
 
     @property
     def info(self):
@@ -280,15 +261,9 @@ class FightItem(Item):
             ATTRIBUTE.COORDINATES: self.coordinates,
             ATTRIBUTE.RATE_OF_FIRE: self.rate_of_fire,
             ATTRIBUTE.DAMAGE_PER_SHOT: self.damage_per_shot,
-            ATTRIBUTE.DAMAGE_PER_SECOND: self.damage_per_second,
             ATTRIBUTE.AREA_DAMAGE_PER_SHOT: self.area_damage_per_shot,
             ATTRIBUTE.AREA_DAMAGE_RADIUS: self.area_damage_radius,
             ATTRIBUTE.FIRING_RANGE: self.firing_range,
-            ATTRIBUTE.FIRING_RANGE_ALWAYS_HIT: self.firing_range_always_hit,
-            ATTRIBUTE.FIRING_TIME_LIMIT: self.firing_time_limit,
-            ATTRIBUTE.FIRING_TIME: self.firing_time,
-            ATTRIBUTE.START_CHANCE: self.start_chance,
-            ATTRIBUTE.RATE_OF_TURN: self.rate_of_turn,
             ATTRIBUTE.LEVEL: self.level,
             ATTRIBUTE.ANGLE: self.angle,
             # TODO State should be reworked
@@ -462,6 +437,76 @@ class FightItem(Item):
     def send_event(self, lookup_key, data):
         self._env.send_event(lookup_key, data)
 
+
+class SentryGunTowerItem(FightItem):
+    ROLE_TYPE = DEF_TYPE.SENTRY
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)  # TODO: dev-119 balance update
+        #self.rate_of_fire = self.item_data.get(ATTRIBUTE.RATE_OF_FIRE)    # TODO: dev-119 is this needed or not anymore
+        self.damage_per_shot = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT)
+        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
+        self.firing_range_always_hit = self.item_data.get(ATTRIBUTE.FIRING_RANGE_ALWAYS_HIT)
+        self.start_chance = self.item_data.get(ATTRIBUTE.START_CHANCE)
+
+    @property
+    def info(self):
+        info = super(SentryGunTowerItem, self).info
+        info.update({
+            ATTRIBUTE.CHARGING_TIME: self.charging_time,
+            ATTRIBUTE.DAMAGE_PER_SHOT: self.damage_per_shot,
+            ATTRIBUTE.FIRING_RANGE: self.firing_range,
+            ATTRIBUTE.FIRING_RANGE_ALWAYS_HIT: self.firing_range_always_hit,
+            ATTRIBUTE.START_CHANCE: self.start_chance,
+        })
+        return info
+
+    @property
+    def total_damage(self):
+        return reduce(
+            lambda total, item: (100 + item.extra_damage) * total / 100,
+            self.get_extras(), self.damage_per_shot)
+
+
+class MachineGunTowerItem(FightItem):
+    ROLE_TYPE = DEF_TYPE.MACHINE
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.field_of_view = self.item_data.get(ATTRIBUTE.FIELD_OF_VIEW, 120)  # TODO: dev-118 balance update
+        self.rate_of_turn = self.item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)  # TODO: dev-118 balance update
+        self.damage_per_second = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)  # TODO: dev-118 balance update
+        self.firing_time_limit = self.item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)  # TODO: dev-118 balance update
+        self.full_cooldown_time = self.item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)  # TODO: dev-118 balance update
+        self.min_percentage_after_overheat = self.item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)  # TODO: dev-118 balance update
+
+        self.firing_time = 0
+        self.overheated = False
+
+    @property
+    def info(self):
+        info = super(MachineGunTowerItem, self).info
+        info.update({
+            ATTRIBUTE.FIELD_OF_VIEW: self.field_of_view,
+            ATTRIBUTE.RATE_OF_TURN: self.rate_of_turn,
+            ATTRIBUTE.DAMAGE_PER_SECOND: self.damage_per_second,
+            ATTRIBUTE.FIRING_TIME_LIMIT: self.firing_time_limit,
+            ATTRIBUTE.FULL_COOLDOWN_TIME: self.full_cooldown_time,
+            ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT: self.min_percentage_after_overheat,
+            ATTRIBUTE.FIRING_TIME: self.firing_time,
+            ATTRIBUTE.OVERHEATED: self.overheated,
+        })
+        return info
+
+    @property
+    def total_damage(self):
+        # TODO: dev-118 check extra damage for damage per second
+        return reduce(
+            lambda total, item: (100 + item.extra_damage) * total / 100,
+            self.get_extras(), self.damage_per_second * self._fight_handler.GAME_FRAME_TIME)
+
+
 class FlagItem(FightItem):
     is_flagman = True
     is_immortal = True
@@ -512,9 +557,9 @@ class FlagItem(FightItem):
         return True
 
 
-
-
 class CraftItem(FightItem):
+    ROLE_TYPE = ROLE.CRAFT
+
     is_craft = True
     landing_duration = 3
     last_landing = -landing_duration
@@ -589,10 +634,12 @@ class CraftItem(FightItem):
     def add_child_id(self, id):
         self.children.add(id)
 
+
 class DefPlatformItem(CraftItem):
+    ROLE_TYPE = ROLE.DEF_PLATFORM
+
     def generate_craft_place(self, craft_data):
         return craft_data[ATTRIBUTE.TILE_POSITION]
-
 
 
 class UnitItem(FightItem):
@@ -617,6 +664,8 @@ class UnitItem(FightItem):
 
 
 class MineItem(FightItem):
+    ROLE_TYPE = ROLE.MINE
+
     is_activated = False
     is_executable = False
     timer = 0.3

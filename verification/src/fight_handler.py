@@ -8,14 +8,14 @@ import shutil
 from checkio_referee.handlers.base import BaseHandler
 
 from fight_item import FightItem, CraftItem, FlagItem, UnitItem, MineItem, \
-    DefPlatformItem
+    DefPlatformItem, SentryGunTowerItem, MachineGunTowerItem
 from fight_logger import FightLogger, StreamFightLogger
 from fight_events import FightEvent
 
 from tools import precalculated, fill_square, grid_to_graph
 from consts import COORDINATE_EDGE_CUT, PERCENT_CENTER_AUTO_DEMAGE, FOLDER_CODES
 from tools import ROLE, ATTRIBUTE, ACTION, DEFEAT_REASON, OUTPUT, STD,\
-    OBSTACLE, INITIAL, PLAYER
+    OBSTACLE, INITIAL, PLAYER, DEF_TYPE
 from tools.terms import ENV
 from tools.distances import euclidean_distance
 
@@ -177,22 +177,24 @@ class FightHandler(BaseHandler):
         fight_items = []
         for item in sorted(self.initial_data[INITIAL.MAP_ELEMENTS], key=lambda a: a.get(PLAYER.PLAYER_ID, -1), reverse=True):
             player = self.players[item.get(PLAYER.PLAYER_ID, -1)]
-            if item[ATTRIBUTE.ITEM_TYPE] == 'craft':
-                cls_name = CraftItem
-            elif item[ATTRIBUTE.ITEM_TYPE] == 'flagman' and item.get(ATTRIBUTE.IS_FLYING):
+
+            #TODO: dev-118 flagman as flagPad
+            if item[ATTRIBUTE.ITEM_TYPE] == 'flagman' and item.get(ATTRIBUTE.IS_FLYING):
                 cls_name = FlagItem
-            elif item[ATTRIBUTE.ITEM_TYPE] == 'mine':
-                cls_name = MineItem
-            elif item[ATTRIBUTE.ITEM_TYPE] == 'defPlatform':
-                cls_name = DefPlatformItem
             else:
-                cls_name = FightItem
+                cls_names = {
+                    DEF_TYPE.SENTRY: SentryGunTowerItem,
+                    DEF_TYPE.MACHINE: MachineGunTowerItem,
+                    ROLE.CRAFT: CraftItem,
+                    ROLE.MINE: MineItem,
+                    ROLE.DEF_PLATFORM: DefPlatformItem,
+                }
+                cls_name = cls_names.get(item[ATTRIBUTE.ITEM_TYPE], FightItem)
 
             fight_item = cls_name(item, player=player, fight_handler=self)
             self.fighters[fight_item.id] = fight_item
             fight_item.set_state_idle()
             fight_items.append(fight_item.start())
-
 
         self.log.initial_state()
 

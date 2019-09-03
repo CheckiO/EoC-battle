@@ -4,6 +4,7 @@ from tools import is_coordinates
 
 
 class BaseItemActions(object):
+
     def __init__(self, item, fight_handler):
         self._item = item
         self._fight_handler = fight_handler
