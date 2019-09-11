@@ -9,7 +9,7 @@ from actions import ItemActions
 from tools.balance import unit_display_stats, building_display_stats, operation_stats
 from tools.distances import euclidean_distance
 from consts import CUT_FROM_BUILDING, IMMORTAL_TIME, FOLDER_CODES
-from tools import ROLE, ATTRIBUTE, ACTION, DEF_TYPE, ATTACK_TYPE, STD, PLAYER, STATUS
+from tools import ROLE, ATTRIBUTE, ACTION, DEF_TYPE, ATTACK_TYPE, STD, PLAYER, STATUS, OUTPUT
 from tools import precalculated
 from actions.exceptions import ActionValidateError, ActionSkip
 from modules import gen_features, map_features, has_feature
@@ -230,13 +230,19 @@ class FightItem(Item):
         self.set_state_dead()
         self._fight_handler.unsubscribe(self)
         if self.role == ROLE.BUILDING:
-            self._fight_handler.demage_center(self)
+            self._fight_handler.damage_center(self)
         # if self._env:
         #     self._env.stop()
 
     @property
     def is_dead(self):
         return self.hit_points <= 0
+
+    @property
+    def is_departed(self):
+        if not self._state:
+            return False
+        return self._state.get('name') == 'departed'
 
     @property
     def is_obstacle(self):
@@ -307,6 +313,9 @@ class FightItem(Item):
 
     def get_action_status(self):
         return self._state and self._state["name"] or 'idle'
+
+    def set_state_departed(self):
+        self._state = {'name': 'departed'}
 
     def set_state_idle(self):
         self._state = {'name': 'idle'}
@@ -643,6 +652,18 @@ class DefPlatformItem(CraftItem):
 
 class UnitItem(FightItem):
     parent_id = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.departing_time = 0
+
+    @property
+    def info(self):
+        info = super(UnitItem, self).info
+        info.update({
+            OUTPUT.DEPARTING_TIME: self.departing_time,
+        })
+        return info
 
     def set_parent_id(self, id):
         self.parent_id = id

@@ -119,9 +119,7 @@ class DefenceMachineActions(DefenceTowerActions):
         targets = []
         if excluded_targets is None:
             excluded_targets = []
-        for event_item in self._fight_handler.get_battle_fighters():
-            if event_item.is_dead:
-                continue
+        for event_item in self._fight_handler.get_active_battle_fighters():
             if self._item == event_item:
                 continue
             if not event_item.coordinates:

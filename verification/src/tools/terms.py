@@ -185,6 +185,7 @@ class OUTPUT():
     ACTION = 'action'
     ANGLE = 'angle'
     FIRING_TIME = 'firing_time'
+    DEPARTING_TIME = 'departing_time'
     FLAGS = 'flags'
     ONE_ACTION = 'one_action'
     INTERNAL = 'internal'

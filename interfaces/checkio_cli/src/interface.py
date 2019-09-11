@@ -119,6 +119,8 @@ class FightHandler(BaseHandler):
 
             if item.get('type') in ('craft', 'flagman'):
                 continue
+            if item.get('state', {}).get('action') == 'departed':
+                continue
             players_groups[item['player_id']].append(item)
             coordinates = item['coordinates']
             r_coordinates = (round(coordinates[0] * MAP_X), round(coordinates[1] * MAP_X))
@@ -205,7 +207,7 @@ class FightHandler(BaseHandler):
     def str_state(self, state):
         if state is None:
             return 'NONE'
-        if state['name'] in ('idle', 'charge', 'dead', 'turn', 'cooldown'):
+        if state['name'] in ('idle', 'charge', 'dead', 'turn', 'cooldown', 'depart', 'departed'):
             return state['name']
         if state['name'] == 'attack':
             str_action = 'fired'

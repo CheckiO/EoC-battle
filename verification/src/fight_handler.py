@@ -13,7 +13,7 @@ from fight_logger import FightLogger, StreamFightLogger
 from fight_events import FightEvent
 
 from tools import precalculated, fill_square, grid_to_graph
-from consts import COORDINATE_EDGE_CUT, PERCENT_CENTER_AUTO_DEMAGE, FOLDER_CODES
+from consts import COORDINATE_EDGE_CUT, PERCENT_CENTER_AUTO_DAMAGE, FOLDER_CODES
 from tools import ROLE, ATTRIBUTE, ACTION, DEFEAT_REASON, OUTPUT, STD,\
     OBSTACLE, INITIAL, PLAYER, DEF_TYPE, ATTACK_TYPE
 from tools.terms import ENV
@@ -97,8 +97,6 @@ class FightHandler(BaseHandler):
                 shutil.chown(filename, user=username)
                 os.chmod(filename, 0o700)
 
-
-
     def get_crafts(self):
         return filter(lambda a: a.is_craft, self.fighters.values())
 
@@ -111,16 +109,27 @@ class FightHandler(BaseHandler):
         return all([item.is_empty() for item in self.get_crafts()])
 
     def get_battle_fighters(self):
-        '''
-            returns only units that are on the battle
-        '''
+        """
+        Returns units that are on the battle
+        :return: battle fighters
+        """
         return filter(lambda a: not a.is_craft and not a.is_flagman, self.fighters.values())
+
+    def get_active_battle_fighters(self):
+        """
+        Returns units that are currently on the battle
+        :return: current battle fighters
+        """
+        return filter(
+            lambda a: not a.is_craft and not a.is_flagman and not a.is_dead and not a.is_departed,
+            self.fighters.values()
+        )
 
     def set_center(self, center):
         self.fi_center = center
 
-    def demage_center(self, building):
-        auto_health_part = self.fi_center.start_hit_points * PERCENT_CENTER_AUTO_DEMAGE
+    def damage_center(self, building):
+        auto_health_part = self.fi_center.start_hit_points * PERCENT_CENTER_AUTO_DAMAGE
         total_buildings = len(list(filter(lambda a: a.role == ROLE.BUILDING, self.fighters.values())))
         self.fi_center.get_shot(auto_health_part/total_buildings)
 
@@ -149,6 +158,8 @@ class FightHandler(BaseHandler):
         data = {}
         for key, value in self.fighters.items():
             if value.is_dead:
+                continue
+            if value.is_departed:
                 continue
             if value.is_obstacle:
                 continue
@@ -190,7 +201,6 @@ class FightHandler(BaseHandler):
                     ROLE.DEF_PLATFORM: DefPlatformItem,
                 }
                 cls_name = cls_names.get(item[ATTRIBUTE.ITEM_TYPE], FightItem)
-
             fight_item = cls_name(item, player=player, fight_handler=self)
             self.fighters[fight_item.id] = fight_item
             fight_item.set_state_idle()
@@ -297,7 +307,7 @@ class FightHandler(BaseHandler):
 
             # WHY: can't we move in the FightItem class?
             # When in can be None?
-            if fighter.is_dead:
+            if fighter.is_dead or fighter.is_departed:
                 #print('DEAD')
                 continue
 
@@ -359,7 +369,7 @@ class FightHandler(BaseHandler):
 
     def _is_player_has_item_role(self, player, role):
         for item in self.fighters.values():
-            if item.player['id'] == player['id'] and item.role == role and not item.is_dead:
+            if item.player['id'] == player['id'] and item.role == role and not item.is_dead and not item.is_departed:
                 return True
         return False
 
@@ -386,5 +396,6 @@ class FightHandler(BaseHandler):
                 continue
             if item.is_dead:
                 continue
+            if item.is_departed:
+                continue
             yield item
-

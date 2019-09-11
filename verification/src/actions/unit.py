@@ -69,6 +69,7 @@ class FlagActions(BaseItemActions):
         if flagman.use_operation(OPERATION.POWER):
             flagman.add_sub_item(PowerSubItem(flagman, data['coordinates']))
 
+
 class CraftActions(BaseItemActions):
 
     def actions_init(self):
@@ -89,6 +90,7 @@ class CraftActions(BaseItemActions):
     def commands_init(self):
         return {
             'attack': self.forward_by('attack'),
+            'depart': self.forward_by('depart'),
             'move': self.forward_by('move'),
             'moves': self.forward_by('moves'),
             'teleport': self.forward_command_by('teleport'),
@@ -129,87 +131,31 @@ class UnitActions(BaseItemActions):
         self._route = []
         self._last_map_hash = 0
         self._last_destination_point = (0, 0)
-
         super().__init__(*args, **kwargs)
 
     def actions_init(self):
         actions = super().actions_init()
         actions.update({
+            'depart': self.action_depart,
             'move': self.action_move,
             'moves': self.action_moves
         })
         return actions
-
-    def commands_init(self):
-        return {
-            'teleport': self.trans_action('teleport')
-        }
 
     def one_actions_init(self):
         return {
             'teleport': self.do_teleport
         }
 
-    def do_teleport(self, data):
-        if not self._item.has_feature(FEATURE.TELEPORT):
-            return
-        if self._item.used_feature(FEATURE.TELEPORT):
-            return
-        self._item.use_feature(FEATURE.TELEPORT)
-        coordinates = data.get('coordinates')
-        self._item.set_coordinates(coordinates)
+    def commands_init(self):
+        return {
+            'teleport': self.trans_action('teleport')
+        }
 
-    def _distance_to_enemy(self, enemy):
-        return euclidean_distance(enemy.coordinates, self._item.coordinates) - enemy.size / 2
-
-    def action_attack(self, data):
-        enemy = self._fight_handler.fighters.get(data['id'])
-        if enemy is None:
-            return  # WTF
-        distance_to_enemy = self._distance_to_enemy(enemy)
-        item_firing_range = self._item.firing_range
-
-        if distance_to_enemy > item_firing_range:
-            return self._move(enemy.coordinates)
-        return self._shot(enemy)
-
-    def action_move(self, data):
-        coordinates = data.get('coordinates')
-        coordinates = self._fight_handler.adjust_coordinates(*coordinates)
-        return self._move(coordinates)
-
-    def action_moves(self, data):
-        steps = data.get('steps')
-        if not len(steps):
-            return self._stop()
-        coordinates = steps[0]
-        coordinates = self._fight_handler.adjust_coordinates(*coordinates)
-        ret = self._move(coordinates, stop_then=False)
-        if ret:
-            return ret
-
-        data['steps'] = steps[1:]
-        return self.action_moves(data)
-
-    def check_or_create_route(self, destination_point):
-        if (self._fight_handler.map_hash != self._last_map_hash or
-                not self._route or
-                self._last_destination_point != tuple(destination_point)):
-            self.calculate_route(destination_point)
-            self._last_map_hash = self._fight_handler.map_hash
-            self._last_destination_point = tuple(destination_point)
-
-    def _stop(self):
-        return self._idle()
-
-    def process_near_turns(self, distance):
-        intermediate_point = tuple(self._item.coordinates)
-        next_point = self._route[0]
-        while self._route and euclidean_distance(intermediate_point, next_point) < distance:
-            distance -= euclidean_distance(intermediate_point, next_point)
-            intermediate_point = self._route.pop(0)
-            next_point = self._route[0] if self._route else next_point
-        return next_point, intermediate_point
+    def _depart(self):
+        self._fight_handler.unsubscribe(self._item)
+        self._item.set_state_departed()
+        return {'name': 'departed'}
 
     def _move(self, destination_point, stop_then=True):
         self.check_or_create_route(destination_point)
@@ -241,6 +187,12 @@ class UnitActions(BaseItemActions):
                 'from': start_point,
                 'to': new_point}
 
+    def _stop(self):
+        return self._idle()
+
+    def get_distance_to_obj(self, obj):
+        return euclidean_distance(obj.coordinates, self._item.coordinates) - obj.size / 2
+
     def calculate_route(self, end_point):
         current_point = self._item.coordinates
         grid_scale = self._fight_handler.GRID_SCALE
@@ -257,14 +209,31 @@ class UnitActions(BaseItemActions):
         self._route = [((c[0] / grid_scale) + cell_shift, (c[1] / grid_scale) + cell_shift)
                        for c in cut_cell_route]
 
-    def validate_move(self, action, data):
-        if not is_coordinates(data.get("coordinates")):
-            raise ActionValidateError("Wrong coordinates {}".format(data.get("coordinates")))
+    def check_or_create_route(self, destination_point):
+        if (self._fight_handler.map_hash != self._last_map_hash or
+                not self._route or
+                self._last_destination_point != tuple(destination_point)):
+            self.calculate_route(destination_point)
+            self._last_map_hash = self._fight_handler.map_hash
+            self._last_destination_point = tuple(destination_point)
 
-    def validate_moves(self, action, data):
-        for coordinates in data.get('steps'):
-            if not is_coordinates(coordinates):
-                raise ActionValidateError("Wrong coordinates {}".format(coordinates))
+    def process_near_turns(self, distance):
+        intermediate_point = tuple(self._item.coordinates)
+        next_point = self._route[0]
+        while self._route and euclidean_distance(intermediate_point, next_point) < distance:
+            distance -= euclidean_distance(intermediate_point, next_point)
+            intermediate_point = self._route.pop(0)
+            next_point = self._route[0] if self._route else next_point
+        return next_point, intermediate_point
+
+    def do_teleport(self, data):
+        if not self._item.has_feature(FEATURE.TELEPORT):
+            return
+        if self._item.used_feature(FEATURE.TELEPORT):
+            return
+        self._item.use_feature(FEATURE.TELEPORT)
+        coordinates = data.get('coordinates')
+        self._item.set_coordinates(coordinates)
 
     def validate_attack(self, action, data):
         enemy = self._fight_handler.fighters.get(data['id'])
@@ -272,6 +241,62 @@ class UnitActions(BaseItemActions):
             raise ActionValidateError("The enemy is dead")
         if enemy.player['id'] == self._item.player['id']:
             raise ActionValidateError("Can not attack own item")
+
+    def action_attack(self, data):
+        self._item.departing_time = 0
+        enemy = self._fight_handler.fighters.get(data['id'])
+        if enemy is None:
+            return  # WTF
+        distance_to_enemy = self.get_distance_to_obj(enemy)
+        item_firing_range = self._item.firing_range
+
+        if distance_to_enemy > item_firing_range:
+            return self._move(enemy.coordinates)
+        return self._shot(enemy)
+
+    def validate_depart(self, action, data):
+        crafts = self._fight_handler.get_crafts()
+        for craft in crafts:
+            if self.get_distance_to_obj(craft) < 2:
+                return
+        raise ActionValidateError('Not close enough to craft')
+
+    def action_depart(self, data):
+        DEPARTURE_TIME = 0.5
+        frame_time = DEPARTURE_TIME * self._fight_handler.GAME_FRAME_TIME
+        self._item.departing_time += frame_time
+        if self._item.departing_time >= DEPARTURE_TIME:
+            return self._depart()
+        return {'name': 'depart'}
+
+    def validate_move(self, action, data):
+        if not is_coordinates(data.get("coordinates")):
+            raise ActionValidateError("Wrong coordinates {}".format(data.get("coordinates")))
+
+    def action_move(self, data):
+        self._item.departing_time = 0
+        coordinates = data.get('coordinates')
+        coordinates = self._fight_handler.adjust_coordinates(*coordinates)
+        return self._move(coordinates)
+
+    def validate_moves(self, action, data):
+        for coordinates in data.get('steps'):
+            if not is_coordinates(coordinates):
+                raise ActionValidateError("Wrong coordinates {}".format(coordinates))
+
+    def action_moves(self, data):
+        self._item.departing_time = 0
+        steps = data.get('steps')
+        if not len(steps):
+            return self._stop()
+        coordinates = steps[0]
+        coordinates = self._fight_handler.adjust_coordinates(*coordinates)
+        ret = self._move(coordinates, stop_then=False)
+        if ret:
+            return ret
+
+        data['steps'] = steps[1:]
+        return self.action_moves(data)
 
 
 class HeavyBotActions(UnitActions):
@@ -328,7 +353,7 @@ class HeavyBotActions(UnitActions):
         }
 
     def is_shot_possible(self, enemy):
-        distance_to_enemy = self._distance_to_enemy(enemy)
+        distance_to_enemy = self.get_distance_to_obj(enemy)
         if distance_to_enemy > self._item.firing_range:
             return False
         return True

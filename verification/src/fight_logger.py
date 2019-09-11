@@ -44,10 +44,12 @@ class FightLogger:
             if player_id == -1:
                 continue
             self.data[OUTPUT.FRAME_CATEGORY][player_id] = []
-        
 
     def get_battle_fighters(self):
         return self._fight_handler.get_battle_fighters()
+
+    def get_active_battle_fighters(self):
+        return self._fight_handler.get_active_battle_fighters()
 
     def get_all_fighters(self):
         return self._fight_handler.fighters.values()
