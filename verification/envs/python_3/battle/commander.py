@@ -229,7 +229,9 @@ class Client(object):
 
     def do_attack_coordinates(self, coordinates):
         check_coordinates(coordinates, "Coordinates")
-        return self.do('attack_coor', {'coordinates': coordinates})
+        return self.do('attack_coordinates', {'coordinates': coordinates})
+
+    attack_coordinates = do_attack_coordinates
 
     def do_move(self, coordinates):
         check_coordinates(coordinates, "Coordinates")

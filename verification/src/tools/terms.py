@@ -28,13 +28,13 @@ class ROLE():
 class DEF_TYPE():
     SENTRY = 'sentryGun'
     MACHINE = 'machineGun'
-    ROCKET = 'rocketGun'
+    ROCKET_GUN = 'rocketGun'
 
 
 class ATTACK_TYPE():
     INFANTRY = 'infantryBot'
     HEAVY = 'heavyBot'
-    ROCKET = 'rocketBot'
+    ROCKET_BOT = 'rocketBot'
 
 
 class OBSTACLE():
@@ -107,10 +107,12 @@ class ACTION():
     DEMAGED = 'damaged'
     CHARGE = 'charge'
 
+
 class OPERATION():
     ROCKET = 'rocket'
     HEAL = 'heal'
     POWER = 'power'
+
 
 class STATUS():
     SUCCESS = 'success'

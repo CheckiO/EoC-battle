@@ -450,8 +450,7 @@ class SentryGunTowerItem(FightItem):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)  # TODO: dev-119 balance update
-        #self.rate_of_fire = self.item_data.get(ATTRIBUTE.RATE_OF_FIRE)    # TODO: dev-119 is this needed or not anymore
+        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)  # TODO: balance update
         self.damage_per_shot = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT)
         self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
         self.firing_range_always_hit = self.item_data.get(ATTRIBUTE.FIRING_RANGE_ALWAYS_HIT)
@@ -481,12 +480,12 @@ class MachineGunTowerItem(FightItem):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.field_of_view = self.item_data.get(ATTRIBUTE.FIELD_OF_VIEW, 120)  # TODO: dev-118 balance update
-        self.rate_of_turn = self.item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)  # TODO: dev-118 balance update
-        self.damage_per_second = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)  # TODO: dev-118 balance update
-        self.firing_time_limit = self.item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)  # TODO: dev-118 balance update
-        self.full_cooldown_time = self.item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)  # TODO: dev-118 balance update
-        self.min_percentage_after_overheat = self.item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)  # TODO: dev-118 balance update
+        self.field_of_view = self.item_data.get(ATTRIBUTE.FIELD_OF_VIEW, 120)  # TODO: balance update
+        self.rate_of_turn = self.item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)  # TODO: balance update
+        self.damage_per_second = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)  # TODO: balance update
+        self.firing_time_limit = self.item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)  # TODO: balance update
+        self.full_cooldown_time = self.item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)  # TODO: balance update
+        self.min_percentage_after_overheat = self.item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)  # TODO: balance update
 
         self.angle = 0
         self.firing_time = 0
@@ -510,10 +509,35 @@ class MachineGunTowerItem(FightItem):
 
     @property
     def total_damage(self):
-        # TODO: dev-118 check extra damage for damage per second
         return reduce(
             lambda total, item: (100 + item.extra_damage) * total / 100,
             self.get_extras(), self.damage_per_second * self._fight_handler.GAME_FRAME_TIME)
+
+
+class RocketGunTowerItem(FightItem):
+    ROLE_TYPE = DEF_TYPE.ROCKET_GUN
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)  # TODO: balance update
+        self.damage_per_shot = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT, 10) # TODO: balance update
+        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
+
+    @property
+    def info(self):
+        info = super(RocketGunTowerItem, self).info
+        info.update({
+            ATTRIBUTE.CHARGING_TIME: self.charging_time,
+            ATTRIBUTE.DAMAGE_PER_SHOT: self.damage_per_shot,
+            ATTRIBUTE.FIRING_RANGE: self.firing_range,
+        })
+        return info
+
+    @property
+    def total_damage(self):
+        return reduce(
+            lambda total, item: (100 + item.extra_damage) * total / 100,
+            self.get_extras(), self.damage_per_shot)
 
 
 class FlagItem(FightItem):
@@ -688,11 +712,11 @@ class HeavyBotUnit(UnitItem):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.rate_of_turn = self.item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)  # TODO: dev-118 balance update
-        self.damage_per_second = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)  # TODO: dev-118 balance update
-        self.firing_time_limit = self.item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)  # TODO: dev-118 balance update
-        self.full_cooldown_time = self.item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)  # TODO: dev-118 balance update
-        self.min_percentage_after_overheat = self.item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)  # TODO: dev-118 balance update
+        self.rate_of_turn = self.item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)  # TODO: balance update
+        self.damage_per_second = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)  # TODO: balance update
+        self.firing_time_limit = self.item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)  # TODO: balance update
+        self.full_cooldown_time = self.item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)  # TODO: balance update
+        self.min_percentage_after_overheat = self.item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)  # TODO: balance update
 
         self.angle = 0
         self.firing_time = 0
@@ -710,6 +734,26 @@ class HeavyBotUnit(UnitItem):
             ATTRIBUTE.ANGLE: self.angle,
             ATTRIBUTE.FIRING_TIME: self.firing_time,
             ATTRIBUTE.OVERHEATED: self.overheated,
+        })
+        return info
+
+
+class RocketBotUnit(UnitItem):
+    ROLE_TYPE = ATTACK_TYPE.ROCKET_BOT
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)  # TODO: balance update
+        self.damage_per_shot = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT, 20)  # TODO: balance update
+        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)  # TODO: balance update
+
+    @property
+    def info(self):
+        info = super(RocketBotUnit, self).info
+        info.update({
+            ATTRIBUTE.CHARGING_TIME: self.charging_time,
+            ATTRIBUTE.DAMAGE_PER_SHOT: self.damage_per_shot,
+            ATTRIBUTE.FIRING_RANGE: self.firing_range,
         })
         return info
 

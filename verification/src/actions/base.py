@@ -41,7 +41,6 @@ class BaseItemActions(object):
         if enemy is None:
             raise Exception("No enemy")
             return  # WTF
-
         return self._shot(enemy)
 
     def _get_charged(self, coordinates, enemy_id=None):

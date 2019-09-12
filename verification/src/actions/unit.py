@@ -1,11 +1,12 @@
-from .base import BaseItemActions, euclidean_distance
+from .base import BaseItemActions
 from .exceptions import ActionValidateError
-from tools import find_route, straighten_route, is_coordinates, shortest_distance_between_angles, angle_to_enemy
-from sub_items import VerticalRocketSubItem, HealSubItem
-from tools.terms import OPERATION, ROLE, FEATURE
 
-import logging
-logger = logging.getLogger()
+from tools.angles import angle_to_enemy, shortest_distance_between_angles
+from tools.grid import is_coordinates, find_route, straighten_route
+from tools.distances import euclidean_distance
+from tools.terms import OPERATION, ROLE, FEATURE
+from sub_items import RocketSubItem, VerticalRocketSubItem, HealSubItem, PowerSubItem
+
 
 class MineActions(BaseItemActions):
     def actions_init(self):
@@ -301,20 +302,9 @@ class UnitActions(BaseItemActions):
 
 class HeavyBotActions(UnitActions):
 
-    def _actual_hit(self, enemy):
-        return True
-
-    def _shot(self, enemy):
-        prepared_to_shoot = self._get_prepared_to_shoot()
-        if prepared_to_shoot:
-            return prepared_to_shoot
-
-        if self.is_shot_possible(enemy):
-            return self._actual_shot(enemy)
-
-        if self._item.firing_time > 0:
-            return self._cooldown()
-        return self._idle()
+    def is_shot_possible(self, enemy):
+        distance_to_enemy = self.get_distance_to_obj(enemy)
+        return distance_to_enemy <= self._item.firing_range
 
     def _cooldown(self):
         cooldown_time = (self._item.firing_time_limit * self._fight_handler.GAME_FRAME_TIME /
@@ -337,11 +327,14 @@ class HeavyBotActions(UnitActions):
             self._item.overheated = True
             return self._cooldown()
 
-    def _actual_shot(self, enemy):
+    def _hit(self, enemy):
+        return True
+
+    def _shot(self, enemy):
         targets = [enemy]
         damaged_ids = []
         for target in targets:
-            if self._actual_hit(target):
+            if self._hit(target):
                 damaged_ids.extend(target.get_shot(self._item.total_damage))
         self._item.firing_time += self._fight_handler.GAME_FRAME_TIME
 
@@ -352,11 +345,17 @@ class HeavyBotActions(UnitActions):
             'damaged': damaged_ids,
         }
 
-    def is_shot_possible(self, enemy):
-        distance_to_enemy = self.get_distance_to_obj(enemy)
-        if distance_to_enemy > self._item.firing_range:
-            return False
-        return True
+    def _attack(self, enemy):
+        prepared_to_shoot = self._get_prepared_to_shoot()
+        if prepared_to_shoot:
+            return prepared_to_shoot
+
+        if self.is_shot_possible(enemy):
+            return self._shot(enemy)
+
+        if self._item.firing_time > 0:
+            return self._cooldown()
+        return self._idle()
 
     def _get_turned(self, desired_angle):
         angle_difference = shortest_distance_between_angles(desired_angle, self._item.angle)
@@ -427,5 +426,56 @@ class HeavyBotActions(UnitActions):
     def action_attack(self, data):
         enemy = self._fight_handler.fighters.get(data['id'])
         if self.is_shot_possible(enemy):
+            return self._attack(enemy)
+        return self._move(enemy.coordinates)
+
+
+class RocketBotActions(UnitActions):
+
+    def is_shot_possible(self, enemy):
+        distance_to_enemy = self.get_distance_to_obj(enemy)
+        return distance_to_enemy <= self._item.firing_range
+
+    def _charging(self):
+        self._item.charging -= self._fight_handler.GAME_FRAME_TIME
+        if self._item.charging <= 0:
+            self._item.charging = 0
+        return {'name': 'charge'}
+
+    def _get_prepared_to_shoot(self):
+        if self._item.charging:
+            return self._charging()
+
+    def _shot(self, enemy):
+        firing_point = enemy.coordinates
+        self._item.add_sub_item(RocketSubItem(self._item, self._item.coordinates, firing_point))
+        self._item.charging = self._item.charging_time
+
+        return {
+            'name': 'attack',
+            'firing_point': firing_point,
+            'aid': enemy.id,
+            'damaged': [],
+        }
+
+    def _attack(self, enemy):
+        prepared_to_shoot = self._get_prepared_to_shoot()
+        if prepared_to_shoot:
+            return prepared_to_shoot
+
+        if self.is_shot_possible(enemy):
             return self._shot(enemy)
+        return self._idle()
+
+    def validate_attack(self, action, data):
+        enemy = self._fight_handler.fighters.get(data['id'])
+        if enemy.is_dead:
+            raise ActionValidateError("The enemy is dead")
+        if enemy.player['id'] == self._item.player['id']:
+            raise ActionValidateError("Can not attack own item")
+
+    def action_attack(self, data):
+        enemy = self._fight_handler.fighters.get(data['id'])
+        if self.is_shot_possible(enemy):
+            return self._attack(enemy)
         return self._move(enemy.coordinates)

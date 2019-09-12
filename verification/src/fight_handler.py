@@ -8,7 +8,7 @@ import shutil
 from checkio_referee.handlers.base import BaseHandler
 
 from fight_item import FightItem, CraftItem, FlagItem, UnitItem, MineItem, \
-    DefPlatformItem, SentryGunTowerItem, MachineGunTowerItem, HeavyBotUnit
+    DefPlatformItem, SentryGunTowerItem, RocketGunTowerItem, MachineGunTowerItem, HeavyBotUnit, RocketBotUnit
 from fight_logger import FightLogger, StreamFightLogger
 from fight_events import FightEvent
 
@@ -108,6 +108,9 @@ class FightHandler(BaseHandler):
     def all_crafts_empty(self):
         return all([item.is_empty() for item in self.get_crafts()])
 
+    def get_all_fighters(self):
+        return self.fighters.values()
+
     def get_battle_fighters(self):
         """
         Returns units that are on the battle
@@ -196,6 +199,7 @@ class FightHandler(BaseHandler):
                 cls_names = {
                     DEF_TYPE.SENTRY: SentryGunTowerItem,
                     DEF_TYPE.MACHINE: MachineGunTowerItem,
+                    DEF_TYPE.ROCKET_GUN: RocketGunTowerItem,
                     ROLE.CRAFT: CraftItem,
                     ROLE.MINE: MineItem,
                     ROLE.DEF_PLATFORM: DefPlatformItem,
@@ -258,7 +262,7 @@ class FightHandler(BaseHandler):
         cls_names = {
             ATTACK_TYPE.INFANTRY: UnitItem,
             ATTACK_TYPE.HEAVY: HeavyBotUnit,
-            ATTACK_TYPE.ROCKET: UnitItem,
+            ATTACK_TYPE.ROCKET_BOT: RocketBotUnit,
         }
         cls_name = cls_names.get(unit[ATTRIBUTE.ITEM_TYPE], FightItem)
         fight_item = cls_name(unit, player=player, fight_handler=self)
