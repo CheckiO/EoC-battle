@@ -119,6 +119,8 @@ class FightHandler(BaseHandler):
 
             if item.get('type') in ('craft', 'flagman'):
                 continue
+            if item.get('state', {}).get('action') == 'departed':
+                continue
             players_groups[item['player_id']].append(item)
             coordinates = item['coordinates']
             r_coordinates = (round(coordinates[0] * MAP_X), round(coordinates[1] * MAP_X))
@@ -188,11 +190,8 @@ class FightHandler(BaseHandler):
                 ))
                 if item.get('subitems'):
                     print('    ', item['subitems'])
-
-                # TODO: dev-118 remove testing utils
-                # if item['id'] == 6:
-                #     print('Angle: {}'.format(round(item.get('angle') * 1.0, 4)))
-                #     print('Firing: {}'.format(round(item.get('firing_time') * 1.0, 4)))
+                # TODO: just-for-testing
+                #print(item)
 
         if data.get('flagman'):
             print('FLAGMAN:', data['flagman']['charge'])
@@ -205,7 +204,7 @@ class FightHandler(BaseHandler):
     def str_state(self, state):
         if state is None:
             return 'NONE'
-        if state['name'] in ('idle', 'charge', 'dead', 'turn', 'cooldown'):
+        if state['name'] in ('idle', 'charge', 'dead', 'turn', 'cooldown', 'depart', 'departed'):
             return state['name']
         if state['name'] == 'attack':
             str_action = 'fired'

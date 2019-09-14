@@ -19,9 +19,7 @@ class FightEvent:
         fight_handler = self._fight_handler
 
         def _checker(event, receiver):
-            for event_item in fight_handler.get_battle_fighters():
-                if event_item.is_dead:
-                    continue
+            for event_item in fight_handler.get_active_battle_fighters():
                 if receiver == event_item:
                     continue
                 if not event_item.coordinates:
