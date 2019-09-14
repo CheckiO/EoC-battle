@@ -446,11 +446,11 @@ class SentryGunTowerItem(FightItem):
 
     # TODO: balance update
     def update_additional_attributes(self):
-        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)
-        self.damage_per_shot = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT)
-        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
-        self.firing_range_always_hit = self.item_data.get(ATTRIBUTE.FIRING_RANGE_ALWAYS_HIT)
-        self.start_chance = self.item_data.get(ATTRIBUTE.START_CHANCE)
+        self.charging_time = self.item_data[ATTRIBUTE.CHARGING_TIME]
+        self.damage_per_shot = self.item_data[ATTRIBUTE.DAMAGE_PER_SHOT]
+        self.firing_range = self.item_data[ATTRIBUTE.FIRING_RANGE]
+        self.firing_range_always_hit = self.item_data[ATTRIBUTE.FIRING_RANGE_ALWAYS_HIT]
+        self.start_chance = self.item_data[ATTRIBUTE.START_CHANCE]
 
     @property
     def info(self):
@@ -476,13 +476,13 @@ class MachineGunTowerItem(FightItem):
 
     # TODO: balance update
     def update_additional_attributes(self):
-        self.field_of_view = self.item_data.get(ATTRIBUTE.FIELD_OF_VIEW, 120)
-        self.rate_of_turn = self.item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)
-        self.damage_per_second = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)
-        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
-        self.firing_time_limit = self.item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)
-        self.full_cooldown_time = self.item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)
-        self.min_percentage_after_overheat = self.item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)
+        self.field_of_view = self.item_data[ATTRIBUTE.FIELD_OF_VIEW]
+        self.rate_of_turn = self.item_data[ATTRIBUTE.RATE_OF_TURN]
+        self.damage_per_second = self.item_data[ATTRIBUTE.DAMAGE_PER_SECOND]
+        self.firing_range = self.item_data[ATTRIBUTE.FIRING_RANGE]
+        self.firing_time_limit = self.item_data[ATTRIBUTE.FIRING_TIME_LIMIT]
+        self.full_cooldown_time = self.item_data[ATTRIBUTE.FULL_COOLDOWN_TIME]
+        self.min_percentage_after_overheat = self.item_data[ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT]
 
         self.angle = 0
         self.firing_time = 0
@@ -517,11 +517,11 @@ class RocketGunTowerItem(FightItem):
 
     # TODO: balance update
     def update_additional_attributes(self):
-        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)
-        self.damage_per_shot = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT, 10)
-        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
-        self.rocket_speed = self.item_data.get(ATTRIBUTE.ROCKET_SPEED, 1)
-        self.rocket_explosion_radius = self.item_data.get(ATTRIBUTE.ROCKET_EXPLOSION_RADIUS, 1.5)
+        self.charging_time = self.item_data[ATTRIBUTE.CHARGING_TIME]
+        self.damage_per_shot = self.item_data[ATTRIBUTE.DAMAGE_PER_SHOT]
+        self.firing_range = self.item_data[ATTRIBUTE.FIRING_RANGE]
+        self.rocket_speed = self.item_data[ATTRIBUTE.ROCKET_SPEED]
+        self.rocket_explosion_radius = self.item_data[ATTRIBUTE.ROCKET_EXPLOSION_RADIUS]
 
     @property
     def info(self):
@@ -709,10 +709,10 @@ class InfantryBotUnit(UnitItem):
     # TODO: balance update
     def update_additional_attributes(self):
         super().update_additional_attributes()
-        self.speed = self.item_data.get(ATTRIBUTE.SPEED)
-        self.damage_per_shot = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT, 10)
-        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)
-        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
+        self.speed = self.item_data[ATTRIBUTE.SPEED]
+        self.damage_per_shot = self.item_data[ATTRIBUTE.DAMAGE_PER_SHOT]
+        self.charging_time = self.item_data[ATTRIBUTE.CHARGING_TIME]
+        self.firing_range = self.item_data[ATTRIBUTE.FIRING_RANGE]
 
     @property
     def info(self):
@@ -732,13 +732,13 @@ class HeavyBotUnit(UnitItem):
     # TODO: balance update
     def update_additional_attributes(self):
         super().update_additional_attributes()
-        self.speed = self.item_data.get(ATTRIBUTE.SPEED)
-        self.rate_of_turn = self.item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)
-        self.damage_per_second = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)
-        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
-        self.firing_time_limit = self.item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)
-        self.full_cooldown_time = self.item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)
-        self.min_percentage_after_overheat = self.item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)
+        self.speed = self.item_data[ATTRIBUTE.SPEED]
+        self.rate_of_turn = self.item_data[ATTRIBUTE.RATE_OF_TURN]
+        self.damage_per_second = self.item_data[ATTRIBUTE.DAMAGE_PER_SECOND]
+        self.firing_range = self.item_data[ATTRIBUTE.FIRING_RANGE]
+        self.firing_time_limit = self.item_data[ATTRIBUTE.FIRING_TIME_LIMIT]
+        self.full_cooldown_time = self.item_data[ATTRIBUTE.FULL_COOLDOWN_TIME]
+        self.min_percentage_after_overheat = self.item_data[ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT]
 
         self.angle = 0
         self.firing_time = 0
@@ -768,12 +768,12 @@ class RocketBotUnit(UnitItem):
     # TODO: balance update
     def update_additional_attributes(self):
         super().update_additional_attributes()
-        self.speed = self.item_data.get(ATTRIBUTE.SPEED)
-        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)
-        self.damage_per_shot = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT, 20)
-        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
-        self.rocket_speed = self.item_data.get(ATTRIBUTE.ROCKET_SPEED, 1)
-        self.rocket_explosion_radius = self.item_data.get(ATTRIBUTE.ROCKET_EXPLOSION_RADIUS, 0)
+        self.speed = self.item_data[ATTRIBUTE.SPEED]
+        self.charging_time = self.item_data[ATTRIBUTE.CHARGING_TIME]
+        self.damage_per_shot = self.item_data[ATTRIBUTE.DAMAGE_PER_SHOT]
+        self.firing_range = self.item_data[ATTRIBUTE.FIRING_RANGE]
+        self.rocket_speed = self.item_data[ATTRIBUTE.ROCKET_SPEED]
+        self.rocket_explosion_radius = 0
 
     @property
     def info(self):
