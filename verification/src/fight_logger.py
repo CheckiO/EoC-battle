@@ -52,7 +52,7 @@ class FightLogger:
         return self._fight_handler.get_active_battle_fighters()
 
     def get_all_fighters(self):
-        return self._fight_handler.fighters.values()
+        return self._fight_handler.get_all_fighters()
 
     def get_crafts(self):
         return self._fight_handler.get_crafts()

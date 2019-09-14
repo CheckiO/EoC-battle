@@ -65,16 +65,8 @@ class FightItem(Item):
         self.hit_points = item_data.get(ATTRIBUTE.HIT_POINTS)
         self.size = item_data.get(ATTRIBUTE.SIZE, 0)
         self.base_size = item_data.get(ATTRIBUTE.BASE_SIZE, 0)
-        self.speed = item_data.get(ATTRIBUTE.SPEED)
 
         self.coordinates = item_data.get(ATTRIBUTE.COORDINATES)  # list of two
-
-        self.rate_of_fire = item_data.get(ATTRIBUTE.RATE_OF_FIRE)
-        self.damage_per_shot = item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT)
-        self.firing_range = item_data.get(ATTRIBUTE.FIRING_RANGE)
-        self.start_chance = item_data.get(ATTRIBUTE.START_CHANCE)
-        self.area_damage_per_shot = item_data.get(ATTRIBUTE.AREA_DAMAGE_PER_SHOT, 0)
-        self.area_damage_radius = item_data.get(ATTRIBUTE.AREA_DAMAGE_RADIUS, 0)
 
         # a current command that was send from code
         self.action = item_data.get(ACTION.REQUEST_NAME)
@@ -104,13 +96,18 @@ class FightItem(Item):
         # every state has a key "action"
         # {'action': 'idle'}
         # {'action': 'dead'}
-        self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
 
+        self.update_additional_attributes()
+
+        self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
         self.features = gen_features(item_data.get(ATTRIBUTE.MODULES, []))
         self._used_features = {}
         map_features(self.features, 'apply', self)
         self.reset_fflags()
         self.reset_std()
+
+    def update_additional_attributes(self):
+        pass
 
     def reset_fflags(self):
         self._frame_flags = {}
@@ -262,13 +259,7 @@ class FightItem(Item):
             ATTRIBUTE.ITEM_TYPE: self.item_type,
             ATTRIBUTE.HIT_POINTS: self.hit_points,
             ATTRIBUTE.SIZE: self.size,
-            ATTRIBUTE.SPEED: self.speed,
             ATTRIBUTE.COORDINATES: self.coordinates,
-            ATTRIBUTE.RATE_OF_FIRE: self.rate_of_fire,
-            ATTRIBUTE.DAMAGE_PER_SHOT: self.damage_per_shot,
-            ATTRIBUTE.AREA_DAMAGE_PER_SHOT: self.area_damage_per_shot,
-            ATTRIBUTE.AREA_DAMAGE_RADIUS: self.area_damage_radius,
-            ATTRIBUTE.FIRING_RANGE: self.firing_range,
             ATTRIBUTE.LEVEL: self.level,
             # TODO State should be reworked
             ATTRIBUTE.IS_DEAD: self.is_dead,
@@ -448,10 +439,9 @@ class FightItem(Item):
 class SentryGunTowerItem(FightItem):
     ROLE_TYPE = DEF_TYPE.SENTRY
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)  # TODO: dev-119 balance update
-        #self.rate_of_fire = self.item_data.get(ATTRIBUTE.RATE_OF_FIRE)    # TODO: dev-119 is this needed or not anymore
+    # TODO: balance update
+    def update_additional_attributes(self):
+        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)
         self.damage_per_shot = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT)
         self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
         self.firing_range_always_hit = self.item_data.get(ATTRIBUTE.FIRING_RANGE_ALWAYS_HIT)
@@ -479,14 +469,15 @@ class SentryGunTowerItem(FightItem):
 class MachineGunTowerItem(FightItem):
     ROLE_TYPE = DEF_TYPE.MACHINE
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.field_of_view = self.item_data.get(ATTRIBUTE.FIELD_OF_VIEW, 120)  # TODO: dev-118 balance update
-        self.rate_of_turn = self.item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)  # TODO: dev-118 balance update
-        self.damage_per_second = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)  # TODO: dev-118 balance update
-        self.firing_time_limit = self.item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)  # TODO: dev-118 balance update
-        self.full_cooldown_time = self.item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)  # TODO: dev-118 balance update
-        self.min_percentage_after_overheat = self.item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)  # TODO: dev-118 balance update
+    # TODO: balance update
+    def update_additional_attributes(self):
+        self.field_of_view = self.item_data.get(ATTRIBUTE.FIELD_OF_VIEW, 120)
+        self.rate_of_turn = self.item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)
+        self.damage_per_second = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)
+        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
+        self.firing_time_limit = self.item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)
+        self.full_cooldown_time = self.item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)
+        self.min_percentage_after_overheat = self.item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)
 
         self.angle = 0
         self.firing_time = 0
@@ -499,6 +490,7 @@ class MachineGunTowerItem(FightItem):
             ATTRIBUTE.FIELD_OF_VIEW: self.field_of_view,
             ATTRIBUTE.RATE_OF_TURN: self.rate_of_turn,
             ATTRIBUTE.DAMAGE_PER_SECOND: self.damage_per_second,
+            ATTRIBUTE.FIRING_RANGE: self.firing_range,
             ATTRIBUTE.FIRING_TIME_LIMIT: self.firing_time_limit,
             ATTRIBUTE.FULL_COOLDOWN_TIME: self.full_cooldown_time,
             ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT: self.min_percentage_after_overheat,
@@ -510,18 +502,46 @@ class MachineGunTowerItem(FightItem):
 
     @property
     def total_damage(self):
-        # TODO: dev-118 check extra damage for damage per second
         return reduce(
             lambda total, item: (100 + item.extra_damage) * total / 100,
             self.get_extras(), self.damage_per_second * self._fight_handler.GAME_FRAME_TIME)
+
+
+class RocketGunTowerItem(FightItem):
+    ROLE_TYPE = DEF_TYPE.ROCKET_GUN
+
+    # TODO: balance update
+    def update_additional_attributes(self):
+        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)
+        self.damage_per_shot = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT, 10)
+        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
+        self.rocket_speed = self.item_data.get(ATTRIBUTE.ROCKET_SPEED, 1)
+        self.rocket_explosion_radius = self.item_data.get(ATTRIBUTE.ROCKET_EXPLOSION_RADIUS, 1.5)
+
+    @property
+    def info(self):
+        info = super(RocketGunTowerItem, self).info
+        info.update({
+            ATTRIBUTE.CHARGING_TIME: self.charging_time,
+            ATTRIBUTE.DAMAGE_PER_SHOT: self.damage_per_shot,
+            ATTRIBUTE.FIRING_RANGE: self.firing_range,
+            ATTRIBUTE.ROCKET_SPEED: self.rocket_speed,
+            ATTRIBUTE.ROCKET_EXPLOSION_RADIUS: self.rocket_explosion_radius,
+        })
+        return info
+
+    @property
+    def total_damage(self):
+        return reduce(
+            lambda total, item: (100 + item.extra_damage) * total / 100,
+            self.get_extras(), self.damage_per_shot)
 
 
 class FlagItem(FightItem):
     is_flagman = True
     is_immortal = True
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def update_additional_attributes(self):
         self.charge = self._initial[ATTRIBUTE.CHARGE_SIZE]
         self.operations = self._initial[ATTRIBUTE.OPERATIONS]
 
@@ -574,24 +594,20 @@ class CraftItem(FightItem):
     last_landing = -landing_duration
     is_immortal = True
 
-    def __init__(self, item_data, player, fight_handler):
-        super().__init__(item_data, player, fight_handler)
-        self.craft_id = item_data.get(ATTRIBUTE.CRAFT_ID)
-        self.unit_type = item_data.get(ATTRIBUTE.UNIT_TYPE)
-        self.coordinates = item_data.get(ATTRIBUTE.COORDINATES)
-        self.tile_position = item_data.get(ATTRIBUTE.COORDINATES)[:]
-        self.level = item_data.get(ATTRIBUTE.LEVEL)
-        self.item_type = item_data.get(ATTRIBUTE.ITEM_TYPE)
-        self.initial_amount_units_in = self.amount_units_in = item_data.get(ATTRIBUTE.UNIT_QUANTITY)
-        craft_coor = item_data[ATTRIBUTE.COORDINATES]
+    def update_additional_attributes(self):
+        self.craft_id = self.item_data.get(ATTRIBUTE.CRAFT_ID)
+        self.unit_type = self.item_data.get(ATTRIBUTE.UNIT_TYPE)
+        self.coordinates = self.item_data.get(ATTRIBUTE.COORDINATES)
+        self.tile_position = self.item_data.get(ATTRIBUTE.COORDINATES)[:]
+        self.level = self.item_data.get(ATTRIBUTE.LEVEL)
+        self.item_type = self.item_data.get(ATTRIBUTE.ITEM_TYPE)
+        self.initial_amount_units_in = self.amount_units_in = self.item_data.get(ATTRIBUTE.UNIT_QUANTITY)
+        craft_coor = self.item_data[ATTRIBUTE.COORDINATES]
         self.units_position = [[craft_coor[0] + shift[0], craft_coor[1] + shift[1]]
                                for shift in precalculated.LAND_POSITION_SHIFTS[:self.amount_units_in]]
 
         # im not sute it is nessesary, but still...
-        self.item_data = item_data
-        self.player = player
         self.role = ROLE.CRAFT
-
         self.children = set() #units
 
 
@@ -653,8 +669,7 @@ class DefPlatformItem(CraftItem):
 class UnitItem(FightItem):
     parent_id = None
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def update_additional_attributes(self):
         self.departing_time = 0
 
     @property
@@ -683,16 +698,42 @@ class UnitItem(FightItem):
         return item_data
 
 
+class InfantryBotUnit(UnitItem):
+    ROLE_TYPE = ATTACK_TYPE.INFANTRY
+
+    # TODO: balance update
+    def update_additional_attributes(self):
+        super().update_additional_attributes()
+        self.speed = self.item_data.get(ATTRIBUTE.SPEED)
+        self.damage_per_shot = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT, 10)
+        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)
+        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
+
+    @property
+    def info(self):
+        info = super(InfantryBotUnit, self).info
+        info.update({
+            ATTRIBUTE.SPEED: self.speed,
+            ATTRIBUTE.CHARGING_TIME: self.charging_time,
+            ATTRIBUTE.DAMAGE_PER_SHOT: self.damage_per_shot,
+            ATTRIBUTE.FIRING_RANGE: self.firing_range,
+        })
+        return info
+
+
 class HeavyBotUnit(UnitItem):
     ROLE_TYPE = ATTACK_TYPE.HEAVY
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.rate_of_turn = self.item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)  # TODO: dev-118 balance update
-        self.damage_per_second = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)  # TODO: dev-118 balance update
-        self.firing_time_limit = self.item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)  # TODO: dev-118 balance update
-        self.full_cooldown_time = self.item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)  # TODO: dev-118 balance update
-        self.min_percentage_after_overheat = self.item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)  # TODO: dev-118 balance update
+    # TODO: balance update
+    def update_additional_attributes(self):
+        super().update_additional_attributes()
+        self.speed = self.item_data.get(ATTRIBUTE.SPEED)
+        self.rate_of_turn = self.item_data.get(ATTRIBUTE.RATE_OF_TURN, 45)
+        self.damage_per_second = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SECOND, 4)
+        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
+        self.firing_time_limit = self.item_data.get(ATTRIBUTE.FIRING_TIME_LIMIT, 4)
+        self.full_cooldown_time = self.item_data.get(ATTRIBUTE.FULL_COOLDOWN_TIME, 2)
+        self.min_percentage_after_overheat = self.item_data.get(ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT, 20)
 
         self.angle = 0
         self.firing_time = 0
@@ -702,14 +743,43 @@ class HeavyBotUnit(UnitItem):
     def info(self):
         info = super(HeavyBotUnit, self).info
         info.update({
+            ATTRIBUTE.SPEED: self.speed,
             ATTRIBUTE.RATE_OF_TURN: self.rate_of_turn,
             ATTRIBUTE.DAMAGE_PER_SECOND: self.damage_per_second,
+            ATTRIBUTE.FIRING_RANGE: self.firing_range,
             ATTRIBUTE.FIRING_TIME_LIMIT: self.firing_time_limit,
             ATTRIBUTE.FULL_COOLDOWN_TIME: self.full_cooldown_time,
             ATTRIBUTE.MIN_PERCENTAGE_AFTER_OVERHEAT: self.min_percentage_after_overheat,
             ATTRIBUTE.ANGLE: self.angle,
             ATTRIBUTE.FIRING_TIME: self.firing_time,
             ATTRIBUTE.OVERHEATED: self.overheated,
+        })
+        return info
+
+
+class RocketBotUnit(UnitItem):
+    ROLE_TYPE = ATTACK_TYPE.ROCKET_BOT
+
+    # TODO: balance update
+    def update_additional_attributes(self):
+        super().update_additional_attributes()
+        self.speed = self.item_data.get(ATTRIBUTE.SPEED)
+        self.charging_time = self.item_data.get(ATTRIBUTE.CHARGING_TIME, 1)
+        self.damage_per_shot = self.item_data.get(ATTRIBUTE.DAMAGE_PER_SHOT, 20)
+        self.firing_range = self.item_data.get(ATTRIBUTE.FIRING_RANGE)
+        self.rocket_speed = self.item_data.get(ATTRIBUTE.ROCKET_SPEED, 1)
+        self.rocket_explosion_radius = self.item_data.get(ATTRIBUTE.ROCKET_EXPLOSION_RADIUS, 0)
+
+    @property
+    def info(self):
+        info = super(RocketBotUnit, self).info
+        info.update({
+            ATTRIBUTE.SPEED: self.speed,
+            ATTRIBUTE.CHARGING_TIME: self.charging_time,
+            ATTRIBUTE.DAMAGE_PER_SHOT: self.damage_per_shot,
+            ATTRIBUTE.FIRING_RANGE: self.firing_range,
+            ATTRIBUTE.ROCKET_SPEED: self.rocket_speed,
+            ATTRIBUTE.ROCKET_EXPLOSION_RADIUS: self.rocket_explosion_radius,
         })
         return info
 

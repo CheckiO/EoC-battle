@@ -22,6 +22,9 @@ class BaseItemActions(object):
             'message': None
         }
 
+    def action_attack(self):
+        pass
+
     def commands_init(self):
         return {}
 
@@ -35,59 +38,6 @@ class BaseItemActions(object):
 
     def _idle(self):
         return {'name': 'idle'}
-
-    def action_attack(self, data):
-        enemy = self._fight_handler.fighters.get(data['id'])
-        if enemy is None:
-            raise Exception("No enemy")
-            return  # WTF
-
-        return self._shot(enemy)
-
-    def _get_charged(self, coordinates, enemy_id=None):
-        attacker = self._item
-        attacker.charging += self._fight_handler.GAME_FRAME_TIME * attacker.rate_of_fire
-        if attacker.charging < 1:
-            return {
-                'name': 'charge',
-                'firing_point': coordinates,
-                'aid': enemy_id
-            }
-
-        attacker.charging -= 1
-
-    def _shot(self, enemy):
-        charged = self._get_charged(enemy.coordinates, enemy.id)
-        if charged:
-            return charged
-
-        attacker = self._item
-
-        if (euclidean_distance(enemy.coordinates, attacker.coordinates) -
-                enemy.size / 2) <= attacker.firing_range:
-            return self._actual_shot(enemy)
-
-        if enemy.is_dead:
-            return self._idle()
-
-        return self._idle()
-
-    def _actual_hit(self, enemy):
-        return True
-
-    def _actual_shot(self, enemy):
-        attacker = self._item
-
-        damaged_ids = []
-        if self._actual_hit(enemy):
-            damaged_ids = enemy.get_shot(attacker.total_damage)
-
-        return {
-            'name': 'attack',
-            'firing_point': enemy.coordinates,
-            'aid': enemy.id,
-            'damaged': damaged_ids,  # TODO:
-        }
 
     def parse_action_data(self, action, data):
         if action not in self._actions:

@@ -1,10 +1,11 @@
 from random import randint
 
-from .base import BaseItemActions, euclidean_distance
+from .base import BaseItemActions
 from .exceptions import ActionValidateError
 
-from tools import (is_angle, is_coordinates, shortest_distance_between_angles,
-                   angle_to_enemy, angle_between_center_vision_and_enemy)
+from tools.angles import angle_between_center_vision_and_enemy, angle_to_enemy, shortest_distance_between_angles
+from tools.grid import is_angle, is_coordinates
+from tools.distances import euclidean_distance
 from sub_items import RocketSubItem
 
 
@@ -13,12 +14,45 @@ class DefenceTowerActions(BaseItemActions):
     def _distance_to_enemy(self, enemy):
         return euclidean_distance(enemy.coordinates, self._item.coordinates) - enemy.size / 2
 
+    def _distance_to_coordinates(self, coordinates):
+        return euclidean_distance(coordinates, self._item.coordinates)
+
+    def is_shot_possible(self, obj):
+        distance_to_obj = self._distance_to_enemy(obj)
+        return distance_to_obj <= self._item.firing_range
+
+    def action_attack(self, data):
+        enemy = self._fight_handler.fighters.get(data['id'])
+        return self._attack(enemy)
+
 
 class DefenceSentryActions(DefenceTowerActions):
 
-    def _actual_hit(self, enemy):
-        attacker = self._item
+    def _charging(self):
+        self._item.charging -= self._fight_handler.GAME_FRAME_TIME
+        if self._item.charging <= 0:
+            self._item.charging = 0
+        return {'name': 'charge'}
 
+    def _get_prepared_to_shoot(self):
+        if self._item.charging:
+            return self._charging()
+
+    def _shot(self, enemy):
+        damaged_ids = []
+        if self._hit(enemy):
+            damaged_ids.extend(enemy.get_shot(self._item.total_damage))
+
+        self._item.charging = self._item.charging_time
+        return {
+            'name': 'attack',
+            'firing_point': enemy.coordinates,
+            'aid': enemy.id,
+            'damaged': damaged_ids,
+        }
+
+    def _hit(self, enemy):
+        attacker = self._item
         distance_to_enemy = self._distance_to_enemy(enemy)
 
         if distance_to_enemy <= attacker.firing_range_always_hit:
@@ -33,66 +67,26 @@ class DefenceSentryActions(DefenceTowerActions):
 
         return False
 
-    def _charging(self):
-        self._item.charging -= self._fight_handler.GAME_FRAME_TIME
-        if self._item.charging <= 0:
-            self._item.charging = 0
-        return {'name': 'charge'}
-
-    def _get_prepared_to_shoot(self):
-        if self._item.charging:
-            return self._charging()
-
-    def _actual_shot(self, enemy):
-        damaged_ids = []
-        if self._actual_hit(enemy):
-            damaged_ids.extend(enemy.get_shot(self._item.total_damage))
-
-        self._item.charging = self._item.charging_time
-        return {
-            'name': 'attack',
-            'firing_point': enemy.coordinates,
-            'aid': enemy.id,
-            'damaged': damaged_ids,
-        }
-
-    def is_shot_possible(self, enemy):
-        distance_to_enemy = self._distance_to_enemy(enemy)
-        if distance_to_enemy > self._item.firing_range:
-            return False
-        return True
-
-    def _shot(self, enemy):
+    def _attack(self, enemy):
         prepared_to_shoot = self._get_prepared_to_shoot()
         if prepared_to_shoot:
             return prepared_to_shoot
 
         if self.is_shot_possible(enemy):
-            return self._actual_shot(enemy)
-
+            return self._shot(enemy)
         return self._idle()
 
 
 class DefenceMachineActions(DefenceTowerActions):
 
-    def _actual_hit(self, enemy):
+    def is_shot_possible(self, obj):
+        distance_to_obj = self._distance_to_enemy(obj)
+        if distance_to_obj > self._item.firing_range:
+            return False
+        angle = angle_between_center_vision_and_enemy(self._item.coordinates, self._item.angle, obj.coordinates)
+        if angle > self._item.field_of_view / 2:
+            return False
         return True
-
-    def _shot(self, enemy=None):
-        prepared_to_shoot = self._get_prepared_to_shoot()
-        if prepared_to_shoot:
-            return prepared_to_shoot
-
-        if enemy is not None:
-            if self.is_shot_possible(enemy):
-                return self._actual_shot(enemy)
-        else:
-            return self._actual_shot()
-
-        if self._item.firing_time > 0:
-            return self._cooldown()
-
-        return self._idle()
 
     def _cooldown(self):
         cooldown_time = (self._item.firing_time_limit * self._fight_handler.GAME_FRAME_TIME /
@@ -115,6 +109,29 @@ class DefenceMachineActions(DefenceTowerActions):
             self._item.overheated = True
             return self._cooldown()
 
+    def _shot(self, enemy=None):
+        if enemy is None:
+            aid = None
+            firing_point = None
+            targets = self._find_targets()
+        else:
+            aid = enemy.id
+            firing_point = enemy.coordinates
+            targets = [enemy]
+            targets.extend(self._find_targets(excluded_targets=[enemy]))
+
+        damaged_ids = []
+        for target in targets:
+            damaged_ids.extend(target.get_shot(self._item.total_damage))
+        self._item.firing_time += self._fight_handler.GAME_FRAME_TIME
+
+        return {
+            'name': 'attack',
+            'firing_point': firing_point,
+            'aid': aid,
+            'damaged': damaged_ids,
+        }
+
     def _find_targets(self, excluded_targets=None):
         targets = []
         if excluded_targets is None:
@@ -131,40 +148,20 @@ class DefenceMachineActions(DefenceTowerActions):
 
         return targets
 
-    def _actual_shot(self, enemy=None):
-        if enemy is None:
-            aid = None
-            firing_point = None
-            targets = self._find_targets()
+    def _attack(self, enemy=None):
+        prepared_to_shoot = self._get_prepared_to_shoot()
+        if prepared_to_shoot:
+            return prepared_to_shoot
+
+        if enemy is not None:
+            if self.is_shot_possible(enemy):
+                return self._shot(enemy)
         else:
-            aid = enemy.id
-            firing_point = enemy.coordinates
-            targets = [enemy]
-            targets.extend(self._find_targets(excluded_targets=[enemy]))
+            return self._shot()
 
-        damaged_ids = []
-        for target in targets:
-            if self._actual_hit(target):
-                damaged_ids.extend(target.get_shot(self._item.total_damage))
-        self._item.firing_time += self._fight_handler.GAME_FRAME_TIME
-
-        return {
-            'name': 'attack',
-            'firing_point': firing_point,
-            'aid': aid,
-            'damaged': damaged_ids,
-        }
-
-    def is_shot_possible(self, enemy):
-        distance_to_enemy = self._distance_to_enemy(enemy)
-        if distance_to_enemy > self._item.firing_range:
-            return False
-
-        angle = angle_between_center_vision_and_enemy(self._item.coordinates, self._item.angle, enemy.coordinates)
-        if angle > self._item.field_of_view / 2:
-            return False
-
-        return True
+        if self._item.firing_time > 0:
+            return self._cooldown()
+        return self._idle()
 
     def _get_turned(self, desired_angle):
         angle_difference = shortest_distance_between_angles(desired_angle, self._item.angle)
@@ -207,7 +204,7 @@ class DefenceMachineActions(DefenceTowerActions):
         turned = self._get_turned(angle)
         if turned:
             return turned
-        return {'name': 'idle'}
+        return self._idle()
 
     def validate_turn_to_fire(self, action, data):
         enemy = self._fight_handler.fighters.get(data['id'])
@@ -217,67 +214,84 @@ class DefenceMachineActions(DefenceTowerActions):
     def action_turn_to_fire(self, data):
         enemy = self._fight_handler.fighters.get(data['id'])
         if self.is_shot_possible(enemy):
-            return self._shot(enemy)
+            return self._attack(enemy)
 
         angle = angle_to_enemy(self._item.coordinates, enemy.coordinates)
         turned = self._get_turned(angle)
         if turned:
             return turned
-        return {'name': 'idle'}
+        return self._idle()
 
     def validate_fire(self, action, data):
         pass
 
     def action_fire(self, data):
-        return self._shot()
+        return self._attack()
 
 
-class DefenceRocketActions(BaseItemActions):
+class DefenceRocketActions(DefenceTowerActions):
 
-    def _distance_to_coordinates(self, coordinates):
-        return euclidean_distance(coordinates, self._item)
+    def is_shot_to_coordinates_possible(self, coordinates):
+        distance_to_coordinates = self._distance_to_coordinates(coordinates)
+        return distance_to_coordinates <= self._item.firing_range
 
-    def _actual_shot(self, enemy):
-        attacker = self._item
-        attacker.add_sub_item(RocketSubItem(attacker, attacker.coordinates, enemy.coordinates))
+    def _charging(self):
+        self._item.charging -= self._fight_handler.GAME_FRAME_TIME
+        if self._item.charging <= 0:
+            self._item.charging = 0
+        return {'name': 'charge'}
+
+    def _get_prepared_to_shoot(self):
+        if self._item.charging:
+            return self._charging()
+
+    def _shot(self, enemy=None, coordinates=None):
+        if enemy is not None:
+            aid = enemy.id
+            firing_point = enemy.coordinates
+        elif coordinates is not None:
+            aid = None
+            firing_point = coordinates
+        else:
+            raise ActionValidateError('Wrong attack data')
+
+        self._item.add_sub_item(RocketSubItem(self._item, self._item.coordinates, firing_point))
+        self._item.charging = self._item.charging_time
+
         return {
             'name': 'attack',
-            'firing_point': enemy.coordinates,
-            'aid': enemy.id,
-            'damaged': []
+            'firing_point': firing_point,
+            'aid': aid,
+            'damaged': [],
         }
+
+    def _attack(self, enemy):
+        prepared_to_shoot = self._get_prepared_to_shoot()
+        if prepared_to_shoot:
+            return prepared_to_shoot
+
+        if self.is_shot_possible(enemy):
+            return self._shot(enemy=enemy)
+        return self._idle()
 
     def actions_init(self):
         actions = super().actions_init()
         actions.update({
-            'attack_coor': self.action_attack_coor
+            'attack_coordinates': self.action_attack_coordinates
         })
         return actions
 
-    def validate_attack_coor(self, action, data):
-        if not is_coordinates(data.get("coordinates")):
-            raise ActionValidateError("Wrong coordinates")
+    def validate_attack_coordinates(self, action, data):
+        if not is_coordinates(data.get('coordinates')):
+            raise ActionValidateError('Wrong coordinates')
 
-    def action_attack_coor(self, data):
+    def action_attack_coordinates(self, data):
         coordinates = data.get('coordinates')
 
-        charged = self._get_charged(coordinates)
-        if charged:
-            return charged
+        prepared_to_shoot = self._get_prepared_to_shoot()
+        if prepared_to_shoot:
+            return prepared_to_shoot
 
-        item_firing_range = self._item.firing_range
-        distance_to_coordinates = self._distance_to_coordinates(coordinates)
-        if distance_to_coordinates > item_firing_range:
-            return {'name': 'idle'}
-        return self._actual_coor_shot(coordinates)
-
-    def _actual_coor_shot(self, coordinates):
-        attacker = self._item
-        attacker.add_sub_item(RocketSubItem(attacker, attacker.coordinates, coordinates))
-
-        return {
-            'name': 'attack',
-            'firing_point': coordinates,
-            'aid': None,
-            'damaged': []  # TODO:
-        }
+        if self.is_shot_to_coordinates_possible(coordinates):
+            return self._shot(coordinates=coordinates)
+        return self._idle()
