@@ -50,9 +50,10 @@ class FightEvent:
                 )),
             lambda event, receiver, res: {'id': res.id, 'percentage': event['data']['percentage'], 'distance': event['data']['distance']})
 
-        self.add_checker('death',
-            lambda event, receiver: fighters.get(event['data']['id']) and fighters.get(event['data']['id']).is_dead,
-            lambda event, receiver, res: {'id': event['data']['id']})
+        self.add_checker('enemy_is_gone',
+            lambda event, receiver: fighters.get(event['data']['id']) and fighters.get(event['data']['id']).is_gone,
+            lambda event, receiver, res: {'id': event['data']['id']}
+        )
 
         self.add_checker('unit_landed',
             self.gen_fighters_checker(

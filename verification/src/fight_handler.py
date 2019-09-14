@@ -125,7 +125,7 @@ class FightHandler(BaseHandler):
         :return: current battle fighters
         """
         return filter(
-            lambda a: not a.is_craft and not a.is_flagman and not a.is_dead and not a.is_departed,
+            lambda a: not a.is_craft and not a.is_flagman and not a.is_gone,
             self.fighters.values()
         )
 
@@ -161,9 +161,7 @@ class FightHandler(BaseHandler):
     def get_env_map_data(self):
         data = {}
         for key, value in self.fighters.items():
-            if value.is_dead:
-                continue
-            if value.is_departed:
+            if value.is_gone:
                 continue
             if value.is_obstacle:
                 continue
@@ -312,8 +310,7 @@ class FightHandler(BaseHandler):
 
             # WHY: can't we move in the FightItem class?
             # When in can be None?
-            if fighter.is_dead or fighter.is_departed:
-                #print('DEAD')
+            if fighter.is_gone:
                 continue
 
             if fighter.action is None:
@@ -374,7 +371,7 @@ class FightHandler(BaseHandler):
 
     def _is_player_has_item_role(self, player, role):
         for item in self.fighters.values():
-            if item.player['id'] == player['id'] and item.role == role and not item.is_dead and not item.is_departed:
+            if item.player['id'] == player['id'] and item.role == role and not item.is_gone:
                 return True
         return False
 
@@ -399,8 +396,6 @@ class FightHandler(BaseHandler):
         for item in self.fighters.values():
             if item.is_obstacle:
                 continue
-            if item.is_dead:
-                continue
-            if item.is_departed:
+            if item.is_gone:
                 continue
             yield item

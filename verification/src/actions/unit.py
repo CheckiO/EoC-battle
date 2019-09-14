@@ -17,7 +17,7 @@ class MineActions(BaseItemActions):
 
     def action_wait(self, data):
         for enemy in self._fight_handler.fighters.values():
-            if enemy.is_dead:
+            if enemy.is_gone:
                 return
 
             if enemy.player_id == self._item.player_id:
@@ -252,9 +252,11 @@ class UnitActions(BaseItemActions):
     def validate_attack(self, action, data):
         enemy = self._fight_handler.fighters.get(data['id'])
         if enemy.is_dead:
-            raise ActionValidateError("The enemy is dead")
-        if enemy.player['id'] == self._item.player['id']:
-            raise ActionValidateError("Can not attack own item")
+            raise ActionValidateError('The enemy is dead')
+        elif enemy.is_departed:
+            raise ActionValidateError('The enemy is departed')
+        elif enemy.player['id'] == self._item.player['id']:
+            raise ActionValidateError('Can not attack own item')
 
     def action_attack(self, data):
         self._item.departing_time = 0
@@ -265,12 +267,27 @@ class UnitActions(BaseItemActions):
 
     def validate_depart(self, action, data):
         crafts = self._fight_handler.get_crafts()
-        for craft in crafts:
-            if self.get_distance_to_obj(craft) < 2:
-                return
-        raise ActionValidateError('Not close enough to craft')
+        if not crafts:
+            raise ActionValidateError('No crafts to depart')
 
     def action_depart(self, data):
+        closest_craft = None
+        closest_distance = None
+        for craft in self._fight_handler.get_crafts():
+            craft_distance = self.get_distance_to_obj(craft)
+            if closest_distance is None:
+                closest_distance = craft_distance
+                closest_craft = craft
+            else:
+                if closest_distance > craft_distance:
+                    closest_distance = craft_distance
+                    closest_craft = craft
+
+        if self.get_distance_to_obj(closest_craft) > 1:
+            coordinates = closest_craft.coordinates
+            coordinates = self._fight_handler.adjust_coordinates(*coordinates)
+            return self._move(coordinates)
+
         DEPARTURE_TIME = 0.5
         frame_time = DEPARTURE_TIME * self._fight_handler.GAME_FRAME_TIME
         self._item.departing_time += frame_time
