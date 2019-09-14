@@ -150,6 +150,8 @@ class Client(object):
         for item in self.env_map.values():
             if item['is_dead']:
                 continue
+            # if item['is_departed']:
+            #     continue
             if 'coordinates' not in item:
                 continue
             if _filters_passed(item):
@@ -227,7 +229,9 @@ class Client(object):
 
     def do_attack_coordinates(self, coordinates):
         check_coordinates(coordinates, "Coordinates")
-        return self.do('attack_coor', {'coordinates': coordinates})
+        return self.do('attack_coordinates', {'coordinates': coordinates})
+
+    attack_coordinates = do_attack_coordinates
 
     def do_move(self, coordinates):
         check_coordinates(coordinates, "Coordinates")
@@ -330,6 +334,7 @@ class Client(object):
     def when_message(self, callback, infinity=True):
         return self.when('message', callback, infinity=infinity)
 
+
 class CraftClient(Client):
 
     def do_land_units(self):
@@ -337,6 +342,7 @@ class CraftClient(Client):
 
     def when_unit_landed(self, callback):
         self.when('unit_landed', callback, {'craft_id': self.my_info['craft_id']}, infinity=True)
+
 
 class FlagmanClient(Client):
 
@@ -368,7 +374,6 @@ class UnitClient(Client):
     @property
     def my_data(self):
         return super().my_data['children'][str(self._id)]
-    
 
     def do(self, action, data):
         if not self.is_alive:
@@ -380,6 +385,9 @@ class UnitClient(Client):
         new_data = {'by': self._id}
         new_data.update(data)
         super().command(action, new_data)
+
+    def do_depart(self):
+        return self.do('depart', {})
 
     def do_teleport(self, coordinates):
         self.command('teleport', {

@@ -28,13 +28,13 @@ class ROLE():
 class DEF_TYPE():
     SENTRY = 'sentryGun'
     MACHINE = 'machineGun'
-    ROCKET = 'rocketGun'
+    ROCKET_GUN = 'rocketGun'
 
 
 class ATTACK_TYPE():
     INFANTRY = 'infantryBot'
     HEAVY = 'heavyBot'
-    ROCKET = 'rocketBot'
+    ROCKET_BOT = 'rocketBot'
 
 
 class OBSTACLE():
@@ -50,11 +50,7 @@ class ATTRIBUTE():
     LEVEL = 'level'
     TILE_POSITION = 'tile_position'
     SPEED = 'speed'
-    RATE_OF_FIRE = 'rate_of_fire'
 
-    AREA_DAMAGE_PER_SHOT = 'area_damage_per_shot'
-
-    AREA_DAMAGE_RADIUS = 'area_damage_radius'
     ITEM_TYPE = 'type'
     UNIT_TYPE = 'unit_type'
     ROLE = 'role'
@@ -97,6 +93,9 @@ class ATTRIBUTE():
     FIRING_RANGE_ALWAYS_HIT = 'firing_range_100'
     START_CHANCE = 'start_chance'
 
+    ROCKET_SPEED = 'rocket_speed'
+    ROCKET_EXPLOSION_RADIUS = 'rocket_explosion_radius'
+
 
 class ACTION():
     REQUEST_NAME = 'action'
@@ -107,10 +106,12 @@ class ACTION():
     DEMAGED = 'damaged'
     CHARGE = 'charge'
 
+
 class OPERATION():
     ROCKET = 'rocket'
     HEAL = 'heal'
     POWER = 'power'
+
 
 class STATUS():
     SUCCESS = 'success'
@@ -185,6 +186,7 @@ class OUTPUT():
     ACTION = 'action'
     ANGLE = 'angle'
     FIRING_TIME = 'firing_time'
+    DEPARTING_TIME = 'departing_time'
     FLAGS = 'flags'
     ONE_ACTION = 'one_action'
     INTERNAL = 'internal'
