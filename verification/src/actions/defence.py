@@ -122,8 +122,7 @@ class DefenceMachineActions(DefenceTowerActions):
 
         damaged_ids = []
         for target in targets:
-            if self._actual_hit(target):
-                damaged_ids.extend(target.get_shot(self._item.total_damage))
+            damaged_ids.extend(target.get_shot(self._item.total_damage))
         self._item.firing_time += self._fight_handler.GAME_FRAME_TIME
 
         return {
@@ -132,9 +131,6 @@ class DefenceMachineActions(DefenceTowerActions):
             'aid': aid,
             'damaged': damaged_ids,
         }
-
-    def _hit(self, enemy):
-        return True
 
     def _find_targets(self, excluded_targets=None):
         targets = []

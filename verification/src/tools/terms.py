@@ -50,11 +50,7 @@ class ATTRIBUTE():
     LEVEL = 'level'
     TILE_POSITION = 'tile_position'
     SPEED = 'speed'
-    RATE_OF_FIRE = 'rate_of_fire'
 
-    AREA_DAMAGE_PER_SHOT = 'area_damage_per_shot'
-
-    AREA_DAMAGE_RADIUS = 'area_damage_radius'
     ITEM_TYPE = 'type'
     UNIT_TYPE = 'unit_type'
     ROLE = 'role'
@@ -96,6 +92,9 @@ class ATTRIBUTE():
     FIRING_RANGE = 'firing_range'
     FIRING_RANGE_ALWAYS_HIT = 'firing_range_100'
     START_CHANCE = 'start_chance'
+
+    ROCKET_SPEED = 'rocket_speed'
+    ROCKET_EXPLOSION_RADIUS = 'rocket_explosion_radius'
 
 
 class ACTION():

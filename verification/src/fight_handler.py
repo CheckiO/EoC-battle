@@ -7,8 +7,9 @@ import shutil
 
 from checkio_referee.handlers.base import BaseHandler
 
-from fight_item import FightItem, CraftItem, FlagItem, UnitItem, MineItem, \
-    DefPlatformItem, SentryGunTowerItem, RocketGunTowerItem, MachineGunTowerItem, HeavyBotUnit, RocketBotUnit
+from fight_item import (FightItem, CraftItem, FlagItem, MineItem, DefPlatformItem,
+                        SentryGunTowerItem, RocketGunTowerItem, MachineGunTowerItem,
+                        HeavyBotUnit, RocketBotUnit, InfantryBotUnit)
 from fight_logger import FightLogger, StreamFightLogger
 from fight_events import FightEvent
 
@@ -260,7 +261,7 @@ class FightHandler(BaseHandler):
         player = self.players[craft_data.get(PLAYER.PLAYER_ID, -1)]
 
         cls_names = {
-            ATTACK_TYPE.INFANTRY: UnitItem,
+            ATTACK_TYPE.INFANTRY: InfantryBotUnit,
             ATTACK_TYPE.HEAVY: HeavyBotUnit,
             ATTACK_TYPE.ROCKET_BOT: RocketBotUnit,
         }

@@ -17,13 +17,8 @@ class RocketSubItem(BaseSubItem):
         self.coordinates = coordinates
         self.target_coordinates = target_coordinates
 
-        self.speed = 1.5
-        if item.item_type == DEF_TYPE.ROCKET_GUN:
-            self.explode_radius = 1.5
-        elif item.item_type == ATTACK_TYPE.ROCKET_BOT:
-            self.explode_radius = 0
-        else:
-            raise ValueError('Wrong role type for RocketSubItem')
+        self.speed = self.item.rocket_speed
+        self.explosion_radius = self.item.rocket_explosion_radius
         self.damage_per_shot = self.item.total_damage
 
     def explode(self):
@@ -34,11 +29,11 @@ class RocketSubItem(BaseSubItem):
                 continue
 
             distance = euclidean_distance(item.coordinates, self.coordinates)
-            if distance > self.explode_radius:
+            if distance > self.explosion_radius:
                 continue
 
-            if self.explode_radius:
-                damage = (self.explode_radius - distance) * self.damage_per_shot / self.explode_radius
+            if self.explosion_radius:
+                damage = (self.explosion_radius - distance) * self.damage_per_shot / self.explosion_radius
             else:
                 damage = self.damage_per_shot
             item.get_shot(damage)

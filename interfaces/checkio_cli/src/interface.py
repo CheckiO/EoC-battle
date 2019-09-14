@@ -190,11 +190,8 @@ class FightHandler(BaseHandler):
                 ))
                 if item.get('subitems'):
                     print('    ', item['subitems'])
-
-                # TODO: dev-118 remove testing utils
-                # if item['id'] == 6:
-                #     print('Angle: {}'.format(round(item.get('angle') * 1.0, 4)))
-                #     print('Firing: {}'.format(round(item.get('firing_time') * 1.0, 4)))
+                # TODO: just-for-testing
+                #print(item)
 
         if data.get('flagman'):
             print('FLAGMAN:', data['flagman']['charge'])
