@@ -4,6 +4,7 @@ from tools import is_coordinates
 
 
 class BaseItemActions(object):
+
     def __init__(self, item, fight_handler):
         self._item = item
         self._fight_handler = fight_handler
@@ -79,7 +80,7 @@ class BaseItemActions(object):
 
         damaged_ids = []
         if self._actual_hit(enemy):
-            damaged_ids = enemy.get_shoted(attacker.total_damage)
+            damaged_ids = enemy.get_shot(attacker.total_damage)
 
         return {
             'name': 'attack',

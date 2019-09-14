@@ -8,14 +8,14 @@ import shutil
 from checkio_referee.handlers.base import BaseHandler
 
 from fight_item import FightItem, CraftItem, FlagItem, UnitItem, MineItem, \
-    DefPlatformItem
+    DefPlatformItem, SentryGunTowerItem, MachineGunTowerItem, HeavyBotUnit
 from fight_logger import FightLogger, StreamFightLogger
 from fight_events import FightEvent
 
 from tools import precalculated, fill_square, grid_to_graph
 from consts import COORDINATE_EDGE_CUT, PERCENT_CENTER_AUTO_DEMAGE, FOLDER_CODES
 from tools import ROLE, ATTRIBUTE, ACTION, DEFEAT_REASON, OUTPUT, STD,\
-    OBSTACLE, INITIAL, PLAYER
+    OBSTACLE, INITIAL, PLAYER, DEF_TYPE, ATTACK_TYPE
 from tools.terms import ENV
 from tools.distances import euclidean_distance
 
@@ -122,7 +122,7 @@ class FightHandler(BaseHandler):
     def demage_center(self, building):
         auto_health_part = self.fi_center.start_hit_points * PERCENT_CENTER_AUTO_DEMAGE
         total_buildings = len(list(filter(lambda a: a.role == ROLE.BUILDING, self.fighters.values())))
-        self.fi_center.get_shoted(auto_health_part/total_buildings)
+        self.fi_center.get_shot(auto_health_part/total_buildings)
 
     def get_my_data(self, id):
         fighter = self.fighters[id]
@@ -177,22 +177,24 @@ class FightHandler(BaseHandler):
         fight_items = []
         for item in sorted(self.initial_data[INITIAL.MAP_ELEMENTS], key=lambda a: a.get(PLAYER.PLAYER_ID, -1), reverse=True):
             player = self.players[item.get(PLAYER.PLAYER_ID, -1)]
-            if item[ATTRIBUTE.ITEM_TYPE] == 'craft':
-                cls_name = CraftItem
-            elif item[ATTRIBUTE.ITEM_TYPE] == 'flagman' and item.get(ATTRIBUTE.IS_FLYING):
+
+            #TODO: dev-118 flagman as flagPad
+            if item[ATTRIBUTE.ITEM_TYPE] == 'flagman' and item.get(ATTRIBUTE.IS_FLYING):
                 cls_name = FlagItem
-            elif item[ATTRIBUTE.ITEM_TYPE] == 'mine':
-                cls_name = MineItem
-            elif item[ATTRIBUTE.ITEM_TYPE] == 'defPlatform':
-                cls_name = DefPlatformItem
             else:
-                cls_name = FightItem
+                cls_names = {
+                    DEF_TYPE.SENTRY: SentryGunTowerItem,
+                    DEF_TYPE.MACHINE: MachineGunTowerItem,
+                    ROLE.CRAFT: CraftItem,
+                    ROLE.MINE: MineItem,
+                    ROLE.DEF_PLATFORM: DefPlatformItem,
+                }
+                cls_name = cls_names.get(item[ATTRIBUTE.ITEM_TYPE], FightItem)
 
             fight_item = cls_name(item, player=player, fight_handler=self)
             self.fighters[fight_item.id] = fight_item
             fight_item.set_state_idle()
             fight_items.append(fight_item.start())
-
 
         self.log.initial_state()
 
@@ -242,14 +244,21 @@ class FightHandler(BaseHandler):
         unit[ATTRIBUTE.CRAFT_ID] = craft.craft_id
         craft.amount_units_in -= 1
         player = self.players[craft_data.get(PLAYER.PLAYER_ID, -1)]
-        fight_item = UnitItem(unit, player=player, fight_handler=self)
+
+        cls_names = {
+            ATTACK_TYPE.INFANTRY: UnitItem,
+            ATTACK_TYPE.HEAVY: HeavyBotUnit,
+            ATTACK_TYPE.ROCKET: UnitItem,
+        }
+        cls_name = cls_names.get(unit[ATTRIBUTE.ITEM_TYPE], FightItem)
+        fight_item = cls_name(unit, player=player, fight_handler=self)
+
         self.fighters[fight_item.id] = fight_item
         fight_item.set_parent_id(craft.id)
         fight_item.set_state_idle()
         fight_item.set_fflag('landed')
         craft.add_child_id(fight_item.id)
         self.log.initial_state_unit(fight_item)
-
 
     def generate_craft_place(self):
         width = self.map_size[1]

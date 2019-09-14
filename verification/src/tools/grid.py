@@ -1,4 +1,4 @@
-__all__ = ["fill_square", "find_route", "straighten_route", "grid_to_graph", "is_coordinates"]
+__all__ = ["fill_square", "find_route", "straighten_route", "grid_to_graph", "is_angle", "is_coordinates"]
 
 from heapq import heappop, heappush
 from .distances import euclidean_distance
@@ -19,6 +19,10 @@ DIRS = (
     # (-1, -1, SQRT_2),
     # (1, 1, SQRT_2),
 )
+
+
+def is_angle(angle):
+    return isinstance(angle, (int, float)) and 0 <= angle < 360
 
 
 def is_coordinates(coordinates):
