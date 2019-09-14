@@ -207,7 +207,7 @@ class FightItem(Item):
             self.get_extras(), self.damage_per_shot)
 
     def get_shot(self, damage):
-        if self.is_dead:
+        if self.is_gone:
             return []
 
         if not self.is_immortal:
@@ -230,6 +230,10 @@ class FightItem(Item):
             self._fight_handler.damage_center(self)
         # if self._env:
         #     self._env.stop()
+
+    @property
+    def is_gone(self):
+        return self.is_dead or self.is_departed
 
     @property
     def is_dead(self):
@@ -263,6 +267,7 @@ class FightItem(Item):
             ATTRIBUTE.LEVEL: self.level,
             # TODO State should be reworked
             ATTRIBUTE.IS_DEAD: self.is_dead,
+            ATTRIBUTE.IS_DEPARTED: self.is_departed,
             ATTRIBUTE.STATE: self._state,
             ATTRIBUTE.SUBITEMS: self.info_subitems,
             ATTRIBUTE.EXTRAS: self.info_extras,

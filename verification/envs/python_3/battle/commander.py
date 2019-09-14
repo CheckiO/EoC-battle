@@ -324,9 +324,9 @@ class Client(object):
             'percentage': percentage,
         })
 
-    def when_item_destroyed(self, item_id, callback):
+    def when_item_gone(self, item_id, callback):
         check_item_id(item_id)
-        return self.when('death', callback, {'id': item_id})
+        return self.when('enemy_is_gone', callback, {'id': item_id})
 
     def when_time(self, secs, callback):
         return self.when('time', callback, {'time': secs})

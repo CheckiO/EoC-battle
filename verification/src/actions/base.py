@@ -63,9 +63,11 @@ class BaseItemActions(object):
     def validate_attack(self, action, data):
         enemy = self._fight_handler.fighters.get(data['id'])
         if enemy.is_dead:
-            raise ActionValidateError("The enemy is dead")
-        if enemy.player['id'] == self._item.player['id']:
-            raise ActionValidateError("Can not attack own item")
+            raise ActionValidateError('The enemy is dead')
+        elif enemy.is_departed:
+            raise ActionValidateError('The enemy is departed')
+        elif enemy.player['id'] == self._item.player['id']:
+            raise ActionValidateError('Can not attack own item')
 
         distance_to_enemy = euclidean_distance(enemy.coordinates, self._item.coordinates) - enemy.size / 2
         item_firing_range = self._item.firing_range
