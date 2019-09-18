@@ -164,7 +164,8 @@ class FightHandler(BaseHandler):
                     else:
                         out_line += self.short_name(el)
                 print(out_line)
-            craft_positions = [craft["coordinates"][1] for craft in data["craft_items"]]
+
+            craft_positions = [craft['coordinates'][1] for craft in data['craft_items'] if craft['coordinates']]
 
             craft_line = "  "
 

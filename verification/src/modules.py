@@ -13,6 +13,21 @@ class BaseFeature:
         pass
 
 
+class IncreaseStats(BaseFeature):
+    stat_names = None
+
+    def apply(self, item):
+        for stat_name in self.stat_names:
+            if not hasattr(item, stat_name):
+                return
+            stat_value = getattr(item, stat_name)
+            if self.IS_POSITIVE:
+                new_value = self.value + stat_value
+            else:
+                new_value = self.value - stat_value
+            setattr(item, stat_name, new_value)
+
+
 class PrIncreaseStats(BaseFeature):
     stat_names = None
 
@@ -56,13 +71,18 @@ class DamagePerShot(PrIncreaseStats):
 class HitPoints(PrIncreaseStats):
     stat_names = ['hit_points', 'start_hit_points']
 
+
+class LandingShift(IncreaseStats):
+    stat_names = ['landing_shift']
+
+
 # TODO: add advanced modules
 #extDeploy
 #coorDeploy
-#groupProtect
-#heavyProtect
 #freezing
 #shotThrough
+#groupProtect
+#heavyProtect
 
 
 FEATURES = {
@@ -73,9 +93,10 @@ FEATURES = {
     'damagePerSecond.pr': DamagePerSecond,
     'damagePerShot.pr': DamagePerShot,
     'hitPoints.pr': HitPoints,
-    FEATURE.TELEPORT: BaseFeature
+    'landingShift': LandingShift,
+    FEATURE.LANDING: BaseFeature,
+    FEATURE.TELEPORT: BaseFeature,
 }
-
 
 
 def gen_features(modules):

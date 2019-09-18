@@ -13,7 +13,7 @@ from fight_item import (FightItem, CraftItem, FlagItem, MineItem, DefPlatformIte
 from fight_logger import FightLogger, StreamFightLogger
 from fight_events import FightEvent
 
-from tools import precalculated, fill_square, grid_to_graph
+from tools import fill_square, grid_to_graph
 from consts import COORDINATE_EDGE_CUT, PERCENT_CENTER_AUTO_DAMAGE, FOLDER_CODES
 from tools import ROLE, ATTRIBUTE, ACTION, DEFEAT_REASON, OUTPUT, STD,\
     OBSTACLE, INITIAL, PLAYER, DEF_TYPE, ATTACK_TYPE
@@ -189,6 +189,7 @@ class FightHandler(BaseHandler):
         
         fight_items = []
         for item in sorted(self.initial_data[INITIAL.MAP_ELEMENTS], key=lambda a: a.get(PLAYER.PLAYER_ID, -1), reverse=True):
+
             player = self.players[item.get(PLAYER.PLAYER_ID, -1)]
 
             #TODO: dev-118 flagman as flagPad
@@ -258,12 +259,11 @@ class FightHandler(BaseHandler):
         craft.amount_units_in -= 1
         player = self.players[craft_data.get(PLAYER.PLAYER_ID, -1)]
 
-        cls_names = {
+        cls_name = {
             ATTACK_TYPE.INFANTRY: InfantryBotUnit,
             ATTACK_TYPE.HEAVY: HeavyBotUnit,
             ATTACK_TYPE.ROCKET_BOT: RocketBotUnit,
-        }
-        cls_name = cls_names.get(unit[ATTRIBUTE.ITEM_TYPE], FightItem)
+        }.get(unit[ATTRIBUTE.ITEM_TYPE], FightItem)
         fight_item = cls_name(unit, player=player, fight_handler=self)
 
         self.fighters[fight_item.id] = fight_item
@@ -273,12 +273,32 @@ class FightHandler(BaseHandler):
         craft.add_child_id(fight_item.id)
         self.log.initial_state_unit(fight_item)
 
-    def generate_craft_place(self):
+    def get_available_craft_places(self):
         width = self.map_size[1]
-        craft_positions = [cr.coordinates[1] for cr in self.get_crafts()] # + [20, ] # one extra place for flag
-        available = [y for y in range(3, width - 3)
+        craft_positions = [craft.coordinates[1] for craft in self.get_crafts() if craft.coordinates]
+        available_craft_places = [y for y in range(3, width - 3)
                      if not any(pos - 2 <= y <= pos + 2 for pos in craft_positions)]
-        return [self.map_size[0], choice(available) if available else 0]
+        return available_craft_places
+
+    def generate_craft_place(self):
+        available_craft_places = self.get_available_craft_places()
+        return [self.map_size[0], choice(available_craft_places) if available_craft_places else 0]
+
+    def find_craft_place(self, coordinates):
+        available_craft_places = self.get_available_craft_places()
+        desired_available = coordinates[1]
+        closest_to_available = None
+
+        for i in range(0, self.map_size[1]):
+            if desired_available + i in available_craft_places:
+                closest_to_available = desired_available + i
+                break
+            if desired_available - i in available_craft_places:
+                closest_to_available = desired_available - i
+                break
+        if closest_to_available is None:
+            closest_to_available = 0
+        return [self.map_size[0], closest_to_available]
 
     def get_frame_time(self):
         # frame time can be variated depends on factors

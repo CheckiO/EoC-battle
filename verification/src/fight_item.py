@@ -10,7 +10,7 @@ from tools.balance import unit_display_stats, building_display_stats, operation_
 from tools.distances import euclidean_distance
 from consts import CUT_FROM_BUILDING, IMMORTAL_TIME, FOLDER_CODES
 from tools import ROLE, ATTRIBUTE, ACTION, DEF_TYPE, ATTACK_TYPE, STD, PLAYER, STATUS, OUTPUT
-from tools import precalculated
+from tools.generators import landing_position_shifts
 from actions.exceptions import ActionValidateError, ActionSkip
 from modules import gen_features, map_features, has_feature
 
@@ -603,33 +603,28 @@ class CraftItem(FightItem):
         self.craft_id = self.item_data.get(ATTRIBUTE.CRAFT_ID)
         self.unit_type = self.item_data.get(ATTRIBUTE.UNIT_TYPE)
         self.coordinates = self.item_data.get(ATTRIBUTE.COORDINATES)
-        self.tile_position = self.item_data.get(ATTRIBUTE.COORDINATES)[:]
+        #self.tile_position = self.item_data.get(ATTRIBUTE.COORDINATES)[:]
         self.level = self.item_data.get(ATTRIBUTE.LEVEL)
         self.item_type = self.item_data.get(ATTRIBUTE.ITEM_TYPE)
         self.initial_amount_units_in = self.amount_units_in = self.item_data.get(ATTRIBUTE.UNIT_QUANTITY)
-        craft_coor = self.item_data[ATTRIBUTE.COORDINATES]
-        self.units_position = [[craft_coor[0] + shift[0], craft_coor[1] + shift[1]]
-                               for shift in precalculated.LAND_POSITION_SHIFTS[:self.amount_units_in]]
+        self.landing_shift = 2
 
         # im not sute it is nessesary, but still...
         self.role = ROLE.CRAFT
         self.children = set() #units
 
-
     def is_empty(self):
         return not self.amount_units_in
 
-    def generate_craft_place(self, craft_data):
+    def generate_craft_place(self):
         return self._fight_handler.generate_craft_place()
 
+    def find_craft_place(self, coordinates):
+        return self._fight_handler.find_craft_place(coordinates)
+
     def adj_item_data(self, craft_data):
-        craft_coor = self.generate_craft_place(craft_data)
-        if not craft_coor[1]:
-            raise ValueError('NO COOR')
         craft_data[ATTRIBUTE.HIT_POINTS] = 10*10
-        craft_data[ATTRIBUTE.COORDINATES] = craft_coor
-        in_unit_description = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION]
-        craft_data[ATTRIBUTE.UNIT_TYPE] = in_unit_description[ATTRIBUTE.ITEM_TYPE]
+        craft_data[ATTRIBUTE.UNIT_TYPE] = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION][ATTRIBUTE.ITEM_TYPE]
         craft_data[ATTRIBUTE.ROLE] = 'craft'
         return craft_data
 
@@ -651,9 +646,19 @@ class CraftItem(FightItem):
             ATTRIBUTE.IS_IMMORTAL: self.is_immortal,
         }
 
-    def land_unit(self):
+    def land_unit(self, coordinates=None):
         if not self.amount_units_in:
             return False
+
+        if self.coordinates is None:
+            if coordinates is None:
+                self.coordinates = self.generate_craft_place()
+            else:
+                self.coordinates = self.find_craft_place(coordinates)
+
+        shifts = landing_position_shifts(self.landing_shift)[:self.amount_units_in]
+        self.units_position = [[self.coordinates[0] + shift[0], self.coordinates[1] + shift[1]] for shift in shifts]
+
         current_frame = self._fight_handler.current_frame
         if current_frame - self.landing_duration >= self.last_landing:
             self._fight_handler.add_unit_from_craft(self)
@@ -664,6 +669,7 @@ class CraftItem(FightItem):
         self.children.add(id)
 
 
+# TODO: is this gonna be changed?
 class DefPlatformItem(CraftItem):
     ROLE_TYPE = ROLE.DEF_PLATFORM
 

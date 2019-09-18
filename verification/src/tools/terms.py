@@ -212,5 +212,7 @@ class ENV():
     DATA = '__env_data'
     MY_DATA = '__my_data'
 
+
 class FEATURE():
+    LANDING = 'landing'
     TELEPORT = 'teleport'

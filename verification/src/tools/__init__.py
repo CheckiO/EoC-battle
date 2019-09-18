@@ -1,7 +1,7 @@
 from .angles import *
+from .generators import *
 from .grid import *
 from .calculations import *
-from .precalculated import *
 from .distances import *
 from .terms import *
 

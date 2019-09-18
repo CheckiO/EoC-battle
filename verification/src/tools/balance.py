@@ -49,4 +49,16 @@ def module_stats(module):
             "chance": "common",
             "rocketSpeed.pr": 10
         }
+    elif module == 'landing.Shift.lvl1':
+        return {
+            "type": "tower",
+            "chance": "common",
+            "landingShift": 1
+        }
+    elif module == 'landing':
+        return {
+            "type": "unit",
+            "chance": "common",
+            "landing": 1
+        }
     return BALANCE['modules'][module]
