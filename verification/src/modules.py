@@ -2,7 +2,17 @@ from tools.balance import module_stats
 from tools.terms import FEATURE
 
 
-class BaseFeature:
+class BaseFeature(object):
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def apply(self, item):
+        pass
+
+
+class ChangeStatsBaseFeature(object):
     IS_POSITIVE = True
 
     def __init__(self, name, value):
@@ -13,7 +23,7 @@ class BaseFeature:
         pass
 
 
-class IncreaseStats(BaseFeature):
+class IncreaseStats(ChangeStatsBaseFeature):
     stat_names = None
 
     def apply(self, item):
@@ -28,7 +38,7 @@ class IncreaseStats(BaseFeature):
             setattr(item, stat_name, new_value)
 
 
-class PrIncreaseStats(BaseFeature):
+class PrIncreaseStats(ChangeStatsBaseFeature):
     stat_names = None
 
     def apply(self, item):
@@ -76,15 +86,6 @@ class LandingShift(IncreaseStats):
     stat_names = ['landing_shift']
 
 
-# TODO: add advanced modules
-#extDeploy
-#coorDeploy
-#freezing
-#shotThrough
-#groupProtect
-#heavyProtect
-
-
 FEATURES = {
     'speed.pr': Speed,
     'rocketSpeed.pr': RocketSpeed,
@@ -94,8 +95,13 @@ FEATURES = {
     'damagePerShot.pr': DamagePerShot,
     'hitPoints.pr': HitPoints,
     'landingShift': LandingShift,
+
     FEATURE.LANDING: BaseFeature,
     FEATURE.TELEPORT: BaseFeature,
+    FEATURE.FREEZE_SHOT: BaseFeature,
+    FEATURE.PIERCE_SHOT: BaseFeature,
+    FEATURE.GROUP_PROTECT: BaseFeature,
+    FEATURE.HEAVY_PROTECT: BaseFeature,
 }
 
 
@@ -115,6 +121,6 @@ def map_features(features, func_name, *args, **kwargs):
     for feature in features:
         getattr(feature, func_name)(*args, **kwargs)
 
-
+        
 def has_feature(features, name):
     return any(map(lambda a: a.name == name, features))

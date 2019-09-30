@@ -318,15 +318,17 @@ class FightHandler(BaseHandler):
         for key, fighter in list(self.fighters.items()):
             #print('COMPUTE', fighter.id, fighter.coordinates, fighter.item_type, fighter.action, fighter._state)
             fighter.reset_fflags()
+
+            for effect in list(fighter.get_effects()):
+                effect.do_frame_action(fighter)
+                if effect.is_dead:
+                    effect.discard_effect(fighter)
+                    fighter.remove_effect(effect)
+
             for sub_item in list(fighter.get_sub_items()):
                 sub_item.do_frame_action()
                 if sub_item.is_dead:
                     fighter.remove_sub_item(sub_item)
-
-            for extra in list(fighter.get_extras()):
-                extra.do_frame_action(fighter)
-                if extra.is_dead:
-                    fighter.remove_extras(extra)
 
             # WHY: can't we move in the FightItem class?
             # When in can be None?

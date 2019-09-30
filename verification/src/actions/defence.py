@@ -6,6 +6,9 @@ from .exceptions import ActionValidateError
 from tools.angles import angle_between_center_vision_and_enemy, angle_to_enemy, shortest_distance_between_angles
 from tools.grid import is_angle, is_coordinates
 from tools.distances import euclidean_distance
+from tools.terms import FEATURE
+
+from effects import gen_effects
 from sub_items import RocketSubItem
 
 
@@ -41,7 +44,9 @@ class DefenceSentryActions(DefenceTowerActions):
     def _shot(self, enemy):
         damaged_ids = []
         if self._hit(enemy):
-            damaged_ids.extend(enemy.get_shot(self._item.total_damage))
+            effects = gen_effects(self._item.features)
+            enemy_ids = enemy.get_shot(self._item.total_damage, effects)
+            damaged_ids.extend(enemy_ids)
 
         self._item.charging = self._item.charging_time
         return {

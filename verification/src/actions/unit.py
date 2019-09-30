@@ -101,6 +101,7 @@ class CraftActions(BaseItemActions):
         return {
             'attack': self.forward_by('attack'),
             'depart': self.forward_by('depart'),
+            'heavy_protect': self.forward_by('heavy_protect'),
             'move': self.forward_by('move'),
             'moves': self.forward_by('moves'),
             'teleport': self.forward_command_by('teleport'),
@@ -154,7 +155,7 @@ class UnitActions(BaseItemActions):
 
     def one_actions_init(self):
         return {
-            'teleport': self.do_teleport
+            'teleport': self.do_teleport,
         }
 
     def commands_init(self):
@@ -237,6 +238,7 @@ class UnitActions(BaseItemActions):
         return next_point, intermediate_point
 
     def do_teleport(self, data):
+
         if not self._item.has_feature(FEATURE.TELEPORT):
             return
         if self._item.used_feature(FEATURE.TELEPORT):
@@ -361,6 +363,13 @@ class InfantryBotActions(UnitActions):
 
 class HeavyBotActions(UnitActions):
 
+    def actions_init(self):
+        actions = super().actions_init()
+        actions.update({
+            'heavy_protect': self.action_heavy_protect,
+        })
+        return actions
+
     def _cooldown(self):
         cooldown_time = (self._item.firing_time_limit * self._fight_handler.GAME_FRAME_TIME /
                          self._item.full_cooldown_time)
@@ -470,6 +479,23 @@ class HeavyBotActions(UnitActions):
         return {'name': 'move',
                 'from': start_point,
                 'to': new_point}
+
+    # TODO: some kind of validation?
+    def validate_heavy_protect(self, action, data):
+        pass
+
+    def action_heavy_protect(self, data):
+        if not self._item.has_feature(FEATURE.HEAVY_PROTECT):
+            return {'name': 'idle'}
+        if self._item.used_feature(FEATURE.HEAVY_PROTECT):
+            return {'name': 'heavy_protect'}
+        self._item.use_feature(FEATURE.HEAVY_PROTECT)
+
+        self._item.original_speed = 0
+        self._item.speed = 0
+
+        self._state = {'name': 'heavy_protect'}
+        return {'name': 'heavy_protect'}
 
 
 class RocketBotActions(UnitActions):

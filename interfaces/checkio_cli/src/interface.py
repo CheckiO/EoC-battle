@@ -119,6 +119,9 @@ class FightHandler(BaseHandler):
 
             if item.get('type') in ('craft', 'flagman'):
                 continue
+            print(item)
+            #TODO: wtf is this?
+
             if item.get('state', {}).get('action') == 'departed':
                 continue
             players_groups[item['player_id']].append(item)
@@ -192,7 +195,7 @@ class FightHandler(BaseHandler):
                 if item.get('subitems'):
                     print('    ', item['subitems'])
                 # TODO: just-for-testing
-                #print(item)
+                print(item)
 
         if data.get('flagman'):
             print('FLAGMAN:', data['flagman']['charge'])
@@ -205,7 +208,7 @@ class FightHandler(BaseHandler):
     def str_state(self, state):
         if state is None:
             return 'NONE'
-        if state['name'] in ('idle', 'charge', 'dead', 'turn', 'cooldown', 'depart', 'departed'):
+        if state['name'] in ('idle', 'charge', 'dead', 'turn', 'cooldown', 'depart', 'departed', 'heavy_protect'):
             return state['name']
         if state['name'] == 'attack':
             str_action = 'fired'

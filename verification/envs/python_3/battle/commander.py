@@ -401,6 +401,9 @@ class UnitClient(Client):
             'coordinates': coordinates
         })
 
+    def do_heavy_protect(self):
+        return self.do('heavy_protect', {})
+
     def when(self, event, callback, data=None, infinity=False):
         if not self.is_alive:
             print('(WHEN) NOT ALIVE')
