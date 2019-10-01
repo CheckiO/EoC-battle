@@ -732,11 +732,11 @@ class UnitItem(FightItem):
     parent_id = None
 
     def update_additional_attributes(self):
-        self.freeze_effect_time = None
+        self.speed = self.item_data[ATTRIBUTE.SPEED]
+        self.original_speed = self.item_data[ATTRIBUTE.SPEED]
 
         self.departing_time = 0
-        self.speed = self.item_data.get(ATTRIBUTE.SPEED)
-        self.original_speed = self.item_data.get(ATTRIBUTE.SPEED)
+
 
     @property
     def info(self):
@@ -775,7 +775,6 @@ class InfantryBotUnit(UnitItem):
 
     def update_additional_attributes(self):
         super().update_additional_attributes()
-        self.speed = self.item_data[ATTRIBUTE.SPEED]
         self.damage_per_shot = self.item_data[ATTRIBUTE.DAMAGE_PER_SHOT]
         self.charging_time = self.item_data[ATTRIBUTE.CHARGING_TIME]
         self.firing_range = self.item_data[ATTRIBUTE.FIRING_RANGE]
@@ -801,7 +800,6 @@ class HeavyBotUnit(UnitItem):
 
     def update_additional_attributes(self):
         super().update_additional_attributes()
-        self.speed = self.item_data[ATTRIBUTE.SPEED]
         self.rate_of_turn = self.item_data[ATTRIBUTE.RATE_OF_TURN]
         self.damage_per_second = self.item_data[ATTRIBUTE.DAMAGE_PER_SECOND]
         self.firing_range = self.item_data[ATTRIBUTE.FIRING_RANGE]
@@ -839,7 +837,6 @@ class RocketBotUnit(UnitItem):
 
     def update_additional_attributes(self):
         super().update_additional_attributes()
-        self.speed = self.item_data[ATTRIBUTE.SPEED]
         self.charging_time = self.item_data[ATTRIBUTE.CHARGING_TIME]
         self.damage_per_shot = self.item_data[ATTRIBUTE.DAMAGE_PER_SHOT]
         self.firing_range = self.item_data[ATTRIBUTE.FIRING_RANGE]

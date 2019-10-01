@@ -72,3 +72,15 @@ def angle_between_center_vision_and_enemy(coordinates, angle, enemy_coordinates)
            normalized_path_angle_vector[1] * normalized_path_enemy_vector[1])
     angle = math.degrees(math.acos(dot))
     return angle
+
+
+def angle_between_current_enemy_and_piercing_enemy(coordinates, enemy_coordinates, piercing_enemy_coordinates):
+    """
+        Calculate angle between current enemy and piercing enemy
+
+        :param coordinates: Coordinates of object
+        :param angle: Angle of object's vision
+        :param enemy_coordinates: Coordinates of enemy
+        :return: angle between the center of the object's vision and the enemy
+    """
+

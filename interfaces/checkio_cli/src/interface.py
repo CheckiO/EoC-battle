@@ -119,8 +119,6 @@ class FightHandler(BaseHandler):
 
             if item.get('type') in ('craft', 'flagman'):
                 continue
-            print(item)
-            #TODO: wtf is this?
 
             if item.get('state', {}).get('action') == 'departed':
                 continue
@@ -195,7 +193,7 @@ class FightHandler(BaseHandler):
                 if item.get('subitems'):
                     print('    ', item['subitems'])
                 # TODO: just-for-testing
-                print(item)
+                #print(item)
 
         if data.get('flagman'):
             print('FLAGMAN:', data['flagman']['charge'])

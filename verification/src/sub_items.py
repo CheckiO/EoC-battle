@@ -1,5 +1,5 @@
 from tools.distances import euclidean_distance
-from tools.terms import ROLE, OPERATION, DEF_TYPE, ATTACK_TYPE, FEATURE
+from tools.terms import ROLE, OPERATION, DEF_TYPE, ATTACK_TYPE
 
 
 class BaseSubItem(object):
@@ -84,7 +84,6 @@ class VerticalRocketSubItem(RocketSubItem):
         ret['timer'] = self.timer
         return ret
 
-
 class BaseTimeExtras:
     extra_damage = 0
 
@@ -115,7 +114,6 @@ class HealExtras(BaseTimeExtras):
 
     def act(self, item):
         item.restore_health(self.power * item._fight_handler.GAME_FRAME_TIME)
-
 
 class HealSubItem(BaseSubItem):
     type = 'heal'
@@ -176,28 +174,3 @@ class PowerSubItem(HealSubItem):
     def act(self, item, power):
         item.add_extras(PowerExtras(power, 0.3))
 
-
-class GroupProtectItem():
-    type = FEATURE.GROUP_PROTECT
-
-    def act(self, item):
-        item.add_extras()
-
-
-class BaseTimeExtras:
-    extra_damage = 0
-
-    def __init__(self, power, timer):
-        self.power = power
-
-    def do_frame_action(self, item):
-        self.act(item)
-
-    def act(item):
-        pass
-
-    def output(self):
-        return {
-            'type': self.type,
-            'power': self.power,
-        }
