@@ -24,6 +24,10 @@ def normalized_vector(vector):
     return vector[0] / length, vector[1] / length
 
 
+def normalized_angle(angle):
+    return (-1) * (angle + 90) % 360
+
+
 def shortest_distance_between_angles(new_angle, current_angle):
     """
     Calculate Difference Between angles on a circle
@@ -43,11 +47,12 @@ def angle_to_enemy(coordinates, enemy_coordinates):
     :param enemy_coordinates: Coordinates of enemy
     :return: angle to the center of the object's vision
     """
+
     angle_vector = (enemy_coordinates[0] - coordinates[0], enemy_coordinates[1] - coordinates[1])
-    angle = math.degrees(math.atan2( (-1) * angle_vector[0], angle_vector[1]))
+    angle = math.degrees(math.atan2((-1) * angle_vector[0], angle_vector[1]))
     if angle < 0:
         angle = 360 + angle
-    return angle
+    return normalized_angle(angle)
 
 
 def angle_between_center_vision_and_enemy(coordinates, angle, enemy_coordinates):
@@ -59,6 +64,7 @@ def angle_between_center_vision_and_enemy(coordinates, angle, enemy_coordinates)
     :param enemy_coordinates: Coordinates of enemy
     :return: angle between the center of the object's vision and the enemy
     """
+    angle = normalized_angle(angle)
     angle_radians = math.radians(angle)
     angle_vector = [coordinates[0] - math.sin(angle_radians), coordinates[1] + math.cos(angle_radians)]
 
@@ -72,15 +78,3 @@ def angle_between_center_vision_and_enemy(coordinates, angle, enemy_coordinates)
            normalized_path_angle_vector[1] * normalized_path_enemy_vector[1])
     angle = math.degrees(math.acos(dot))
     return angle
-
-
-def angle_between_current_enemy_and_piercing_enemy(coordinates, enemy_coordinates, piercing_enemy_coordinates):
-    """
-        Calculate angle between current enemy and piercing enemy
-
-        :param coordinates: Coordinates of object
-        :param angle: Angle of object's vision
-        :param enemy_coordinates: Coordinates of enemy
-        :return: angle between the center of the object's vision and the enemy
-    """
-

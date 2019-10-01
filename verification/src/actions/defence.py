@@ -123,6 +123,7 @@ class DefenceMachineActions(DefenceTowerActions):
         if distance_to_obj > self._item.firing_range:
             return False
         angle = angle_between_center_vision_and_enemy(self._item.coordinates, self._item.angle, obj.coordinates)
+
         if angle > self._item.field_of_view / 2:
             return False
         return True
@@ -251,6 +252,7 @@ class DefenceMachineActions(DefenceTowerActions):
             raise ActionValidateError('Wrong coordinates')
 
     def action_turn_to_fire(self, data):
+
         enemy = self._fight_handler.fighters.get(data['id'])
         if self.is_shot_possible(enemy):
             return self._attack(enemy)
