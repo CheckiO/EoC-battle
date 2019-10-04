@@ -6,6 +6,9 @@ from .exceptions import ActionValidateError
 from tools.angles import angle_between_center_vision_and_enemy, angle_to_enemy, shortest_distance_between_angles
 from tools.grid import is_angle, is_coordinates
 from tools.distances import euclidean_distance
+from tools.terms import FEATURE
+
+from effects import gen_effects
 from sub_items import RocketSubItem
 
 
@@ -38,10 +41,46 @@ class DefenceSentryActions(DefenceTowerActions):
         if self._item.charging:
             return self._charging()
 
+    def is_pierce_shot_possible(self, coordinates, angle, obj):
+
+        distance_to_obj = self._distance_to_enemy(obj)
+        if distance_to_obj > self._item.firing_range:
+            return False
+
+        enemy_angle = angle_between_center_vision_and_enemy(coordinates, angle, obj.coordinates)
+        if enemy_angle > 2:
+            return False
+        return True
+
+    def _find_targets(self, enemy):
+
+        if not self._item.has_feature(FEATURE.PIERCE_SHOT):
+            return [enemy]
+        targets = [enemy]
+        angle = angle_to_enemy(self._item.coordinates, enemy.coordinates)
+
+        for event_item in self._fight_handler.get_active_battle_fighters():
+            if enemy == event_item:
+                continue
+            if self._item.player_id == event_item.player_id:
+                continue
+            if not event_item.coordinates:
+                continue
+
+            if self.is_pierce_shot_possible(self._item.coordinates, angle, event_item):
+                targets.append(event_item)
+
+        return targets
+
     def _shot(self, enemy):
         damaged_ids = []
         if self._hit(enemy):
-            damaged_ids.extend(enemy.get_shot(self._item.total_damage))
+            effects = gen_effects(self._item.features)
+            enemies = self._find_targets(enemy)
+
+            for enemy in enemies:
+                enemy_ids = enemy.get_shot(self._item.total_damage, effects)
+                damaged_ids.extend(enemy_ids)
 
         self._item.charging = self._item.charging_time
         return {
@@ -84,6 +123,7 @@ class DefenceMachineActions(DefenceTowerActions):
         if distance_to_obj > self._item.firing_range:
             return False
         angle = angle_between_center_vision_and_enemy(self._item.coordinates, self._item.angle, obj.coordinates)
+
         if angle > self._item.field_of_view / 2:
             return False
         return True
@@ -212,6 +252,7 @@ class DefenceMachineActions(DefenceTowerActions):
             raise ActionValidateError('Wrong coordinates')
 
     def action_turn_to_fire(self, data):
+
         enemy = self._fight_handler.fighters.get(data['id'])
         if self.is_shot_possible(enemy):
             return self._attack(enemy)

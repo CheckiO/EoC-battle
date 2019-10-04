@@ -75,7 +75,7 @@ class ATTRIBUTE():
     CHARGE_SIZE = 'charge_size'
     CHARGE = 'charge'
     SUBITEMS = 'subitems'
-    EXTRAS = 'extras'
+    EFFECTS = 'effects'
     MODULES = 'modules'
     CRAFT_FIGHT_ID = 'craft_fight_id'
     IS_IMMORTAL = 'is_immortal'
@@ -212,5 +212,15 @@ class ENV():
     DATA = '__env_data'
     MY_DATA = '__my_data'
 
+
 class FEATURE():
+    LANDING = 'landing'
     TELEPORT = 'teleport'
+    FREEZE_SHOT = 'freezeShot'
+    PIERCE_SHOT = 'pierceShot'
+    GROUP_PROTECT = 'groupProtect'
+    HEAVY_PROTECT = 'heavyProtect'
+
+
+class EFFECT():
+    FREEZE = 'freeze'

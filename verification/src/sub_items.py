@@ -174,4 +174,3 @@ class PowerSubItem(HealSubItem):
     def act(self, item, power):
         item.add_extras(PowerExtras(power, 0.3))
 
-

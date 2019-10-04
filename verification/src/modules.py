@@ -2,7 +2,17 @@ from tools.balance import module_stats
 from tools.terms import FEATURE
 
 
-class BaseFeature:
+class BaseFeature(object):
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def apply(self, item):
+        pass
+
+
+class ChangeStatsBaseFeature(object):
     IS_POSITIVE = True
 
     def __init__(self, name, value):
@@ -13,7 +23,22 @@ class BaseFeature:
         pass
 
 
-class PrIncreaseStats(BaseFeature):
+class IncreaseStats(ChangeStatsBaseFeature):
+    stat_names = None
+
+    def apply(self, item):
+        for stat_name in self.stat_names:
+            if not hasattr(item, stat_name):
+                return
+            stat_value = getattr(item, stat_name)
+            if self.IS_POSITIVE:
+                new_value = self.value + stat_value
+            else:
+                new_value = self.value - stat_value
+            setattr(item, stat_name, new_value)
+
+
+class PrIncreaseStats(ChangeStatsBaseFeature):
     stat_names = None
 
     def apply(self, item):
@@ -56,13 +81,9 @@ class DamagePerShot(PrIncreaseStats):
 class HitPoints(PrIncreaseStats):
     stat_names = ['hit_points', 'start_hit_points']
 
-# TODO: add advanced modules
-#extDeploy
-#coorDeploy
-#groupProtect
-#heavyProtect
-#freezing
-#shotThrough
+
+class LandingShift(IncreaseStats):
+    stat_names = ['landing_shift']
 
 
 FEATURES = {
@@ -73,9 +94,15 @@ FEATURES = {
     'damagePerSecond.pr': DamagePerSecond,
     'damagePerShot.pr': DamagePerShot,
     'hitPoints.pr': HitPoints,
-    FEATURE.TELEPORT: BaseFeature
-}
+    'landingShift': LandingShift,
 
+    FEATURE.LANDING: BaseFeature,
+    FEATURE.TELEPORT: BaseFeature,
+    FEATURE.FREEZE_SHOT: BaseFeature,
+    FEATURE.PIERCE_SHOT: BaseFeature,
+    FEATURE.GROUP_PROTECT: BaseFeature,
+    FEATURE.HEAVY_PROTECT: BaseFeature,
+}
 
 
 def gen_features(modules):
@@ -94,6 +121,6 @@ def map_features(features, func_name, *args, **kwargs):
     for feature in features:
         getattr(feature, func_name)(*args, **kwargs)
 
-
+        
 def has_feature(features, name):
     return any(map(lambda a: a.name == name, features))

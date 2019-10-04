@@ -10,7 +10,8 @@ from tools.balance import unit_display_stats, building_display_stats, operation_
 from tools.distances import euclidean_distance
 from consts import CUT_FROM_BUILDING, IMMORTAL_TIME, FOLDER_CODES
 from tools import ROLE, ATTRIBUTE, ACTION, DEF_TYPE, ATTACK_TYPE, STD, PLAYER, STATUS, OUTPUT
-from tools import precalculated
+from tools.generators import landing_position_shifts
+from tools.terms import FEATURE
 from actions.exceptions import ActionValidateError, ActionSkip
 from modules import gen_features, map_features, has_feature
 
@@ -87,7 +88,7 @@ class FightItem(Item):
         self.sub_items = {}
         self._sub_items_counter = 0
 
-        self.extras = {}
+        self.effects = {}
 
         self._std = {
             "out": [],
@@ -100,9 +101,12 @@ class FightItem(Item):
         self.update_additional_attributes()
 
         self._actions_handlers = ItemActions.get_factory(self, fight_handler=fight_handler)
+
         self.features = gen_features(item_data.get(ATTRIBUTE.MODULES, []))
-        self._used_features = {}
         map_features(self.features, 'apply', self)
+
+        self._used_features = {}
+
         self.reset_fflags()
         self.reset_std()
 
@@ -183,40 +187,94 @@ class FightItem(Item):
     def get_sub_items(self):
         return self.sub_items.values()
 
-    def add_extras(self, extra):
-        self.extras[extra.type] = extra
+    def add_effect(self, effect):
+        self.effects[effect.type] = effect
 
-    def remove_extras(self, extra):
-        del self.extras[extra.type]
+    def remove_effect(self, effect):
+        del self.effects[effect.type]
 
-    def get_extras(self):
-        return self.extras.values()
+    def get_effects(self):
+        return self.effects.values()
 
     def output_sub_items(self):
         return list(map(lambda a: a.output(), self.get_sub_items()))
 
     @property
     def is_immortal(self):
+        return False
         return (self.role == ROLE.UNIT and
                 self._fight_handler.current_game_time - self.land_time < IMMORTAL_TIME)
 
-    @property
-    def total_damage(self):
-        return reduce(
-            lambda total, item: (100 + item.extra_damage) * total / 100,
-            self.get_extras(), self.damage_per_shot)
+    def shot_items(self, damage):
+        items = {}
 
-    def get_shot(self, damage):
+        heavy_protection_feature_units = {}
+        for item in self._fight_handler.get_active_battle_fighters():
+            if item.player_id != self.player_id or not item.coordinates:
+                continue
+            if not item.used_feature(FEATURE.HEAVY_PROTECT):
+                continue
+
+            distance_to_item = euclidean_distance(item.coordinates, self.coordinates)
+            # TODO: how to make radius
+            if distance_to_item > 2:
+                continue
+            heavy_protection_feature_units[item] = distance_to_item
+
+        if heavy_protection_feature_units:
+            closest_heavy_protection_feature_units = [k for k in sorted(
+                heavy_protection_feature_units, key=heavy_protection_feature_units.get)]
+            items[closest_heavy_protection_feature_units[0]] = damage
+            return items
+
+        if self.has_feature(FEATURE.GROUP_PROTECT):
+            group_protection_feauture_units = []
+            for item in self._fight_handler.get_active_battle_fighters():
+                if item.player_id != self.player_id or not item.coordinates:
+                    continue
+                if not item.has_feature(FEATURE.GROUP_PROTECT):
+                    continue
+                distance_to_item = euclidean_distance(item.coordinates, self.coordinates)
+                # TODO: how to make radius
+                if distance_to_item > 2:
+                    continue
+                group_protection_feauture_units.append(item)
+            count = len(group_protection_feauture_units)
+            # TODO: move to table or something
+            if count > 4:
+                group_protection_average_item_damage = damage / count
+                for item in group_protection_feauture_units:
+                    items[item] = group_protection_average_item_damage
+                return items
+
+        items[self] = damage
+        return items
+
+    def get_shot(self, damage, effects=None):
         if self.is_gone:
             return []
 
-        if not self.is_immortal:
-            self.hit_points -= damage
+        shot_items = self.shot_items(damage)
 
-        if self.hit_points <= 0:
-            self._dead()
+        for item, item_damage in shot_items.items():
+            if item == self:
+                item.get_damaged(item_damage, effects)
+            else:
+                item.get_damaged(item_damage)
+        # TODO: is this still relevant after changes?
 
         return [self.id]
+
+    def get_damaged(self, damage, effects=None):
+        if self.is_immortal:
+            return
+        self.hit_points -= damage
+        if self.hit_points <= 0:
+            self._dead()
+            return
+        if effects is not None:
+            for effect in effects:
+                self.add_effect(effect)
 
     def restore_health(self, power):
         self.hit_points += power
@@ -270,7 +328,7 @@ class FightItem(Item):
             ATTRIBUTE.IS_DEPARTED: self.is_departed,
             ATTRIBUTE.STATE: self._state,
             ATTRIBUTE.SUBITEMS: self.info_subitems,
-            ATTRIBUTE.EXTRAS: self.info_extras,
+            ATTRIBUTE.EFFECTS: self.info_effects,
             ATTRIBUTE.IS_IMMORTAL: self.is_immortal,
         }
 
@@ -279,9 +337,9 @@ class FightItem(Item):
         return list(map(lambda a: a.output(), self.get_sub_items()))
 
     @property
-    def info_extras(self):
-        return list(map(lambda a: a.output(), self.get_extras()))
-    
+    def info_effects(self):
+        return list(map(lambda a: a.output(), self.get_effects()))
+
     @property
     def internal_info(self):
         info = self.info
@@ -444,7 +502,6 @@ class FightItem(Item):
 class SentryGunTowerItem(FightItem):
     ROLE_TYPE = DEF_TYPE.SENTRY
 
-    # TODO: balance update
     def update_additional_attributes(self):
         self.charging_time = self.item_data[ATTRIBUTE.CHARGING_TIME]
         self.damage_per_shot = self.item_data[ATTRIBUTE.DAMAGE_PER_SHOT]
@@ -466,9 +523,7 @@ class SentryGunTowerItem(FightItem):
 
     @property
     def total_damage(self):
-        return reduce(
-            lambda total, item: (100 + item.extra_damage) * total / 100,
-            self.get_extras(), self.damage_per_shot)
+        return self.damage_per_shot
 
 
 class MachineGunTowerItem(FightItem):
@@ -507,9 +562,7 @@ class MachineGunTowerItem(FightItem):
 
     @property
     def total_damage(self):
-        return reduce(
-            lambda total, item: (100 + item.extra_damage) * total / 100,
-            self.get_extras(), self.damage_per_second * self._fight_handler.GAME_FRAME_TIME)
+        return self.damage_per_second * self._fight_handler.GAME_FRAME_TIME
 
 
 class RocketGunTowerItem(FightItem):
@@ -537,9 +590,7 @@ class RocketGunTowerItem(FightItem):
 
     @property
     def total_damage(self):
-        return reduce(
-            lambda total, item: (100 + item.extra_damage) * total / 100,
-            self.get_extras(), self.damage_per_shot)
+        return self.damage_per_shot
 
 
 class FlagItem(FightItem):
@@ -603,33 +654,28 @@ class CraftItem(FightItem):
         self.craft_id = self.item_data.get(ATTRIBUTE.CRAFT_ID)
         self.unit_type = self.item_data.get(ATTRIBUTE.UNIT_TYPE)
         self.coordinates = self.item_data.get(ATTRIBUTE.COORDINATES)
-        self.tile_position = self.item_data.get(ATTRIBUTE.COORDINATES)[:]
+        #self.tile_position = self.item_data.get(ATTRIBUTE.COORDINATES)[:]
         self.level = self.item_data.get(ATTRIBUTE.LEVEL)
         self.item_type = self.item_data.get(ATTRIBUTE.ITEM_TYPE)
         self.initial_amount_units_in = self.amount_units_in = self.item_data.get(ATTRIBUTE.UNIT_QUANTITY)
-        craft_coor = self.item_data[ATTRIBUTE.COORDINATES]
-        self.units_position = [[craft_coor[0] + shift[0], craft_coor[1] + shift[1]]
-                               for shift in precalculated.LAND_POSITION_SHIFTS[:self.amount_units_in]]
+        self.landing_shift = 2
 
         # im not sute it is nessesary, but still...
         self.role = ROLE.CRAFT
         self.children = set() #units
 
-
     def is_empty(self):
         return not self.amount_units_in
 
-    def generate_craft_place(self, craft_data):
+    def generate_craft_place(self):
         return self._fight_handler.generate_craft_place()
 
+    def find_craft_place(self, coordinates):
+        return self._fight_handler.find_craft_place(coordinates)
+
     def adj_item_data(self, craft_data):
-        craft_coor = self.generate_craft_place(craft_data)
-        if not craft_coor[1]:
-            raise ValueError('NO COOR')
         craft_data[ATTRIBUTE.HIT_POINTS] = 10*10
-        craft_data[ATTRIBUTE.COORDINATES] = craft_coor
-        in_unit_description = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION]
-        craft_data[ATTRIBUTE.UNIT_TYPE] = in_unit_description[ATTRIBUTE.ITEM_TYPE]
+        craft_data[ATTRIBUTE.UNIT_TYPE] = craft_data[ATTRIBUTE.IN_UNIT_DESCRIPTION][ATTRIBUTE.ITEM_TYPE]
         craft_data[ATTRIBUTE.ROLE] = 'craft'
         return craft_data
 
@@ -651,9 +697,19 @@ class CraftItem(FightItem):
             ATTRIBUTE.IS_IMMORTAL: self.is_immortal,
         }
 
-    def land_unit(self):
+    def land_unit(self, coordinates=None):
         if not self.amount_units_in:
             return False
+
+        if self.coordinates is None:
+            if coordinates is None:
+                self.coordinates = self.generate_craft_place()
+            else:
+                self.coordinates = self.find_craft_place(coordinates)
+
+        shifts = landing_position_shifts(self.landing_shift)[:self.amount_units_in]
+        self.units_position = [[self.coordinates[0] + shift[0], self.coordinates[1] + shift[1]] for shift in shifts]
+
         current_frame = self._fight_handler.current_frame
         if current_frame - self.landing_duration >= self.last_landing:
             self._fight_handler.add_unit_from_craft(self)
@@ -664,6 +720,7 @@ class CraftItem(FightItem):
         self.children.add(id)
 
 
+# TODO: is this gonna be changed?
 class DefPlatformItem(CraftItem):
     ROLE_TYPE = ROLE.DEF_PLATFORM
 
@@ -675,20 +732,31 @@ class UnitItem(FightItem):
     parent_id = None
 
     def update_additional_attributes(self):
+        self.speed = self.item_data[ATTRIBUTE.SPEED]
+        self.original_speed = self.item_data[ATTRIBUTE.SPEED]
+
         self.departing_time = 0
+
 
     @property
     def info(self):
         info = super(UnitItem, self).info
         info.update({
             OUTPUT.DEPARTING_TIME: self.departing_time,
+            ATTRIBUTE.SPEED: self.speed,
         })
         return info
 
     def set_parent_id(self, id):
         self.parent_id = id
+        self.set_parent_features()
 
-        map_features(self.parent_item.features, 'apply', self)
+    # TODO: features only for unit
+    def set_parent_features(self):
+        for feature in self.parent_item.features:
+            self.features.append(feature)
+        map_features(self.features, 'apply', self)
+        #map_features(self.parent_item.features, 'apply', self)
 
     def has_feature(self, name):
         return has_feature(self.parent_item.features, name)
@@ -696,7 +764,6 @@ class UnitItem(FightItem):
     @property
     def parent_item(self):
         return self._fight_handler.fighters[self.parent_id]
-    
 
     def adj_item_data(self, item_data):
         item_data.update(unit_display_stats(item_data[ATTRIBUTE.ITEM_TYPE], item_data[ATTRIBUTE.LEVEL]))
@@ -706,10 +773,8 @@ class UnitItem(FightItem):
 class InfantryBotUnit(UnitItem):
     ROLE_TYPE = ATTACK_TYPE.INFANTRY
 
-    # TODO: balance update
     def update_additional_attributes(self):
         super().update_additional_attributes()
-        self.speed = self.item_data[ATTRIBUTE.SPEED]
         self.damage_per_shot = self.item_data[ATTRIBUTE.DAMAGE_PER_SHOT]
         self.charging_time = self.item_data[ATTRIBUTE.CHARGING_TIME]
         self.firing_range = self.item_data[ATTRIBUTE.FIRING_RANGE]
@@ -718,21 +783,23 @@ class InfantryBotUnit(UnitItem):
     def info(self):
         info = super(InfantryBotUnit, self).info
         info.update({
-            ATTRIBUTE.SPEED: self.speed,
+
             ATTRIBUTE.CHARGING_TIME: self.charging_time,
             ATTRIBUTE.DAMAGE_PER_SHOT: self.damage_per_shot,
             ATTRIBUTE.FIRING_RANGE: self.firing_range,
         })
         return info
 
+    @property
+    def total_damage(self):
+        return self.damage_per_shot
+
 
 class HeavyBotUnit(UnitItem):
     ROLE_TYPE = ATTACK_TYPE.HEAVY
 
-    # TODO: balance update
     def update_additional_attributes(self):
         super().update_additional_attributes()
-        self.speed = self.item_data[ATTRIBUTE.SPEED]
         self.rate_of_turn = self.item_data[ATTRIBUTE.RATE_OF_TURN]
         self.damage_per_second = self.item_data[ATTRIBUTE.DAMAGE_PER_SECOND]
         self.firing_range = self.item_data[ATTRIBUTE.FIRING_RANGE]
@@ -748,7 +815,6 @@ class HeavyBotUnit(UnitItem):
     def info(self):
         info = super(HeavyBotUnit, self).info
         info.update({
-            ATTRIBUTE.SPEED: self.speed,
             ATTRIBUTE.RATE_OF_TURN: self.rate_of_turn,
             ATTRIBUTE.DAMAGE_PER_SECOND: self.damage_per_second,
             ATTRIBUTE.FIRING_RANGE: self.firing_range,
@@ -761,14 +827,16 @@ class HeavyBotUnit(UnitItem):
         })
         return info
 
+    @property
+    def total_damage(self):
+        return self.damage_per_second * self._fight_handler.GAME_FRAME_TIME
+
 
 class RocketBotUnit(UnitItem):
     ROLE_TYPE = ATTACK_TYPE.ROCKET_BOT
 
-    # TODO: balance update
     def update_additional_attributes(self):
         super().update_additional_attributes()
-        self.speed = self.item_data[ATTRIBUTE.SPEED]
         self.charging_time = self.item_data[ATTRIBUTE.CHARGING_TIME]
         self.damage_per_shot = self.item_data[ATTRIBUTE.DAMAGE_PER_SHOT]
         self.firing_range = self.item_data[ATTRIBUTE.FIRING_RANGE]
@@ -779,7 +847,6 @@ class RocketBotUnit(UnitItem):
     def info(self):
         info = super(RocketBotUnit, self).info
         info.update({
-            ATTRIBUTE.SPEED: self.speed,
             ATTRIBUTE.CHARGING_TIME: self.charging_time,
             ATTRIBUTE.DAMAGE_PER_SHOT: self.damage_per_shot,
             ATTRIBUTE.FIRING_RANGE: self.firing_range,
@@ -787,6 +854,10 @@ class RocketBotUnit(UnitItem):
             ATTRIBUTE.ROCKET_EXPLOSION_RADIUS: self.rocket_explosion_radius,
         })
         return info
+
+    @property
+    def total_damage(self):
+        return self.damage_per_shot
 
 
 class MineItem(FightItem):

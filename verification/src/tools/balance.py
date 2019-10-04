@@ -49,4 +49,40 @@ def module_stats(module):
             "chance": "common",
             "rocketSpeed.pr": 10
         }
+    elif module == 'landing.Shift.lvl1':
+        return {
+            "type": "tower",
+            "chance": "common",
+            "landingShift": 1
+        }
+    elif module == 'landing':
+        return {
+            "type": "unit",
+            "chance": "common",
+            "landing": 1
+        }
+    elif module == 'groupProtection':
+        return {
+            "type": "unit",
+            "chance": "common",
+            "groupProtect": 1
+        }
+    elif module == 'heavyProtection':
+        return {
+            "type": "unit",
+            "chance": "common",
+            "heavyProtect": 1
+        }
+    elif module == 'freezeShot':
+        return {
+            "type": "tower",
+            "chance": "common",
+            "freezeShot": 1
+        }
+    elif module == 'pierceShot':
+        return {
+            "type": "tower",
+            "chance": "common",
+            "pierceShot": 1
+        }
     return BALANCE['modules'][module]

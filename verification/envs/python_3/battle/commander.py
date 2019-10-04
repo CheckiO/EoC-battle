@@ -1,7 +1,6 @@
 from battle import ROLE, PARTY
 from battle.tools import euclidean_distance
 import battle.map_filters as MF
-import warnings
 
 ERR_ID_TYPE = "{name} ID must be an integer"
 ERR_ARRAY_TYPE = "{name} must be a list/tuple"
@@ -19,6 +18,12 @@ def check_coordinates(coordinates, name):
             len(coordinates) == 2 and
             all(isinstance(n, (float, int)) for n in coordinates)):
         raise TypeError(ERR_COORDINATES_TYPE.format(name=name))
+
+
+def check_land_coordinates(coordinates, name):
+    check_coordinates(coordinates, name)
+    if coordinates[0] != 40:
+        raise TypeError('Must be a border of map')
 
 
 def check_angle(angle, name):
@@ -337,8 +342,10 @@ class Client(object):
 
 class CraftClient(Client):
 
-    def do_land_units(self):
-        self.do('land_units', {})
+    def do_land_units(self, coordinates=None):
+        if coordinates is not None:
+            check_land_coordinates(coordinates, 'Coordinates')
+        self.do('land_units', {'coordinates': coordinates})
 
     def when_unit_landed(self, callback):
         self.when('unit_landed', callback, {'craft_id': self.my_info['craft_id']}, infinity=True)
@@ -393,6 +400,9 @@ class UnitClient(Client):
         self.command('teleport', {
             'coordinates': coordinates
         })
+
+    def do_heavy_protect(self):
+        return self.do('heavy_protect', {})
 
     def when(self, event, callback, data=None, infinity=False):
         if not self.is_alive:
