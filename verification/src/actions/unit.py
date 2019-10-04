@@ -84,9 +84,6 @@ class CraftActions(BaseItemActions):
         if coordinates is not None:
             if not self._item.has_feature(FEATURE.LANDING):
                 return
-            # elif self._item.used_feature(FEATURE.LANDING):
-            #     return
-            # self._item.use_feature(FEATURE.LANDING)
 
         if self._item.land_unit(coordinates):
             #print('LAND', self._item.craft_id, self._item.amount_units_in)

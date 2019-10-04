@@ -239,11 +239,13 @@ class FightItem(Item):
                 if distance_to_item > 2:
                     continue
                 group_protection_feauture_units.append(item)
-
-            group_protection_average_item_damage = damage / len(group_protection_feauture_units)
-            for item in group_protection_feauture_units:
-                items[item] = group_protection_average_item_damage
-            return items
+            count = len(group_protection_feauture_units)
+            # TODO: move to table or something
+            if count > 4:
+                group_protection_average_item_damage = damage / count
+                for item in group_protection_feauture_units:
+                    items[item] = group_protection_average_item_damage
+                return items
 
         items[self] = damage
         return items
@@ -255,7 +257,6 @@ class FightItem(Item):
         shot_items = self.shot_items(damage)
 
         for item, item_damage in shot_items.items():
-
             if item == self:
                 item.get_damaged(item_damage, effects)
             else:
@@ -273,7 +274,6 @@ class FightItem(Item):
             return
         if effects is not None:
             for effect in effects:
-                # TODO: update effect
                 self.add_effect(effect)
 
     def restore_health(self, power):
