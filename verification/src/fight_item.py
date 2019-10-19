@@ -162,8 +162,7 @@ class FightItem(Item):
             round(item_data[ATTRIBUTE.TILE_POSITION][0] + size / 2, 6),
             round(item_data[ATTRIBUTE.TILE_POSITION][1] + size / 2, 6)]
         # [SPIKE] We use center coordinates
-        cut_size = (size if (item_data[ATTRIBUTE.ROLE] == ROLE.OBSTACLE
-                             and item_data[ATTRIBUTE.ITEM_TYPE] == 'rock')
+        cut_size = (size if (item_data[ATTRIBUTE.ROLE] == ROLE.OBSTACLE)
                     else max(size - CUT_FROM_BUILDING, 0))
         item_data[ATTRIBUTE.BASE_SIZE] = size
         item_data[ATTRIBUTE.SIZE] = cut_size
@@ -295,6 +294,8 @@ class FightItem(Item):
 
     @property
     def is_dead(self):
+        if not self.hit_points:
+            return False
         return self.hit_points <= 0
 
     @property

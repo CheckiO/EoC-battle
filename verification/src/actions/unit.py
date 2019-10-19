@@ -209,10 +209,13 @@ class UnitActions(BaseItemActions):
                         int(round((current_point[1] - cell_shift) * grid_scale)))
         end_cell = (int(round((end_point[0] - cell_shift) * grid_scale)),
                     int(round((end_point[1] - cell_shift) * grid_scale)))
+
         # A-star search
         cell_route = find_route(self._fight_handler.map_grid,
                                 self._fight_handler.map_graph,
                                 current_cell, end_cell)
+        if len(cell_route) == 0:
+            return
         cut_cell_route = straighten_route(self._fight_handler.map_grid, cell_route)
         self._route = [((c[0] / grid_scale) + cell_shift, (c[1] / grid_scale) + cell_shift)
                        for c in cut_cell_route]
