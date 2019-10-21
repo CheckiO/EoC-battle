@@ -12,6 +12,8 @@ def gen_xy_pos(position):
         'y': position[1]
     }
 
+WAITING_POS = {'x': 40, 'y': 40}
+
 
 def name_to_js(name):
     return name[0].lower() + name.title().replace('_', '')[1:]
@@ -138,7 +140,7 @@ class FightLogger:
     def initial_state_craft(self, craft):
         self.data[OUTPUT.INITIAL_CATEGORY][OUTPUT.CRAFTS][craft.id] = {
             OUTPUT.ITEM_ID: craft.id,
-            OUTPUT.TILE_POSITION: gen_xy_pos(craft.tile_position),
+            OUTPUT.TILE_POSITION: gen_xy_pos(craft.tile_position) or WAITING_POS,
             OUTPUT.ITEM_TYPE: craft.item_type,
             OUTPUT.ITEM_LEVEL: craft.level,
             OUTPUT.PLAYER_ID: craft.player[PLAYER.ID],
@@ -148,7 +150,7 @@ class FightLogger:
     def initial_state_flagman(self, flagman):
         self.data[OUTPUT.INITIAL_CATEGORY][OUTPUT.FLAGMAN] = {
             OUTPUT.ITEM_ID: flagman.id,
-            OUTPUT.TILE_POSITION: gen_xy_pos(flagman.tile_position),
+            OUTPUT.TILE_POSITION: gen_xy_pos(flagman.tile_position) or WAITING_POS,
             OUTPUT.OPERATIONS: {name: value['level'] for name, value in flagman.operations.items()},
             OUTPUT.ITEM_LEVEL: flagman.level,
             OUTPUT.PLAYER_ID: flagman.player[PLAYER.ID],
@@ -184,12 +186,15 @@ class FightLogger:
 
             item_info = {
                 OUTPUT.ITEM_ID: item.id,
-                OUTPUT.TILE_POSITION: gen_xy_pos(item.coordinates if item.role == ROLE.UNIT
+                OUTPUT.TILE_POSITION: gen_xy_pos(item.coordinates if item.role in (ROLE.UNIT, ROLE.CRAFT)
                                        else item.tile_position),
                 OUTPUT.HIT_POINTS_PERCENTAGE: item.get_percentage_hit_points(),
                 OUTPUT.ITEM_STATUS: item.get_action_status(),
                 OUTPUT.IS_IMMORTAL: item.is_immortal,
             }
+
+            if not item_info[OUTPUT.TILE_POSITION] and item.role in (ROLE.CRAFT, ROLE.FLAGMAN):
+                item_info[OUTPUT.TILE_POSITION] = WAITING_POS
             
             item_info[OUTPUT.STATUS] = item.get_action_status()
             item_info[OUTPUT.STATE] = dict_to_js(item._state)
@@ -201,6 +206,7 @@ class FightLogger:
 
             if item.sub_items:
                 item_info[OUTPUT.SUBITEMS] = item.output_sub_items()
+                print('SUBITEMS', item.id, item_info[OUTPUT.SUBITEMS])
 
             if item.role == ROLE.CRAFT:
                 item_info[OUTPUT.UNITS_IN] = item.amount_units_in
@@ -216,6 +222,7 @@ class FightLogger:
                 internal[OUTPUT.ACTION] = item.action
                 internal[OUTPUT.FLAGS] = item._frame_flags
                 internal[OUTPUT.ONE_ACTION] = item.one_action
+                internal[OUTPUT.HAS_ERROR] = item.has_error
 
                 item.reset_std()
 

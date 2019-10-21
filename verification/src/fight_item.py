@@ -94,6 +94,7 @@ class FightItem(Item):
             "out": [],
             "err": []
         }
+        self.has_error = False
         # every state has a key "action"
         # {'action': 'idle'}
         # {'action': 'dead'}
@@ -424,6 +425,7 @@ class FightItem(Item):
         self._std.append([STD.OUT, out])
 
     def stderr(self, connection_id, err):
+        self.has_error = True
         self._std.append([STD.ERR, err])
 
     def show_error(self, error_msg):

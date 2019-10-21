@@ -201,6 +201,7 @@ class OUTPUT():
     FLAGMAN = 'flagman'
     CHARGE = 'charge'
     IS_IMMORTAL = 'is_immortal'
+    HAS_ERROR = 'has_error'
 
 
 class STD():

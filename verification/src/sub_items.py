@@ -56,7 +56,10 @@ class RocketSubItem(BaseSubItem):
     def output(self):
         return {
             'id': self.id,
-            'coordinates': self.coordinates,
+            'coordinates': {
+                'x': self.coordinates[0],
+                'y': self.coordinates[1]
+            },
             'is_dead': self.is_dead,
             'type': self.type
         }
