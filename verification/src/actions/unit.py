@@ -5,7 +5,7 @@ from tools.angles import angle_to_enemy, shortest_distance_between_angles
 from tools.grid import is_coordinates, find_route, straighten_route
 from tools.distances import euclidean_distance
 from tools.terms import OPERATION, ROLE, FEATURE
-from sub_items import RocketSubItem, VerticalRocketSubItem, HealSubItem, PowerSubItem
+from sub_items import ArrowSubItem, VerticalRocketSubItem, HealSubItem, PowerSubItem
 
 
 class MineActions(BaseItemActions):
@@ -512,7 +512,7 @@ class RocketBotActions(UnitActions):
 
     def _shot(self, enemy):
         firing_point = enemy.coordinates
-        self._item.add_sub_item(RocketSubItem(self._item, self._item.coordinates, firing_point))
+        self._item.add_sub_item(ArrowSubItem(self._item, firing_point))
         self._item.charging = self._item.charging_time
 
         return {

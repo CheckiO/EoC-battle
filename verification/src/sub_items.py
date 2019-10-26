@@ -9,14 +9,12 @@ class BaseSubItem(object):
         self.is_dead = False
 
 
-class RocketSubItem(BaseSubItem):
-    type = 'rocket'
+class BaseMissileSubItem(BaseSubItem):
 
-    def __init__(self, item, coordinates, target_coordinates):
+    def __init__(self, item, target_coordinates):
         self.item = item
-        self.coordinates = coordinates
+        self.coordinates = self.item.coordinates
         self.target_coordinates = target_coordinates
-
         self.speed = self.item.rocket_speed
         self.explosion_radius = self.item.rocket_explosion_radius
         self.damage_per_shot = self.item.total_damage
@@ -31,11 +29,7 @@ class RocketSubItem(BaseSubItem):
             distance = euclidean_distance(item.coordinates, self.coordinates)
             if distance > self.explosion_radius:
                 continue
-
-            if self.explosion_radius:
-                damage = (self.explosion_radius - distance) * self.damage_per_shot / self.explosion_radius
-            else:
-                damage = self.damage_per_shot
+            damage = self.get_damage(distance)
             item.get_shot(damage)
 
     def do_frame_action(self):
@@ -63,6 +57,20 @@ class RocketSubItem(BaseSubItem):
             'is_dead': self.is_dead,
             'type': self.type
         }
+
+
+class RocketSubItem(BaseMissileSubItem):
+    type = 'rocket'
+
+    def get_damage(self, distance):
+        return (self.explosion_radius - distance) * self.damage_per_shot / self.explosion_radius
+
+
+class ArrowSubItem(BaseMissileSubItem):
+    type = 'arrow'
+
+    def get_damage(self, distance):
+        return self.damage_per_shot
 
 
 class VerticalRocketSubItem(RocketSubItem):
