@@ -296,7 +296,7 @@ class DefenceRocketActions(DefenceTowerActions):
         else:
             raise ActionValidateError('Wrong attack data')
 
-        self._item.add_sub_item(RocketSubItem(self._item, self._item.coordinates, firing_point))
+        self._item.add_sub_item(RocketSubItem(self._item, firing_point))
         self._item.charging = self._item.charging_time
 
         return {
