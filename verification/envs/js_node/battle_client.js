@@ -87,6 +87,10 @@ BattleClientLoop.prototype.setAction = function (action, data) {
     return this.actualRequest({'method': 'set_action', 'action': action, 'data': data});
 };
 
+BattleClientLoop.prototype.sendCommand = function (action, data) {
+    return this.actualRequest({'method': 'command', 'action': action, 'data': data});
+};
+
 BattleClientLoop.prototype.subscribe = function (action, data) {
     var key = makeId();
     return new Promise(function(resolve, reject){

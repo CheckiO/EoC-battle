@@ -10,7 +10,18 @@ ERR_STR_TYPE = "{name} must be a string"
 ERR_NUMBER_TYPE = "{name} must be a number."
 ERR_NUMBER_POSITIVE_VALUE = "{name} must be a positive."
 ERR_NUMBER_PERCENTAGE_VALUE = "{name} must be a percentage."
-ERR_ARRAY_VALUE = "{name} must contains only correct values"
+ERR_NUMBER_ANGLE_VALUE = "{name} must be an angle number (0<=x<=360)."
+ERR_ARRAY_VALUE = "{name} must contain only correct values"
+
+
+def check_callable(func, name):
+    if not callable(func):
+        raise TypeError(ERR_CALLABLE_TYPE.format(name=name))
+
+
+def check_item_id(item_id):
+    if not isinstance(item_id, int):
+        raise TypeError(ERR_ID_TYPE.format(name="Item"))
 
 
 def check_coordinates(coordinates, name):
@@ -31,12 +42,7 @@ def check_angle(angle, name):
         raise TypeError(ERR_COORDINATES_TYPE.format(name=name))
 
     if angle < 0 or angle > 360:
-        raise ValueError(ERR_NUMBER_POSITIVE_VALUE.format(name=name))
-
-
-def check_item_id(item_id):
-    if not isinstance(item_id, int):
-        raise TypeError(ERR_ID_TYPE.format(name="Item"))
+        raise ValueError(ERR_NUMBER_ANGLE_VALUE.format(name=name))
 
 
 def check_array(array, correct_values, name):
@@ -46,36 +52,31 @@ def check_array(array, correct_values, name):
         raise ValueError(ERR_ARRAY_VALUE.format(name=name))
 
 
-def check_radius(number):
-    if not isinstance(number, (int, float)):
-        raise TypeError(ERR_NUMBER_TYPE.format(name="Radius"))
-    if number <= 0:
-        raise ValueError(ERR_NUMBER_POSITIVE_VALUE.format(name="Radius"))
+# def check_radius(number):
+#     if not isinstance(number, (int, float)):
+#         raise TypeError(ERR_NUMBER_TYPE.format(name="Radius"))
+#     if number <= 0:
+#         raise ValueError(ERR_NUMBER_POSITIVE_VALUE.format(name="Radius"))
 
 
-def check_distance(number):
+def check_distance(number, name):
     if number is None:
         return
     if not isinstance(number, (int, float)):
-        raise TypeError(ERR_NUMBER_TYPE.format(name="Distance"))
+        raise TypeError(ERR_NUMBER_TYPE.format(name=name))
     if number <= 0:
-        raise ValueError(ERR_NUMBER_POSITIVE_VALUE.format(name="Distance"))
+        raise ValueError(ERR_NUMBER_POSITIVE_VALUE.format(name=name))
 
 
-def check_percentage(number):
+def check_percentage(number, name):
     if number is None:
         return
     if not isinstance(number, (int, float)):
-        raise TypeError(ERR_NUMBER_TYPE.format(name="Percentage"))
+        raise TypeError(ERR_NUMBER_TYPE.format(name=name))
     if number < 0:
-        raise ValueError(ERR_NUMBER_PERCENTAGE_VALUE.format(name="Percentage"))
+        raise ValueError(ERR_NUMBER_PERCENTAGE_VALUE.format(name=name))
     if number > 100:
-        raise ValueError(ERR_NUMBER_PERCENTAGE_VALUE.format(name="Percentage"))
-
-
-def check_callable(func, name):
-    if not callable(func):
-        raise TypeError(ERR_CALLABLE_TYPE.format(name=name))
+        raise ValueError(ERR_NUMBER_PERCENTAGE_VALUE.format(name=name))
 
 
 def check_str_type(data, name):
@@ -220,6 +221,8 @@ class Client(object):
 
     ask_enemy_items_in_my_firing_range = ask_my_range_enemy_items
 
+    # DO
+
     def do(self, action, data):
         return Client.CLIENT.set_action(action, data)
 
@@ -230,43 +233,29 @@ class Client(object):
         check_item_id(item_id)
         return self.do('attack', {'id': item_id})
 
-    attack_item = do_attack
-
     def do_attack_coordinates(self, coordinates):
         check_coordinates(coordinates, "Coordinates")
         return self.do('attack_coordinates', {'coordinates': coordinates})
 
-    attack_coordinates = do_attack_coordinates
-
     def do_move(self, coordinates):
         check_coordinates(coordinates, "Coordinates")
         return self.do('move', {'coordinates': coordinates})
-
-    move_to_point = do_move
 
     def do_moves(self, steps):
         for coordinates in steps:
             check_coordinates(coordinates, "Coordinates")
         return self.do('moves', {'steps': steps})
 
-    # TODO: dev-118 methods only for towers?
-
     def do_fire(self):
         return self.do('fire', {})
-
-    fire = do_fire
 
     def do_turn(self, angle):
         check_angle(angle, 'Angle')
         return self.do('turn', {'angle': angle})
 
-    turn_to_angle = do_turn
-
     def do_turn_to_fire(self, item_id):
         check_item_id(item_id)
         return self.do('turn_to_fire', {'id': item_id})
-
-    turn_to_fire = do_turn_to_fire
 
     def do_message(self, message, ids):
         self.do('message', {'message': message, 'ids': ids})
@@ -280,9 +269,11 @@ class Client(object):
     def do_message_to_team(self, message):
         return self.do_message(message, self.ids_my_team())
 
+    # SUBSCRIBE
+
     def when(self, event, callback, data=None, infinity=False):
-        check_callable(callback, "Callback")
         check_str_type(event, "Event")
+        check_callable(callback, "Callback")
         if infinity:
             def new_call(*args, **kwargs):
                 self.when(event, callback, data, infinity=True)
@@ -294,50 +285,34 @@ class Client(object):
     def unsubscribe_all(self):
         return self.when('unsubscribe_all', None)
 
-    def when_in_area(self, center, radius, callback):
-        check_coordinates(center, "Center coordinates")
-        check_radius(radius)
-        return self.when('im_in_area', callback, {
-            'coordinates': center,
-            'radius': radius
-        })
+    def when_enemy_in_range(self, callback, options=None):
+        distance = None
+        percentage = None
+        if isinstance(options, dict):
+            if 'distance' in options:
+                distance = options['distance']
+                check_distance(distance, "Distance")
+            if 'percentage' in options:
+                percentage = options['percentage']
+                check_percentage(percentage, "Percentage")
 
-    def when_item_in_area(self, center, radius, callback):
-        check_coordinates(center, "Center coordinates")
-        check_radius(radius)
-        return self.when('any_item_in_area', callback, {
-            'coordinates': center,
-            'radius': radius
-        })
-
-    def when_im_idle(self, callback):
-        return self.when('idle', callback, {
-            'id': self.my_info['id']
-        })
-
-    def when_id_idle(self, item_id, callback):
-        check_item_id(item_id)
-        return self.when('idle', callback, {
-            'id': item_id
-        })
-
-    def when_enemy_in_range(self, callback, distance=None, percentage=None):
-        check_distance(distance)
-        check_percentage(percentage)
-        return self.when('enemy_in_my_firing_range', callback, {
+        return self.when('enemy_in_range', callback, {
             'distance': distance,
             'percentage': percentage,
         })
 
+    def when_im_idle(self, callback):
+        return self.when('idle', callback, {'id': self.my_info['id']})
+
     def when_item_gone(self, item_id, callback):
         check_item_id(item_id)
-        return self.when('enemy_is_gone', callback, {'id': item_id})
-
-    def when_time(self, secs, callback):
-        return self.when('time', callback, {'time': secs})
+        return self.when('gone', callback, {'id': item_id})
 
     def when_message(self, callback, infinity=True):
         return self.when('message', callback, infinity=infinity)
+
+    def when_time(self, secs, callback):
+        return self.when('time', callback, {'time': secs})
 
 
 class CraftClient(Client):
@@ -351,22 +326,16 @@ class CraftClient(Client):
         self.when('unit_landed', callback, {'craft_id': self.my_info['craft_id']}, infinity=True)
 
 
-class FlagmanClient(Client):
-
-    def command_rocket(self, coordinates):
-        self.command('rocket', {
-                'coordinates': coordinates
-            })
-
-    def command_heal(self, coordinates):
-        self.command('heal', {
-                'coordinates': coordinates
-            })
-
-    def command_power(self, coordinates):
-        self.command('power', {
-                'coordinates': coordinates
-            })
+# class FlagmanClient(Client):
+#
+#     def command_rocket(self, coordinates):
+#         self.command('rocket', {'coordinates': coordinates})
+#
+#     def command_heal(self, coordinates):
+#         self.command('heal', {'coordinates': coordinates})
+#
+#     def command_power(self, coordinates):
+#         self.command('power', {'coordinates': coordinates})
 
 
 class UnitClient(Client):
@@ -389,6 +358,9 @@ class UnitClient(Client):
         self.command(action, data)
 
     def command(self, action, data):
+        if not self.is_alive:
+            print('(COMMAND) NOT ALIVE')
+            return
         new_data = {'by': self._id}
         new_data.update(data)
         super().command(action, new_data)
@@ -396,18 +368,18 @@ class UnitClient(Client):
     def do_depart(self):
         return self.do('depart', {})
 
-    def do_teleport(self, coordinates):
-        self.command('teleport', {
-            'coordinates': coordinates
-        })
-
     def do_heavy_protect(self):
         return self.do('heavy_protect', {})
+
+    def do_teleport(self, coordinates):
+        check_coordinates(coordinates, "Coordinates")
+        return self.do('teleport', {'coordinates': coordinates})
 
     def when(self, event, callback, data=None, infinity=False):
         if not self.is_alive:
             print('(WHEN) NOT ALIVE')
             return
+
         def new_callback(*args, **kwargs):
             if not self.is_alive:
                 return

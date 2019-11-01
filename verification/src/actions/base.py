@@ -86,6 +86,7 @@ class BaseItemActions(object):
         raise ActionSkip
 
     def do_action(self, action_data):
+
         validator = getattr(self, 'validate_{}'.format(action_data['name']), None)
         if validator is not None:
             validator(action_data['name'], action_data["data"])

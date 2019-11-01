@@ -74,9 +74,7 @@ class FlagActions(BaseItemActions):
 class CraftActions(BaseItemActions):
 
     def actions_init(self):
-        return {
-            'land_units': self.action_land_units,
-        }
+        return {'land_units': self.action_land_units}
 
     def action_land_units(self, data):
         coordinates = data.get('coordinates')
@@ -87,50 +85,37 @@ class CraftActions(BaseItemActions):
 
         if self._item.land_unit(coordinates):
             #print('LAND', self._item.craft_id, self._item.amount_units_in)
-            return {
-                'name': 'land_units'
-            }
+            return {'name': 'land_units'}
         else:
             #print('DONE LANDING', self._item.craft_id, self._item.amount_units_in)
             return self._idle()
 
     def commands_init(self):
         return {
-            'attack': self.forward_by('attack'),
-            'depart': self.forward_by('depart'),
-            'heavy_protect': self.forward_by('heavy_protect'),
-            'move': self.forward_by('move'),
-            'moves': self.forward_by('moves'),
-            'teleport': self.forward_command_by('teleport'),
+            'attack': self.forward_action_by('attack'),
+            'depart': self.forward_action_by('depart'),
+            'heavy_protect': self.forward_action_by('heavy_protect'),
+            'move': self.forward_action_by('move'),
+            'moves': self.forward_action_by('moves'),
+            'teleport': self.forward_action_by('teleport'),
+            #'teleport': self.forward_command_by('teleport'),
         }
 
-    def forward_by(self, command):
+    def forward_action_by(self, command):
         def _forwarded(data):
             unit = self._fight_handler.fighters[data['by']]
-
             # TODO: check if unit from Craft
             # craft = self._item
-
-            unit.method_set_action(command, data, from_self=False)  
+            unit.method_set_action(command, data, from_self=False)
         return _forwarded
 
     def forward_command_by(self, command):
         def _forwarded(data):
             unit = self._fight_handler.fighters[data['by']]
-
             # TODO: check if unit from Craft
             # craft = self._item
-
-            unit.method_command(command, data, from_self=False)  
+            unit.method_command(command, data, from_self=False)
         return _forwarded
-
-    def forward_do_attack(self, data):
-        unit = self._fight_handler.fighters[data['by']]
-
-        # TODO: check if unit from Craft
-        # craft = self._item
-
-        unit.method_set_action('attack', data, from_self=False)
 
 
 class UnitActions(BaseItemActions):
@@ -146,19 +131,16 @@ class UnitActions(BaseItemActions):
         actions.update({
             'depart': self.action_depart,
             'move': self.action_move,
-            'moves': self.action_moves
+            'moves': self.action_moves,
+            'teleport': self.action_teleport,
         })
         return actions
 
-    def one_actions_init(self):
-        return {
-            'teleport': self.do_teleport,
-        }
-
-    def commands_init(self):
-        return {
-            'teleport': self.trans_action('teleport')
-        }
+    # def one_actions_init(self):
+    #     return {'teleport': self.command_teleport}
+    #
+    # def commands_init(self):
+    #     return {'teleport': self.trans_action('teleport')}
 
     def _depart(self):
         self._fight_handler.unsubscribe(self._item)
@@ -237,15 +219,17 @@ class UnitActions(BaseItemActions):
             next_point = self._route[0] if self._route else next_point
         return next_point, intermediate_point
 
-    def do_teleport(self, data):
-
+    def validate_teleport(self, action, data):
         if not self._item.has_feature(FEATURE.TELEPORT):
-            return
+            raise ActionValidateError('Teleport is not available')
         if self._item.used_feature(FEATURE.TELEPORT):
-            return
+            raise ActionValidateError('Teleport is already used')
+
+    def action_teleport(self, data):
         self._item.use_feature(FEATURE.TELEPORT)
         coordinates = data.get('coordinates')
         self._item.set_coordinates(coordinates)
+        return self._idle()
 
     def is_shot_possible(self, enemy):
         distance_to_enemy = self.get_distance_to_obj(enemy)

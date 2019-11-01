@@ -125,9 +125,9 @@ class FightItem(Item):
 
     def add_one_action(self, name, data):
         self.one_action.append({
-                'name': name,
-                'data': data
-            })
+            'name': name,
+            'data': data
+        })
 
     def pop_first_one_action(self):
         try:
@@ -140,6 +140,7 @@ class FightItem(Item):
             info = self.pop_first_one_action()
             if info is None:
                 break
+
             self._actions_handlers.parse_one_action_data(info['name'], info['data'])
 
     def has_feature(self, name):
