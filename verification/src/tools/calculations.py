@@ -34,7 +34,7 @@ def in_firing_range_by_percentage(event_item, receiver, desired_percentage):
 
 
 def in_firing_range(event_item, receiver, event_data):
-    if receiver.player_id == event_item.player_id:
+    if receiver.player_id == event_item.player_id or event_item.player_id == -1:
         return False
 
     if event_data is not None:

@@ -388,7 +388,7 @@ Client.prototype.whenTime = function(atTime) {
 class CraftClient extends Client {
 }
 
-CraftClient.prototype.doLandUnits = function (coordinates) {
+CraftClient.prototype.doLandUnits = function (coordinates = undefined) {
     if (typeof coordinates !== 'undefined') {
         checkCoordinates(coordinates, "Coordinates");
     }
@@ -396,7 +396,7 @@ CraftClient.prototype.doLandUnits = function (coordinates) {
 };
 
 CraftClient.prototype.whenUnitLanded = function() {
-    return this.when('unit_landed', {'craft_id': this.myInfo().craft_id});
+    return this.when('unit_landed', {'craft_id': this.myInfo().craft_id}, true);
 };
 
 
@@ -432,12 +432,19 @@ UnitClient.prototype.command = function (action, data) {
     return this.loop.sendCommand(action, data);
 };
 
-UnitClient.prototype.when = function (event, data) {
+UnitClient.prototype.when = function (event, data, infinity=false) {
     if (!this.isAlive()) {
         console.log('(DO) NOT ALIVE');
         return;
     };
     checkStrType(event, "Event");
+    if (infinity === true) {
+        function newCall() {
+            return this.when(event, data, false);
+        };
+        return newCall();
+    }
+
     return this.loop.subscribe(event, data);
 };
 

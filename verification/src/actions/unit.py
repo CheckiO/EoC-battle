@@ -256,6 +256,7 @@ class UnitActions(BaseItemActions):
     def action_attack(self, data):
         self._item.departing_time = 0
         enemy = self._fight_handler.fighters.get(data['id'])
+
         if self.is_shot_possible(enemy):
             return self._attack(enemy)
         return self._move(enemy.coordinates)

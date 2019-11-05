@@ -142,16 +142,16 @@ class FightHandler(BaseHandler):
                         continue
 
                     out_map[xs][ys] = MAP_BUILDING
-                print()
-        print('-' * 30)
+                #print()
+        # print('-' * 30)
         print('{:<10}'.format(round(data['current_game_time'] * 1.0, 4)), end='')
-        print('-' * 20)
-        print('-' * 30)
-        print('  ', end='')
+        # print('-' * 20)
+        # print('-' * 30)
+        # print('  ', end='')
         if SHOW_MAP:
-            for i in range(map_size[0]):
-                print('{num:<{size}}'.format(num=i, size=MAP_X * 2), end='')
-            print()
+            # for i in range(map_size[0]):
+            #     print('{num:<{size}}'.format(num=i, size=MAP_X * 2), end='')
+            # print()
             for num, line in enumerate(out_map):
                 if num % MAP_X:
                     out_line = '  '
@@ -164,7 +164,7 @@ class FightHandler(BaseHandler):
                         out_line += '##'
                     else:
                         out_line += self.short_name(el)
-                print(out_line)
+                #print(out_line)
 
             craft_positions = [craft['coordinates'][1] for craft in data['craft_items'] if craft['coordinates']]
 

@@ -15,7 +15,7 @@ class ROLE():
     TOWER = 'tower'
     UNIT = 'unit'
     BUILDING = 'building'
-    OBSTACLE = 'obstacle'
+    OBSTACLE = 'objective'
     CRAFT = 'craft'
     FLAGMAN = 'flagman'
     MINE = 'mine'

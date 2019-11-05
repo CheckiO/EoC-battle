@@ -73,13 +73,13 @@ PLAYERS = {
             'player_id': 1,
             'type': 'craft',
             'modules': [
-                'landing',
+                'extDeploy',
             ],
             'unit': {
                 'level': 5,
                 'type': 'infantryBot'
             },
-            'unit_quantity': 1
+            'unit_quantity': 3
         },
 
     ],
