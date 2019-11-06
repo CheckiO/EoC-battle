@@ -5,7 +5,6 @@ craft_client = commander.CraftClient()
 craft_client.do_land_units([40,2])
 
 def unit_landed(data):
-    print('LANDED',randint(0, 100), data)
     unit_client = commander.UnitClient(data['id'])
     def search_and_destroy(data=None):
         enemy = unit_client.ask_nearest_enemy()
@@ -23,7 +22,6 @@ craft_client = commander.CraftClient()
 craft_client.do_land_units([40,2])
 
 def unit_landed(data):
-    print('LANDED',randint(0, 100), data)
     unit_client = commander.UnitClient(data['id'])
 
     def heavy_protection(data=None):
@@ -45,7 +43,6 @@ craft_client = commander.CraftClient()
 craft_client.do_land_units([40,0])
 
 def unit_landed(data):
-    print('LANDED',randint(0, 100), data)
     unit_client = commander.UnitClient(data['id'])
     def search_and_destroy(data=None):
         enemy = unit_client.ask_nearest_enemy()

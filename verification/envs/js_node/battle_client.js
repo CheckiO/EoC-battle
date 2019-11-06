@@ -106,9 +106,9 @@ BattleClientLoop.prototype.subscribeCallback = function (action, data, callback,
     }.bind(this);
 };
 
-BattleClientLoop.prototype.subscribe = function (action, data, infinity=false) {
+BattleClientLoop.prototype.subscribe = function (action, data) {
     return new Promise(function(resolve, reject){
-        this.subscribeCallback(action, data, resolve, infinity);
+        this.subscribeCallback(action, data, resolve);
     }.bind(this));
 };
 

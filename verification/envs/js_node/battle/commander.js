@@ -341,9 +341,14 @@ Client.prototype.doMessageToTeam = function (message) {
 
 // SUBSCRIBE
 
-Client.prototype.when = function (event, data, infinity=false) {
+Client.prototype.when = function (event, data) {
     checkStrType(event, "Event");
-    return this.loop.subscribe(event, data, infinity);
+    return this.loop.subscribe(event, data);
+};
+
+Client.prototype.whenInfinity = function (event, data, callback, infinity=false) {
+    checkStrType(event, "Event");
+    return this.loop.subscribeCallback(event, data, callback, infinity);
 };
 
 Client.prototype.unSubscribeAll = function () {
@@ -398,8 +403,8 @@ CraftClient.prototype.doLandUnits = function (coordinates = undefined) {
     return this.do('land_units', {'coordinates': coordinates});
 };
 
-CraftClient.prototype.whenUnitLanded = function() {
-    return this.when('unit_landed', {'craft_id': this.myInfo().craft_id}, true);
+CraftClient.prototype.whenUnitLanded = function(callback) {
+    return this.whenInfinity('unit_landed', {'craft_id': this.myInfo().craft_id}, callback, true);
 };
 
 

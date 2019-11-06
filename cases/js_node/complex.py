@@ -15,7 +15,7 @@ function unitLanded(data) {
     searchAndDestroy();
 }
 
-craftClient.whenUnitLanded().then(unitLanded);
+craftClient.whenUnitLanded(unitLanded);
 """
 
 ATTACKER_CODE_HEAVY = """
@@ -38,7 +38,7 @@ function unitLanded(data) {
     searchAndDestroy();
 }
 
-craftClient.whenUnitLanded().then(unitLanded);
+craftClient.whenUnitLanded(unitLanded);
 """
 
 ATTACKER_CODE_ROCKET = """
@@ -58,7 +58,7 @@ function unitLanded(data) {
     searchAndDestroy();
 }
 
-craftClient.whenUnitLanded().then(unitLanded);
+craftClient.whenUnitLanded(unitLanded);
 """
 
 DEF_CODE_SENTRY_GUN = """

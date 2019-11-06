@@ -269,6 +269,7 @@ class FightItem(Item):
     def get_damaged(self, damage, effects=None):
         if self.is_immortal:
             return
+
         self.hit_points -= damage
         if self.hit_points <= 0:
             self._dead()

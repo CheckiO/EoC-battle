@@ -4,20 +4,17 @@ var craftClient = new commander.CraftClient();
 craftClient.doLandUnits([40,2]);
 
 function unitDepart(data) {
-    console.log(data);
     var unitClient = new commander.UnitClient(data['id']);
     unitClient.doDepart();
 }
 
 function unitTravel(data) {
-    //console.log(data);
-    console.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
     var unitClient = new commander.UnitClient(data['id']);
     unitClient.doMove([36,6]);
-    //unitClient.whenImIdle().then(unitDepart);
+    unitClient.whenImIdle().then(unitDepart);
 }
 
-craftClient.whenUnitLanded().then(unitTravel);
+craftClient.whenUnitLanded(unitTravel);
 """
 
 DEF_CODE_SENTRY_GUN = """
@@ -25,7 +22,6 @@ var commander = require("battle/commander.js");
 var towerClient = new commander.Client();
 
 function unitInFiringRange(data) {
-    console.log(data);
     towerClient.doAttack(data['id'])
 }
 towerClient.whenEnemyInRange().then(unitInFiringRange);
@@ -52,23 +48,23 @@ PLAYERS = {
             'tile_position': [20, 18],
             'type': 'commandCenter'
         },
-        # {
-        #     'code': 'def_code_sentry_gun.py',
-        #     'level': 5,
-        #     'player_id': 0,
-        #     'status': 'idle',
-        #     'tile_position': [32, 12],
-        #     'modules': [
-        #     ],
-        #     'type': 'sentryGun'
-        # },
-        # {
-        #     'level': 2,
-        #     'player_id': 0,
-        #     'status': 'idle',
-        #     'tile_position': [35, 19],
-        #     'type': 'crystaliteFarm'
-        # },
+        {
+            'code': 'def_code_sentry_gun.py',
+            'level': 5,
+            'player_id': 0,
+            'status': 'idle',
+            'tile_position': [32, 12],
+            'modules': [
+            ],
+            'type': 'sentryGun'
+        },
+        {
+            'level': 2,
+            'player_id': 0,
+            'status': 'idle',
+            'tile_position': [35, 19],
+            'type': 'crystaliteFarm'
+        },
         {
             'code': 'attacker_infantry.py',
             'craft_id': 1,

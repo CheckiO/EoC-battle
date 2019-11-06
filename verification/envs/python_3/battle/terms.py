@@ -14,5 +14,5 @@ class ROLE():
     TOWER = 'tower'
     UNIT = 'unit'
     BUILDING = 'building'
-    OBSTACLE = 'objective'
+    OBSTACLE = 'obstacle'
     ALL = (CENTER, TOWER, UNIT, BUILDING, OBSTACLE)

@@ -4,13 +4,10 @@ craft_client = commander.CraftClient()
 craft_client.do_land_units([40,2])
 
 def unit_depart(data):
-    print(data)
     unit_client = commander.UnitClient(data['id'])
     unit_client.do_depart()
 
 def unit_travel(data):
-    #print(data)
-    print('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
     unit_client = commander.UnitClient(data['id'])
     unit_client.do_move([36,6])
     #unit_client.when_im_idle(unit_depart)
@@ -23,7 +20,6 @@ from battle import commander
 tower_client = commander.Client()
 
 def unit_in_firing_range(data):
-    print(data)
     tower_client.do_attack(data['id'])
 
 tower_client.when_enemy_in_range(unit_in_firing_range)
