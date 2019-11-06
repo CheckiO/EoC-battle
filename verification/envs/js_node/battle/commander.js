@@ -379,19 +379,6 @@ Client.prototype.whenImIdle = function () {
     return this.when('idle', {'id': this.myInfo().id});
 };
 
-Client.prototype.whenItemGone = function (id) {
-    checkItemId(id);
-    return this.when('gone', {'id': id});
-};
-
-Client.prototype.whenMessage = function() {
-    return this.when('message', {});
-};
-
-Client.prototype.whenTime = function(atTime) {
-    return this.when('time', {'time': atTime});
-};
-
 
 class CraftClient extends Client {
 }
@@ -425,7 +412,6 @@ UnitClient.prototype.myData = function(){
 
 UnitClient.prototype.do = function (action, data) {
     if (!this.isAlive()) {
-        console.log('(DO) NOT ALIVE');
         return;
     };
     this.command(action, data);
@@ -433,7 +419,6 @@ UnitClient.prototype.do = function (action, data) {
 
 UnitClient.prototype.command = function (action, data) {
     if (!this.isAlive()) {
-        console.log('(COMMAND) NOT ALIVE');
         return;
     };
     data['by'] = this._id;
@@ -442,7 +427,6 @@ UnitClient.prototype.command = function (action, data) {
 
 UnitClient.prototype.when = function (event, data, infinity=false) {
     if (!this.isAlive()) {
-        console.log('(DO) NOT ALIVE');
         return;
     };
     checkStrType(event, "Event");

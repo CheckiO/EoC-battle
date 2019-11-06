@@ -34,10 +34,6 @@ class FightEvent:
         fight_handler = self._fight_handler
         fighters = fight_handler.fighters
 
-        self.add_checker('time',
-            lambda event, receiver: fight_handler.current_game_time >= event['data']['time'],
-            lambda event, receiver, res: {'time': event['data']['time']})
-
         self.add_checker('idle',
             lambda event, receiver: (event['data']['id'] in fighters and
                                      fighters[event['data']['id']].get_action_status() == 'idle'),
@@ -49,12 +45,6 @@ class FightEvent:
                     in_firing_range(event_item, receiver, event['data'])
                 )),
             lambda event, receiver, res: {'id': res.id, 'percentage': event['data']['percentage'], 'distance': event['data']['distance']})
-
-        self.add_checker('gone',
-            lambda event, receiver: (event['data']['id'] in fighters and
-                                     fighters[event['data']['id']].is_gone),
-            lambda event, receiver, res: {'id': event['data']['id']}
-        )
 
         self.add_checker('unit_landed',
             self.gen_fighters_checker(

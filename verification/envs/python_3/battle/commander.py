@@ -301,16 +301,6 @@ class Client(object):
     def when_im_idle(self, callback):
         return self.when('idle', callback, {'id': self.my_info['id']})
 
-    def when_item_gone(self, item_id, callback):
-        check_item_id(item_id)
-        return self.when('gone', callback, {'id': item_id})
-
-    def when_message(self, callback, infinity=True):
-        return self.when('message', callback, infinity=infinity)
-
-    def when_time(self, secs, callback):
-        return self.when('time', callback, {'time': secs})
-
 
 class CraftClient(Client):
 
@@ -350,13 +340,11 @@ class UnitClient(Client):
 
     def do(self, action, data):
         if not self.is_alive:
-            print('(DO) NOT ALIVE')
             return
         self.command(action, data)
 
     def command(self, action, data):
         if not self.is_alive:
-            print('(COMMAND) NOT ALIVE')
             return
         new_data = {'by': self._id}
         new_data.update(data)
@@ -374,7 +362,6 @@ class UnitClient(Client):
 
     def when(self, event, callback, data=None, infinity=False):
         if not self.is_alive:
-            print('(WHEN) NOT ALIVE')
             return
 
         def new_callback(*args, **kwargs):
