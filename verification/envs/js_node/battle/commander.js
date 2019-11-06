@@ -17,21 +17,11 @@ var ERR_ID_TYPE = "%s ID must be an integer",
     ERR_NUMBER_TYPE = "%s must be a number.",
     ERR_NUMBER_POSITIVE_VALUE = "%s must be a positive.",
     ERR_NUMBER_PERCENTAGE_VALUE = "%s must be a percentage.",
-    ERR_ARRAY_VALUE = "%s must contains only correct values",
-    ERR_CALLBACK_DEPRECATED = "[WARNING][DEPRECATED] " +
-        "Callbacks for 'do' (action) commands are deprecated. " +
-        "They will be disabled soon." +
-        " Be careful - callback for 'do' is called after command sending," +
-        " not after end of the action";
+    ERR_NUMBER_ANGLE_VALUE = "%s must be an angle number (0<=x<=360).",
+    ERR_ARRAY_VALUE = "%s must contain only correct values";
 
 
 // Type and values check functions
-
-function checkCallable(func, name) {
-    if (typeof(func) !== 'function') {
-        throw new TypeError(util.format(ERR_CALLABLE_TYPE, name));
-    }
-}
 
 function checkItemId(itemId) {
     if (isNaN(itemId) || parseInt(itemId, 10) !== itemId) {
@@ -46,6 +36,23 @@ function checkCoordinates(coordinates, name) {
     }
 }
 
+function checkLandCoordinates(coordinates, name) {
+    checkCoordinates(coordinates, name)
+    if (coordinates[0] !== 40) {
+        throw new TypeError('Must be a border of map')
+    }
+}
+
+function checkAngle(angle, name) {
+    checkCoordinates(coordinates, name)
+    if (isNaN(number)) {
+        throw new TypeError(util.format(ERR_NUMBER_TYPE, name));
+    }
+    if (angle < 0 || angle > 360) {
+        throw new ValueError(util.format(ERR_NUMBER_ANGLE_VALUE, name))
+    }
+}
+
 function checkArray(array, correctValues, name) {
     if (!Array.isArray(array)) {
         throw new TypeError(util.format(ERR_ARRAY_TYPE, name));
@@ -57,39 +64,42 @@ function checkArray(array, correctValues, name) {
     }
 }
 
-function checkRadius(number) {
-    if (isNaN(number)) {
-        throw new TypeError(util.format(ERR_NUMBER_TYPE, "Radius"));
-    }
-    if (number <= 0) {
-        throw new Error(util.format(ERR_NUMBER_POSITIVE_VALUE, "Radius"));
-    }
-}
-
-function checkDistance(number) {
-    if (number is undefined) {
+function checkDistance(number, name) {
+    if (typeof number === 'undefined') {
         return
     }
     if (isNaN(number)) {
-        throw new TypeError(util.format(ERR_NUMBER_TYPE, "Distance"));
+        throw new TypeError(util.format(ERR_NUMBER_TYPE, name));
     }
     if (number <= 0) {
-        throw new Error(util.format(ERR_NUMBER_POSITIVE_VALUE, "Distance"));
+        throw new Error(util.format(ERR_NUMBER_POSITIVE_VALUE, name));
     }
 }
 
-function checkPercentage(number) {
-    if (number is undefined) {
+function checkPercentage(number, name) {
+    if (typeof number === 'undefined') {
         return
     }
     if (isNaN(number)) {
-        throw new TypeError(util.format(ERR_NUMBER_TYPE, "Percentage"));
+        throw new TypeError(util.format(ERR_NUMBER_TYPE, name));
     }
     if (number < 0) {
-        throw new Error(util.format(ERR_NUMBER_PERCENTAGE_VALUE, "Percentage"));
+        throw new Error(util.format(ERR_NUMBER_PERCENTAGE_VALUE, name));
     }
     if (number > 100) {
-        throw new Error(util.format(ERR_NUMBER_PERCENTAGE_VALUE, "Percentage"));
+        throw new Error(util.format(ERR_NUMBER_PERCENTAGE_VALUE, name));
+    }
+}
+
+function checkCallable(func, name) {
+    if (typeof(func) !== 'function') {
+        throw new TypeError(util.format(ERR_CALLABLE_TYPE, name));
+    }
+}
+
+function checkStrType(func, name) {
+    if (typeof(func) !== 'string') {
+        throw new TypeError(util.format(ERR_STR_TYPE, name));
     }
 }
 
@@ -121,7 +131,7 @@ var MapMath = {
 
 var Filters = {
     enemy: function(client, item){
-        return client.myInfo().player_id != item.player_id && item.player_id != -1;
+        return client.myInfo().player_id != item.player_id && item.player_id != -1 && !item.is_immortal;
     },
     my: function(client, item){
         return client.myInfo().player_id == item.player_id;
@@ -133,6 +143,9 @@ var Filters = {
         return _filter;
     },
     inMyRange: function(client, item){
+        if (!item.coordinates || !client.myInfo().coordinates) {
+            return false;
+        }
         var distance = MapMath.euclideanDistance(item.coordinates, client.myInfo().coordinates);
         return distance - item.size/2 <= client.myInfo().firing_range;
     }
@@ -236,7 +249,7 @@ Client.prototype.askUnits = function () {
     return this.askItems(undefined, [ROLE.UNIT]);
 };
 
-Client.prototype.askMyRangeEnemyItems = function () {
+Client.prototype.askEnemyItemsInMyFiringRange = function () {
     return this.mapFilter([Filters.enemy, Filters.inMyRange]);
 };
 
@@ -270,9 +283,18 @@ Client.prototype.do = function (action, data) {
     return this.loop.setAction(action, data);
 };
 
+Client.prototype.command = function (action, data) {
+    return this.loop.sendCommand(action, data);
+};
+
 Client.prototype.doAttack = function (id) {
     checkItemId(id);
     return this.do('attack', {'id': id});
+};
+
+Client.prototype.doAttackCoordinates = function (coordinates) {
+    checkCoordinates(coordinates, "Coordinates");
+    return this.do('attack_coordinates', {'coordinates': coordinates});
 };
 
 Client.prototype.doMove = function (coordinates) {
@@ -284,16 +306,22 @@ Client.prototype.doMoves = function (steps) {
     _.each(steps, function(coordinates) {
         checkCoordinates(coordinates, "Coordinates");
     });
-    
     return this.do('moves', {'steps': steps});
 };
 
-Client.prototype.doAttackCoordinates = function (coordinates) {
-    checkCoordinates(coordinates, "Coordinates");
-    return this.do('attack_coor', {'coordinates': coordinates});
+Client.prototype.doFire = function () {
+    return this.do('fire', {});
 };
 
-Client.prototype.doAttackCoordinated = Client.prototype.doAttackCoordinates; // Used to have a typo, kept to prevent breakage
+Client.prototype.doTurn = function (angle) {
+    checkAngle(angle, "Angle");
+    return this.do('turn', {'angle': angle});
+};
+
+Client.prototype.doTurnToFire = function (itemId) {
+    checkItemId(itemId);
+    return this.do('turn_to_fire', {'id': itemId});
+};
 
 Client.prototype.doMessage = function (message, ids) {
     return this.do('message', {'message': message, 'ids': ids});
@@ -313,65 +341,114 @@ Client.prototype.doMessageToTeam = function (message) {
 
 // SUBSCRIBE
 
-Client.prototype.when = function (action, data) {
-    return this.loop.subscribe(action, data);
+Client.prototype.when = function (event, data) {
+    checkStrType(event, "Event");
+    return this.loop.subscribe(event, data);
+};
+
+Client.prototype.whenInfinity = function (event, data, callback, infinity=false) {
+    checkStrType(event, "Event");
+    return this.loop.subscribeCallback(event, data, callback, infinity);
 };
 
 Client.prototype.unSubscribeAll = function () {
     return this.when('unsubscribe_all', undefined);
 };
 
-Client.prototype.whenInArea = function (center, radius) {
-    checkCoordinates(center, "Center coordinates");
-    checkRadius(radius);
-    return this.when('im_in_area', {
-        'coordinates': center,
-        'radius': radius
-    });
-};
+Client.prototype.whenEnemyInRange = function (options = undefined) {
+    var distance = null;
+    var percentage = null;
+    if (typeof options !== 'undefined') {
+        if (typeof options.distance !== 'undefined') {
+            distance = options.distance;
+            checkDistance(distance);
+        };
+        if (typeof options.percentage !== 'undefined') {
+            percentage = options.percentage;
+            checkPercentage(percentage);
+        };
+    };
 
-Client.prototype.whenItemInArea = function (center, radius) {
-    checkCoordinates(center, "Center coordinates");
-    return this.when('any_item_in_area', {
-        'coordinates': center,
-        'radius': radius
-    });
-};
-
-Client.prototype.whenStoped = function () {
-    console.warn("'whenStoped' is deprecated. Please use 'whenIdle' instaed");
-    return new Promise(function(resolve){});
-};
-
-Client.prototype.whenIdle = function () {
-    return this.when('im_idle', {});
-};
-
-Client.prototype.whenEnemyInRange = function (distance, percentage) {
-    checkDistance(distance);
-    checkPercentage(percentage);
-    return this.when('enemy_in_my_firing_range', {
+    return this.when('enemy_in_range', {
         'distance': distance,
         'percentage': percentage
     });
 };
 
-Client.prototype.whenEnemyOutRange = function () {
-    console.warn("'whenEnemyOutRange' is deprecated");
-    return new Promise(function(resolve){});
+Client.prototype.whenImIdle = function () {
+    return this.when('idle', {'id': this.myInfo().id});
 };
 
-Client.prototype.whenItemDestroyed = function (id) {
-    checkItemId(id);
-    return this.when('death', {'id': id});
+
+class CraftClient extends Client {
+}
+
+CraftClient.prototype.doLandUnits = function (coordinates = undefined) {
+    if (typeof coordinates !== 'undefined') {
+        checkCoordinates(coordinates, "Coordinates");
+    }
+    return this.do('land_units', {'coordinates': coordinates});
 };
 
-Client.prototype.whenTime = function(atTime) {
-    return this.when('time', {'time': atTime});
+CraftClient.prototype.whenUnitLanded = function(callback) {
+    return this.whenInfinity('unit_landed', {'craft_id': this.myInfo().craft_id}, callback, true);
 };
 
-Client.prototype.whenMessage = function() {
-    return this.when('message', {});
+
+class UnitClient extends Client {
+    constructor(_id) {
+        super();
+        this._id = _id;
+    };
+}
+
+UnitClient.prototype.isAlive = function () {
+    return this._id.toString() in this.envMap();
 };
+
+UnitClient.prototype.myData = function(){
+    return this.loop.myData['children'][this._id.toString()]
+};
+
+UnitClient.prototype.do = function (action, data) {
+    if (!this.isAlive()) {
+        return;
+    };
+    this.command(action, data);
+};
+
+UnitClient.prototype.command = function (action, data) {
+    if (!this.isAlive()) {
+        return;
+    };
+    data['by'] = this._id;
+    return this.loop.sendCommand(action, data);
+};
+
+UnitClient.prototype.when = function (event, data, infinity=false) {
+    if (!this.isAlive()) {
+        return;
+    };
+    checkStrType(event, "Event");
+    return this.loop.subscribe(event, data, infinity);
+};
+
+UnitClient.prototype.doDepart = function () {
+    return this.do('depart', {});
+};
+
+UnitClient.prototype.doHeavyProtect = function () {
+    return this.do('heavy_protect', {});
+};
+
+UnitClient.prototype.doTeleport = function (coordinates) {
+    checkCoordinates(coordinates, "Coordinates");
+    return this.do('teleport', {'coordinates': coordinates});
+};
+
 
 exports.Client = Client;
+exports.CraftClient = CraftClient;
+exports.UnitClient = UnitClient;
+
+//exports.FlagmanClient = FlagmanClient;

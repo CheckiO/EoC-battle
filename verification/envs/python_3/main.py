@@ -111,8 +111,7 @@ class PlayerRefereeClient(RefereeClient):
             data = self.grab_env_data(data)
             return callback(data)
         lookup_key = _make_id(_grab_call_back)
-        response = self.actual_request({'method': 'subscribe', 'lookup_key': lookup_key,
-                                        'event': event, 'data': data})
+        response = self.actual_request({'method': 'subscribe', 'lookup_key': lookup_key, 'event': event, 'data': data})
         if response.get('status') == 200:
             self.runner.subscribe(lookup_key, _grab_call_back)
             return True

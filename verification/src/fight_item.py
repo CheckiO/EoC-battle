@@ -125,9 +125,9 @@ class FightItem(Item):
 
     def add_one_action(self, name, data):
         self.one_action.append({
-                'name': name,
-                'data': data
-            })
+            'name': name,
+            'data': data
+        })
 
     def pop_first_one_action(self):
         try:
@@ -140,6 +140,7 @@ class FightItem(Item):
             info = self.pop_first_one_action()
             if info is None:
                 break
+
             self._actions_handlers.parse_one_action_data(info['name'], info['data'])
 
     def has_feature(self, name):
@@ -268,6 +269,7 @@ class FightItem(Item):
     def get_damaged(self, damage, effects=None):
         if self.is_immortal:
             return
+
         self.hit_points -= damage
         if self.hit_points <= 0:
             self._dead()

@@ -87,15 +87,26 @@ BattleClientLoop.prototype.setAction = function (action, data) {
     return this.actualRequest({'method': 'set_action', 'action': action, 'data': data});
 };
 
-BattleClientLoop.prototype.subscribe = function (action, data) {
+BattleClientLoop.prototype.sendCommand = function (action, data) {
+    return this.actualRequest({'method': 'command', 'action': action, 'data': data});
+};
+
+
+BattleClientLoop.prototype.subscribeCallback = function (action, data, callback, infinity=false) {
     var key = makeId();
+    this.actualRequest({'method': 'subscribe', 'lookup_key': key, 'event': action, 'data': data});
+    this.waitEvents[key] = function(data){
+        data = this.grabEnvData(data);
+        callback(data);
+        if (infinity === true) {
+            this.subscribeCallback(action, data, callback, infinity);
+        };
+    }.bind(this);
+};
+
+BattleClientLoop.prototype.subscribe = function (action, data) {
     return new Promise(function(resolve, reject){
-        this.actualRequest({'method': 'subscribe', 'lookup_key': key,
-                            'event': action, 'data': data});
-        this.waitEvents[key] = function(data){
-            data = this.grabEnvData(data);
-            resolve(data);
-        }.bind(this);
+        this.subscribeCallback(action, data, resolve);
     }.bind(this));
 };
 
