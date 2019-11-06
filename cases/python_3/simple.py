@@ -9,10 +9,11 @@ def unit_depart(data):
     unit_client.do_depart()
 
 def unit_travel(data):
-    print(data)
+    #print(data)
+    print('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
     unit_client = commander.UnitClient(data['id'])
     unit_client.do_move([36,6])
-    unit_client.when_im_idle(unit_depart)
+    #unit_client.when_im_idle(unit_depart)
 
 craft_client.when_unit_landed(unit_travel)
 """
@@ -49,23 +50,23 @@ PLAYERS = {
             'tile_position': [20, 18],
             'type': 'commandCenter'
         },
-        {
-            'code': 'def_code_sentry_gun.py',
-            'level': 5,
-            'player_id': 0,
-            'status': 'idle',
-            'tile_position': [32, 12],
-            'modules': [
-            ],
-            'type': 'sentryGun'
-        },
-        {
-            'level': 2,
-            'player_id': 0,
-            'status': 'idle',
-            'tile_position': [35, 19],
-            'type': 'crystaliteFarm'
-        },
+        # {
+        #     'code': 'def_code_sentry_gun.py',
+        #     'level': 5,
+        #     'player_id': 0,
+        #     'status': 'idle',
+        #     'tile_position': [32, 12],
+        #     'modules': [
+        #     ],
+        #     'type': 'sentryGun'
+        # },
+        # {
+        #     'level': 2,
+        #     'player_id': 0,
+        #     'status': 'idle',
+        #     'tile_position': [35, 19],
+        #     'type': 'crystaliteFarm'
+        # },
         {
             'code': 'attacker_infantry.py',
             'craft_id': 1,

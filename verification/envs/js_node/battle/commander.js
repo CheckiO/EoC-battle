@@ -131,7 +131,7 @@ var MapMath = {
 
 var Filters = {
     enemy: function(client, item){
-        return client.myInfo().player_id != item.player_id && item.player_id != -1;
+        return client.myInfo().player_id != item.player_id && item.player_id != -1 && !item.is_immortal;
     },
     my: function(client, item){
         return client.myInfo().player_id == item.player_id;
@@ -143,6 +143,9 @@ var Filters = {
         return _filter;
     },
     inMyRange: function(client, item){
+        if (!item.coordinates || !client.myInfo().coordinates) {
+            return false;
+        }
         var distance = MapMath.euclideanDistance(item.coordinates, client.myInfo().coordinates);
         return distance - item.size/2 <= client.myInfo().firing_range;
     }
@@ -246,7 +249,7 @@ Client.prototype.askUnits = function () {
     return this.askItems(undefined, [ROLE.UNIT]);
 };
 
-Client.prototype.askMyRangeEnemyItems = function () {
+Client.prototype.askEnemyItemsInMyFiringRange = function () {
     return this.mapFilter([Filters.enemy, Filters.inMyRange]);
 };
 
@@ -338,9 +341,9 @@ Client.prototype.doMessageToTeam = function (message) {
 
 // SUBSCRIBE
 
-Client.prototype.when = function (event, data) {
+Client.prototype.when = function (event, data, infinity=false) {
     checkStrType(event, "Event");
-    return this.loop.subscribe(event, data);
+    return this.loop.subscribe(event, data, infinity);
 };
 
 Client.prototype.unSubscribeAll = function () {
@@ -438,14 +441,7 @@ UnitClient.prototype.when = function (event, data, infinity=false) {
         return;
     };
     checkStrType(event, "Event");
-    if (infinity === true) {
-        function newCall() {
-            return this.when(event, data, false);
-        };
-        return newCall();
-    }
-
-    return this.loop.subscribe(event, data);
+    return this.loop.subscribe(event, data, infinity);
 };
 
 UnitClient.prototype.doDepart = function () {

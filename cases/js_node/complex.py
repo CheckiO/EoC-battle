@@ -4,13 +4,10 @@ var craftClient = new commander.CraftClient();
 craftClient.doLandUnits([40,2]);
 
 function unitLanded(data) {
-    console.log(data);
     var unitClient = new commander.UnitClient(data['id']);
     
     function searchAndDestroy() {
-        console.log('wewww');    
         var enemy = unitClient.askNearestEnemy();
-        console.log(enemy);
         unitClient.doAttack(enemy['id']);
         unitClient.whenImIdle().then(searchAndDestroy);
     };
@@ -27,13 +24,13 @@ var craftClient = new commander.CraftClient();
 craftClient.doLandUnits([40,2]);
 
 function unitLanded(data) {
-    console.log(data);
     var unitClient = new commander.UnitClient(data['id']);
 
-    function heavyProtection(data) {
+    function heavyProtection() {
         unitClient.doHeavyProtect();
     };
-    function searchAndDestroy(data) {
+    
+    function searchAndDestroy() {
         unitClient.doMove([28,19]);
         unitClient.whenImIdle().then(heavyProtection);
     };
@@ -50,11 +47,10 @@ var craftClient = new commander.CraftClient();
 craftClient.doLandUnits([40,0]);
 
 function unitLanded(data) {
-    console.log(data);
     var unitClient = new commander.UnitClient(data['id']);
 
-    function searchAndDestroy(data) {
-        enemy = unitClient.askNearestEnemy();
+    function searchAndDestroy() {
+        var enemy = unitClient.askNearestEnemy();
         unitClient.doAttack(enemy['id']);
         unitClient.whenImIdle().then(searchAndDestroy);
     };
@@ -71,13 +67,14 @@ var towerClient = new commander.Client();
 
 function searchNextTarget(data) {
     var enemies = towerClient.askEnemyItemsInMyFiringRange();
-    if enemies:
-        unitInFiringRange(enemies[0])
-    else:
-        towerClient.whenEnemyInRange().then(unitInFiringRange);
+    if (typeof enemies !== 'undefined') {
+        unitInFiringRange(enemies[0]);
+    } else {
+        towerClient.whenEnemyInRange().then(unitInFiringRange);    
+    };
 };
+
 function unitInFiringRange(data) {
-    console.log(data);
     towerClient.doAttack(data['id']);
     towerClient.whenImIdle().then(searchNextTarget);
 };
@@ -91,13 +88,13 @@ var towerClient = new commander.Client();
 
 function searchNextTarget(data) {
     var enemies = towerClient.askEnemyItemsInMyFiringRange();
-    if enemies:
-        unitInFiringRange(enemies[0])
-    else:
-        towerClient.whenEnemyInRange().then(unitInFiringRange);
+    if (typeof enemies !== 'undefined') {
+        unitInFiringRange(enemies[0]);
+    } else {
+        towerClient.whenEnemyInRange().then(unitInFiringRange);    
+    };
 };
 function unitInFiringRange(data) {
-    console.log(data);
     // ATTACK ITEM
     towerClient.doTurnToFire(data['id']);
     //ATTACK ANGLE
@@ -115,13 +112,13 @@ var towerClient = new commander.Client();
 
 function searchNextTarget(data) {
     var enemies = towerClient.askEnemyItemsInMyFiringRange();
-    if enemies:
-        unitInFiringRange(enemies[0])
-    else:
-        towerClient.whenEnemyInRange().then(unitInFiringRange);
+    if (typeof enemies !== 'undefined') {
+        unitInFiringRange(enemies[0]);
+    } else {
+        towerClient.whenEnemyInRange().then(unitInFiringRange);    
+    };
 };
 function unitInFiringRange(data) {
-    console.log(data);
     // ATTACK ITEM
     towerClient.doAttack(data['id']);
     //ATTACK COORDINATES
@@ -174,32 +171,32 @@ PLAYERS = {
             ],
             'type': 'sentryGun'
         },
-        # {
-        #     'code': 'def_code_machine_gun.py',
-        #     'level': 1,
-        #     'player_id': 0,
-        #     'status': 'idle',
-        #     'tile_position': [27, 23],
-        #     'modules': [
-        #         'u.rateOfFire.lvl1',
-        #         'u.hitPoints.lvl1',
-        #         'incCoverRange',
-        #     ],
-        #     'type': 'machineGun'
-        # },
-        # {
-        #     'code': 'def_code_rocket_gun.py',
-        #     'level': 1,
-        #     'player_id': 0,
-        #     'status': 'idle',
-        #     'tile_position': [20, 23],
-        #     'modules': [
-        #         'b.damagePerShot.lvl1',
-        #         'u.hitPoints.lvl2',
-        #         'u.fireRange.lvl2',
-        #     ],
-        #     'type': 'rocketGun'
-        # },
+        {
+            'code': 'def_code_machine_gun.py',
+            'level': 1,
+            'player_id': 0,
+            'status': 'idle',
+            'tile_position': [27, 23],
+            'modules': [
+                'u.rateOfFire.lvl1',
+                'u.hitPoints.lvl1',
+                'incCoverRange',
+            ],
+            'type': 'machineGun'
+        },
+        {
+            'code': 'def_code_rocket_gun.py',
+            'level': 1,
+            'player_id': 0,
+            'status': 'idle',
+            'tile_position': [20, 23],
+            'modules': [
+                'b.damagePerShot.lvl1',
+                'u.hitPoints.lvl2',
+                'u.fireRange.lvl2',
+            ],
+            'type': 'rocketGun'
+        },
         {
             'level': 2,
             'player_id': 0,
@@ -223,76 +220,74 @@ PLAYERS = {
                 'level': 5,
                 'type': 'infantryBot'
             },
+            'unit_quantity': 5
+        },
+        {
+            'code': 'attacker_heavy.py',
+            'craft_id': 2,
+            'level': 1,
+            'player_id': 1,
+            'type': 'craft',
+            'modules': [
+                'u.rateOfFire.lvl1',
+                'speed.lvl2',
+                'extDeploy',
+                'heavyProtect',
+            ],
+            'unit': {
+                'level': 1,
+                'type': 'heavyBot'
+            },
+            'unit_quantity': 3
+        },
+        {
+            'code': 'attacker_rocket.py',
+            'craft_id': 3,
+            'level': 1,
+            'player_id': 1,
+            'type': 'craft',
+            'modules': [
+                'fasterRocket',
+                'speed.lvl1',
+                'extDeploy',
+            ],
+            'unit': {
+                'level': 3,
+                'type': 'rocketBot'
+            },
             'unit_quantity': 2
         },
-        # {
-        #     'code': 'attacker_heavy.py',
-        #     'craft_id': 2,
-        #     'level': 1,
-        #     'player_id': 1,
-        #     'type': 'craft',
-        #     'modules': [
-        #         'u.rateOfFire.lvl1',
-        #         'speed.lvl2',
-        #         'extDeploy',
-        #         'heavyProtect',
-        #     ],
-        #     'unit': {
-        #         'level': 1,
-        #         'type': 'heavyBot'
-        #     },
-        #     'unit_quantity': 3
-        # },
-        # {
-        #     'code': 'attacker_rocket.py',
-        #     'craft_id': 3,
-        #     'level': 1,
-        #     'player_id': 1,
-        #     'type': 'craft',
-        #     'modules': [
-        #         'fasterRocket',
-        #         'speed.lvl1',
-        #         'extDeploy',
-        #     ],
-        #     'unit': {
-        #         'level': 3,
-        #         'type': 'rocketBot'
-        #     },
-        #     'unit_quantity': 2
-        # },
 
-        # Obstacles
-
-        # {
-        #     'player_id': -1,
-        #     'status': 'idle',
-        #     'tile_position': [
-        #         33,
-        #         10
-        #     ],
-        #     'type': 'obstacle5',
-        #     'level': 2
-        # },
-        # {
-        #     'player_id': -1,
-        #     'status': 'idle',
-        #     'tile_position': [
-        #         33,
-        #         5
-        #     ],
-        #     'type': 'obstacle5',
-        #     'level': 2
-        # },
-        # {
-        #     'player_id': -1,
-        #     'status': 'idle',
-        #     'tile_position': [
-        #         33,
-        #         0
-        #     ],
-        #     'type': 'obstacle5',
-        #     'level': 3
-        # },
+        {
+            'player_id': -1,
+            'status': 'idle',
+            'tile_position': [
+                33,
+                10
+            ],
+            'type': 'obstacle5',
+            'level': 2
+        },
+        {
+            'player_id': -1,
+            'status': 'idle',
+            'tile_position': [
+                33,
+                5
+            ],
+            'type': 'obstacle5',
+            'level': 2
+        },
+        {
+            'player_id': -1,
+            'status': 'idle',
+            'tile_position': [
+                33,
+                0
+            ],
+            'type': 'obstacle5',
+            'level': 3
+        },
 
     ],
     'map_size': [40, 40],

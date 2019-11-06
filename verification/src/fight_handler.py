@@ -402,6 +402,13 @@ class FightHandler(BaseHandler):
             subscribe an FightItem with ID "item_id" on event "event_name" with data "data"
             and on item side it registered as lookup_key
         """
+        print(event_name)
+        print(item_id)
+        print(lookup_key)
+        print(data)
+
+        # from tools import debug
+        # debug()
 
         subscribe_data = {
             'receiver_id': item_id,
@@ -411,6 +418,7 @@ class FightHandler(BaseHandler):
         
         self.event.add_subscriptions(event_name, subscribe_data)
         return True
+
     def unsubscribe(self, fight_item):
         self.event.unsubscribe_all(fight_item.id)
 

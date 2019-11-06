@@ -210,7 +210,7 @@ PLAYERS = {
                 'level': 5,
                 'type': 'infantryBot'
             },
-            'unit_quantity': 2
+            'unit_quantity': 5
         },
         {
             'code': 'attacker_heavy.py',
