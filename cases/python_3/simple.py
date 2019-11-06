@@ -46,23 +46,23 @@ PLAYERS = {
             'tile_position': [20, 18],
             'type': 'commandCenter'
         },
-        # {
-        #     'code': 'def_code_sentry_gun.py',
-        #     'level': 5,
-        #     'player_id': 0,
-        #     'status': 'idle',
-        #     'tile_position': [32, 12],
-        #     'modules': [
-        #     ],
-        #     'type': 'sentryGun'
-        # },
-        # {
-        #     'level': 2,
-        #     'player_id': 0,
-        #     'status': 'idle',
-        #     'tile_position': [35, 19],
-        #     'type': 'crystaliteFarm'
-        # },
+        {
+            'code': 'def_code_sentry_gun.py',
+            'level': 5,
+            'player_id': 0,
+            'status': 'idle',
+            'tile_position': [32, 12],
+            'modules': [
+            ],
+            'type': 'sentryGun'
+        },
+        {
+            'level': 2,
+            'player_id': 0,
+            'status': 'idle',
+            'tile_position': [35, 19],
+            'type': 'crystaliteFarm'
+        },
         {
             'code': 'attacker_infantry.py',
             'craft_id': 1,

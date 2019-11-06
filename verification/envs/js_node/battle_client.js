@@ -57,8 +57,6 @@ BattleClientLoop.prototype.getCallActions = function () {
 };
 
 BattleClientLoop.prototype.actionEvent = function (data) {
-    console.log('QQQQQQQQQQQQQQQQQQQQQQQQQQQ');
-    console.log(data);
     var callBack = this.waitEvents[data.lookup_key];
     delete this.waitEvents[data.lookup_key];
     callBack(data.data);
