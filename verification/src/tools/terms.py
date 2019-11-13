@@ -78,6 +78,7 @@ class ATTRIBUTE():
     EFFECTS = 'effects'
     MODULES = 'modules'
     CRAFT_FIGHT_ID = 'craft_fight_id'
+    IS_HIDDEN = 'is_hidden'
     IS_IMMORTAL = 'is_immortal'
     # MachineGun Attributes
     FIELD_OF_VIEW = 'field_of_view'
@@ -97,6 +98,8 @@ class ATTRIBUTE():
 
     ROCKET_SPEED = 'rocket_speed'
     ROCKET_EXPLOSION_RADIUS = 'rocket_explosion_radius'
+    # Mine Attributes
+    EXPLOSION_TIMER = 'explosion_timer'
 
 
 class ACTION():

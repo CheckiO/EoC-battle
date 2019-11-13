@@ -131,7 +131,7 @@ var MapMath = {
 
 var Filters = {
     enemy: function(client, item){
-        return client.myInfo().player_id != item.player_id && item.player_id != -1 && !item.is_immortal;
+        return client.myInfo().player_id != item.player_id && item.player_id != -1 && !item.is_immortal && !item.is_hidden;
     },
     my: function(client, item){
         return client.myInfo().player_id == item.player_id;

@@ -1,4 +1,0 @@
-// battle configuration works through the Python only.
-// switch to python and uncomment 
-// mission.MISSION_DATA['players'][1]['env_name'] = 'js_node'
-// so you can code your attack strategy in JS
