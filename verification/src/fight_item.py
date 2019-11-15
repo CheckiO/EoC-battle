@@ -172,10 +172,6 @@ class FightItem(Item):
         
         return item_data
 
-    @property
-    def is_hidden(self):
-        return False
-    
     def add_sub_item(self, sub_item):
         next_id = self.generate_id()
         sub_item.set_id(next_id)
@@ -304,6 +300,10 @@ class FightItem(Item):
         if not self._state:
             return False
         return self._state.get('name') == 'departed'
+
+    @property
+    def is_hidden(self):
+        return False
 
     @property
     def is_obstacle(self):
@@ -890,7 +890,7 @@ class MineItem(FightItem):
 
     @property
     def is_dead(self):
-        return self._state == {'name': 'dead'}
+        return self._state.get('name') == 'dead'
 
     def detonate(self):
         self.action = {

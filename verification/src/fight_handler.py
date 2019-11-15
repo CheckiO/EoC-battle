@@ -161,6 +161,8 @@ class FightHandler(BaseHandler):
     def get_env_map_data(self):
         data = {}
         for key, value in self.fighters.items():
+            if value.is_hidden:
+                continue
             if value.is_gone:
                 continue
             if value.is_obstacle:
