@@ -2,7 +2,7 @@ from battle.tools import euclidean_distance
 
 
 def enemy(client, item):
-    return client.my_info['player_id'] != item['player_id'] and item['player_id'] != -1 and not item['is_immortal'] and not item['is_hidden']
+    return client.my_info['player_id'] != item['player_id'] and item['player_id'] != -1 and not item['is_immortal']
 
 
 def my(client, item):
