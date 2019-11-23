@@ -172,11 +172,6 @@ class FightItem(Item):
         
         return item_data
 
-
-    @property
-    def is_hidden(self):
-        return False
-    
     def add_sub_item(self, sub_item):
         next_id = self.generate_id()
         sub_item.set_id(next_id)
@@ -202,7 +197,6 @@ class FightItem(Item):
 
     @property
     def is_immortal(self):
-        return False
         return (self.role == ROLE.UNIT and
                 self._fight_handler.current_game_time - self.land_time < IMMORTAL_TIME)
 
@@ -308,6 +302,10 @@ class FightItem(Item):
         return self._state.get('name') == 'departed'
 
     @property
+    def is_hidden(self):
+        return False
+
+    @property
     def is_obstacle(self):
         return self.role == "obstacle"
 
@@ -334,6 +332,7 @@ class FightItem(Item):
             ATTRIBUTE.SUBITEMS: self.info_subitems,
             ATTRIBUTE.EFFECTS: self.info_effects,
             ATTRIBUTE.IS_IMMORTAL: self.is_immortal,
+            ATTRIBUTE.IS_HIDDEN: self.is_hidden,
         }
 
     @property
@@ -868,13 +867,30 @@ class RocketBotUnit(UnitItem):
 class MineItem(FightItem):
     ROLE_TYPE = ROLE.MINE
 
-    is_activated = False
     is_executable = False
-    timer = 0.3
+
+    def update_additional_attributes(self):
+        self.firing_range = self.item_data[ATTRIBUTE.FIRING_RANGE]
+        self.damage_per_shot = self.item_data[ATTRIBUTE.DAMAGE_PER_SHOT]
+        self.explosion_timer = 0.3
+
+    @property
+    def info(self):
+        info = super(MineItem, self).info
+        info.update({
+            ATTRIBUTE.FIRING_RANGE: self.firing_range,
+            ATTRIBUTE.DAMAGE_PER_SHOT:self.damage_per_shot,
+            ATTRIBUTE.EXPLOSION_TIMER: self.explosion_timer,
+        })
+        return info
 
     @property
     def is_hidden(self):
-        return self.action.get('name') == 'waiting'
+        return self.action.get('name') == 'wait'
+
+    @property
+    def is_dead(self):
+        return self._state.get('name') == 'dead'
 
     def detonate(self):
         self.action = {
@@ -886,33 +902,30 @@ class MineItem(FightItem):
         item_data.update(unit_display_stats(item_data[ATTRIBUTE.ITEM_TYPE], item_data[ATTRIBUTE.LEVEL]))
         item_data[ATTRIBUTE.ROLE] = ROLE.MINE
         item_data[ACTION.REQUEST_NAME] = {
-            'name': 'waiting',
+            'name': 'wait',
             'data': {}
         }
         item_data[ATTRIBUTE.COORDINATES] = item_data[ATTRIBUTE.TILE_POSITION]
-
         return item_data
 
     def detonator_timer(self):
-        self.timer -= self._fight_handler.GAME_FRAME_TIME
-        if self.timer <= 0:
+        self.explosion_timer -= self._fight_handler.GAME_FRAME_TIME
+        if self.explosion_timer <= 0:
+            self.explosion_timer = 0
             self.explode()
 
     def explode(self):
-        self.is_dead = True
         for item in self._fight_handler.fighters.values():
-            if item.is_dead:
+            if item.is_gone:
                 continue
-
-            if item.player_id == self.item.player_id:
+            if item.player_id == self.player_id:
                 continue
-
             if item.role != ROLE.UNIT:
                 continue
 
             distance = euclidean_distance(item.coordinates, self.coordinates)
             if distance > self.firing_range:
                 continue
-
             damage = (self.firing_range - distance) * self.damage_per_shot / self.firing_range
             item.get_shot(damage)
+        self._dead()

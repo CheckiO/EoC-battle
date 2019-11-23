@@ -9,6 +9,7 @@ from sub_items import ArrowSubItem, VerticalRocketSubItem, HealSubItem, PowerSub
 
 
 class MineActions(BaseItemActions):
+
     def actions_init(self):
         return {
             'wait': self.action_wait,
@@ -18,30 +19,24 @@ class MineActions(BaseItemActions):
     def action_wait(self, data):
         for enemy in self._fight_handler.fighters.values():
             if enemy.is_gone:
-                return
-
+                continue
             if enemy.player_id == self._item.player_id:
                 continue
-
             if enemy.role != ROLE.UNIT:
                 continue
-
             distance_to_enemy = euclidean_distance(enemy.coordinates, self._item.coordinates)
-
             if distance_to_enemy <= self._item.firing_range:
                 self._item.detonate()
                 break
 
-        return {
-            'name': 'idle'
-        }
+        return {'name': 'idle'}
 
     def action_detonate(self, data):
         self._item.detonator_timer()
-        return {
-            'name': 'detonate'
-        }
-        
+        if self._item.is_dead:
+            return self._item._state
+        return {'name': 'detonate'}
+
 
 class FlagActions(BaseItemActions):
 

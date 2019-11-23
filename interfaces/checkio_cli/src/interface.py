@@ -206,7 +206,7 @@ class FightHandler(BaseHandler):
     def str_state(self, state):
         if state is None:
             return 'NONE'
-        if state['name'] in ('idle', 'charge', 'dead', 'turn', 'cooldown', 'depart', 'departed', 'heavy_protect'):
+        if state['name'] in ('idle', 'charge', 'dead', 'turn', 'cooldown', 'depart', 'departed', 'heavy_protect', 'detonate'):
             return state['name']
         if state['name'] == 'attack':
             str_action = 'fired'

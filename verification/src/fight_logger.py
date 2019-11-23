@@ -179,10 +179,12 @@ class FightLogger:
     def snapshot(self, player_id):
         snapshot = []
         for item in self.get_all_fighters():
+            is_cur_player = item.player_id == player_id
+
             if item.is_obstacle:
                 continue
-
-            is_cur_player = item.player_id == player_id
+            if not is_cur_player and item.is_hidden:
+                continue
 
             item_info = {
                 OUTPUT.ITEM_ID: item.id,
