@@ -1,5 +1,5 @@
 coloredlogs==1.0.1
-tornado==5.0.2
+tornado==6.3.2
 sentry-sdk==0.7.9
 -e git://github.com/Checkio/checkio-referee.git#egg=checkio-referee
 -e git://github.com/CheckiO/EoC-battle-mocks.git#egg=battle-mocks
